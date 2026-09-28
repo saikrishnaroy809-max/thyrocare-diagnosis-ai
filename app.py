@@ -1,24 +1,28 @@
+# ============================================================
+# ThyroCare AI - FastAPI Backend
+# Thyroid Disease Prediction + SHAP + Counterfactual AI
+# ============================================================
+
 from pathlib import Path
 from typing import Any, Dict, List
 
 import joblib
 import numpy as np
 import pandas as pd
-import shap
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel
 
 
 # ============================================================
-# APP
+# APP CONFIGURATION
 # ============================================================
 
 app = FastAPI(
     title="ThyroCare AI API",
-    description="Thyroid prediction with XGBoost, SHAP and Counterfactual XAI",
-    version="2.1.0",
+    description="AI-powered thyroid disease prediction with Explainable AI",
+    version="2.2.0",
 )
 
 
@@ -36,20 +40,31 @@ app.add_middleware(
 
 
 # ============================================================
-# MODEL PATH
+# PATHS
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 
-MODEL_PATH = (
-    BASE_DIR
-    / "model"
-    / "thyroid_xgboost_final.joblib"
-)
+MODEL_PATH = BASE_DIR / "model" / "thyroid_xgboost_final.joblib"
 
 
 # ============================================================
-# FEATURES
+# MODEL
+# ============================================================
+
+model = None
+MODEL_LOAD_ERROR = None
+
+try:
+    model = joblib.load(MODEL_PATH)
+except Exception as e:
+    MODEL_LOAD_ERROR = str(e)
+
+
+# ============================================================
+# TRAINING FEATURES
+# IMPORTANT:
+# These names MUST match the original dataset.
 # ============================================================
 
 FEATURE_NAMES = [
@@ -100,58 +115,32 @@ MEASURED_FEATURES = [
 
 
 BINARY_FEATURES = [
-    feature
-    for feature in FEATURE_NAMES
-    if feature not in CONTINUOUS_FEATURES
+    "sex",
+    "on thyroxine",
+    "query on thyroxine",
+    "on antithyroid medication",
+    "sick",
+    "pregnant",
+    "thyroid surgery",
+    "I131 treatment",
+    "query hypothyroid",
+    "query hyperthyroid",
+    "lithium",
+    "goitre",
+    "tumor",
+    "hypopituitary",
+    "psych",
 ]
 
 
 # ============================================================
-# LOAD MODEL
-# ============================================================
-
-MODEL = None
-MODEL_LOAD_ERROR = None
-
-try:
-
-    if not MODEL_PATH.exists():
-
-        MODEL_LOAD_ERROR = (
-            f"Model file not found: {MODEL_PATH}"
-        )
-
-    else:
-
-        MODEL = joblib.load(MODEL_PATH)
-
-        print(
-            "Model loaded successfully:",
-            MODEL_PATH,
-        )
-
-except Exception as exc:
-
-    MODEL_LOAD_ERROR = str(exc)
-
-    print(
-        "Model loading error:",
-        MODEL_LOAD_ERROR,
-    )
-
-
-# ============================================================
-# REQUEST MODEL
+# PYDANTIC REQUEST MODEL
+#
+# IMPORTANT:
+# These names intentionally match the React frontend.
 # ============================================================
 
 class PredictionRequest(BaseModel):
-
-    # Allows frontend field aliases such as
-    # TSH_measured and I131_treatment.
-
-    model_config = ConfigDict(
-        populate_by_name=True
-    )
 
     age: float
     sex: int
@@ -159,427 +148,276 @@ class PredictionRequest(BaseModel):
     on_thyroxine: int
     query_on_thyroxine: int
     on_antithyroid_medication: int
+
     sick: int
     pregnant: int
     thyroid_surgery: int
 
-    i131_treatment: int = Field(
-        alias="I131_treatment"
-    )
+    # EXACT FRONTEND NAME
+    I131_treatment: int
 
     query_hypothyroid: int
     query_hyperthyroid: int
+
     lithium: int
     goitre: int
     tumor: int
     hypopituitary: int
     psych: int
 
-    tsh_measured: int = Field(
-        alias="TSH_measured"
-    )
-
+    # EXACT FRONTEND NAMES
+    TSH_measured: int
     TSH: float
 
-    t3_measured: int = Field(
-        alias="T3_measured"
-    )
+    T3_measured: int
 
-    tt4_measured: int = Field(
-        alias="TT4_measured"
-    )
-
+    TT4_measured: int
     TT4: float
 
-    t4u_measured: int = Field(
-        alias="T4U_measured"
-    )
-
+    T4U_measured: int
     T4U: float
 
-    fti_measured: int = Field(
-        alias="FTI_measured"
-    )
-
+    FTI_measured: int
     FTI: float
 
 
 # ============================================================
-# REQUEST → DATAFRAME
+# REQUEST -> DATAFRAME
 # ============================================================
 
-def request_to_dataframe(
-    request: PredictionRequest,
-) -> pd.DataFrame:
+def request_to_dataframe(req: PredictionRequest) -> pd.DataFrame:
 
     data = {
+        "age": req.age,
+        "sex": req.sex,
 
-        "age": request.age,
+        "on thyroxine": req.on_thyroxine,
+        "query on thyroxine": req.query_on_thyroxine,
+        "on antithyroid medication": req.on_antithyroid_medication,
 
-        "sex": request.sex,
+        "sick": req.sick,
+        "pregnant": req.pregnant,
+        "thyroid surgery": req.thyroid_surgery,
 
-        "on thyroxine":
-            request.on_thyroxine,
+        "I131 treatment": req.I131_treatment,
 
-        "query on thyroxine":
-            request.query_on_thyroxine,
+        "query hypothyroid": req.query_hypothyroid,
+        "query hyperthyroid": req.query_hyperthyroid,
 
-        "on antithyroid medication":
-            request.on_antithyroid_medication,
+        "lithium": req.lithium,
+        "goitre": req.goitre,
+        "tumor": req.tumor,
+        "hypopituitary": req.hypopituitary,
+        "psych": req.psych,
 
-        "sick":
-            request.sick,
+        "TSH measured": req.TSH_measured,
+        "TSH": req.TSH,
 
-        "pregnant":
-            request.pregnant,
+        "T3 measured": req.T3_measured,
 
-        "thyroid surgery":
-            request.thyroid_surgery,
+        "TT4 measured": req.TT4_measured,
+        "TT4": req.TT4,
 
-        "I131 treatment":
-            request.i131_treatment,
+        "T4U measured": req.T4U_measured,
+        "T4U": req.T4U,
 
-        "query hypothyroid":
-            request.query_hypothyroid,
-
-        "query hyperthyroid":
-            request.query_hyperthyroid,
-
-        "lithium":
-            request.lithium,
-
-        "goitre":
-            request.goitre,
-
-        "tumor":
-            request.tumor,
-
-        "hypopituitary":
-            request.hypopituitary,
-
-        "psych":
-            request.psych,
-
-        "TSH measured":
-            request.tsh_measured,
-
-        "TSH":
-            request.TSH,
-
-        "T3 measured":
-            request.t3_measured,
-
-        "TT4 measured":
-            request.tt4_measured,
-
-        "TT4":
-            request.TT4,
-
-        "T4U measured":
-            request.t4u_measured,
-
-        "T4U":
-            request.T4U,
-
-        "FTI measured":
-            request.fti_measured,
-
-        "FTI":
-            request.FTI,
+        "FTI measured": req.FTI_measured,
+        "FTI": req.FTI,
     }
 
-    return pd.DataFrame(
+    df = pd.DataFrame(
         [data],
-        columns=FEATURE_NAMES,
+        columns=FEATURE_NAMES
     )
 
+    return df
+
 
 # ============================================================
-# PREDICTION
+# BASIC PREDICTION
 # ============================================================
 
-def get_prediction(
-    df: pd.DataFrame,
-):
+def get_prediction(df: pd.DataFrame):
 
-    if MODEL is None:
-
+    if model is None:
         raise RuntimeError(
-            MODEL_LOAD_ERROR
-            or "Model is not loaded."
+            f"Model could not be loaded: {MODEL_LOAD_ERROR}"
         )
 
-    prediction = int(
-        MODEL.predict(df)[0]
-    )
+    prediction = model.predict(df)[0]
 
-    probabilities = (
-        MODEL.predict_proba(df)[0]
-    )
+    probabilities = model.predict_proba(df)[0]
 
-    class_0 = float(
-        probabilities[0]
-    )
+    prediction = int(prediction)
 
-    class_1 = float(
-        probabilities[1]
-    )
+    class_0_probability = float(probabilities[0])
+    class_1_probability = float(probabilities[1])
 
     if prediction == 1:
-
-        label = (
-            "Thyroid Disease Predicted"
-        )
-
+        label = "Thyroid Disease Predicted"
     else:
+        label = "Thyroid Disease Not Predicted"
 
-        label = (
-            "Thyroid Disease Not Predicted"
-        )
-
-    return (
-        prediction,
-        label,
-        class_0,
-        class_1,
-    )
+    return {
+        "prediction": prediction,
+        "label": label,
+        "probabilities": {
+            "class_0": class_0_probability,
+            "class_1": class_1_probability,
+        },
+    }
 
 
 # ============================================================
 # SHAP
 # ============================================================
 
-def generate_shap(
-    df: pd.DataFrame,
-) -> Dict[str, Any]:
+def generate_shap(df: pd.DataFrame):
+
+    if model is None:
+        return {
+            "available": False,
+            "features": [],
+            "error": "Model is not loaded",
+        }
 
     try:
 
-        if MODEL is None:
+        import shap
 
-            return {
-                "available": False,
-                "features": [],
-            }
+        # Extract classifier from sklearn pipeline
+        classifier = model
 
-        classifier = MODEL
+        if hasattr(model, "named_steps"):
+            if "classifier" in model.named_steps:
+                classifier = model.named_steps["classifier"]
 
-        if hasattr(
-            MODEL,
-            "named_steps",
-        ):
+        # Transform dataframe if preprocessing exists
+        transformed = df
 
-            if (
-                "classifier"
-                in MODEL.named_steps
-            ):
+        feature_names = FEATURE_NAMES.copy()
 
-                classifier = (
-                    MODEL.named_steps[
-                        "classifier"
-                    ]
-                )
+        if hasattr(model, "named_steps"):
 
-            elif (
-                "model"
-                in MODEL.named_steps
-            ):
+            if "preprocessor" in model.named_steps:
 
-                classifier = (
-                    MODEL.named_steps[
-                        "model"
-                    ]
-                )
+                preprocessor = model.named_steps["preprocessor"]
 
-        transformed_df = df
+                transformed = preprocessor.transform(df)
 
-        if (
-            hasattr(
-                MODEL,
-                "named_steps",
-            )
-            and
-            "preprocessor"
-            in MODEL.named_steps
-        ):
+                try:
+                    transformed_names = (
+                        preprocessor.get_feature_names_out()
+                    )
 
-            preprocessor = (
-                MODEL.named_steps[
-                    "preprocessor"
-                ]
-            )
+                    feature_names = list(transformed_names)
 
-            try:
+                except Exception:
+                    feature_names = FEATURE_NAMES.copy()
 
-                transformed_df = (
-                    preprocessor.transform(df)
-                )
+        # Create SHAP explainer
+        explainer = shap.TreeExplainer(classifier)
 
-            except Exception:
+        shap_values = explainer.shap_values(transformed)
 
-                transformed_df = df
-
-        explainer = (
-            shap.TreeExplainer(
-                classifier
-            )
-        )
-
-        shap_values = (
-            explainer.shap_values(
-                transformed_df
-            )
-        )
-
-        if isinstance(
-            shap_values,
-            list,
-        ):
+        # Handle binary classification output
+        if isinstance(shap_values, list):
 
             if len(shap_values) > 1:
-
-                values = np.asarray(
-                    shap_values[1]
-                )[0]
-
+                values = np.asarray(shap_values[1])[0]
             else:
-
-                values = np.asarray(
-                    shap_values[0]
-                )[0]
+                values = np.asarray(shap_values[0])[0]
 
         else:
 
-            values_array = np.asarray(
-                shap_values
-            )
+            values = np.asarray(shap_values)
 
-            if values_array.ndim == 3:
+            if values.ndim == 3:
+                values = values[0, :, -1]
 
-                values = (
-                    values_array[
-                        0,
-                        :,
-                        -1
-                    ]
-                )
-
-            elif values_array.ndim == 2:
-
-                values = (
-                    values_array[0]
-                )
+            elif values.ndim == 2:
+                values = values[0]
 
             else:
+                values = values.reshape(-1)
 
-                values = (
-                    values_array.flatten()
-                )
+        values = values.astype(float)
 
-        values = np.asarray(
-            values
-        ).flatten()
+        # Make sure names and values have same length
+        count = min(len(values), len(feature_names))
 
-        feature_names = None
+        values = values[:count]
+        feature_names = feature_names[:count]
 
-        if (
-            hasattr(
-                MODEL,
-                "named_steps",
-            )
-            and
-            "preprocessor"
-            in MODEL.named_steps
-        ):
+        result = []
 
-            try:
-
-                feature_names = list(
-                    MODEL.named_steps[
-                        "preprocessor"
-                    ].get_feature_names_out()
-                )
-
-            except Exception:
-
-                feature_names = None
-
-        if (
-            not feature_names
-            or len(feature_names)
-            != len(values)
-        ):
-
-            feature_names = (
-                FEATURE_NAMES[
-                    :len(values)
-                ]
-            )
-
-        results = []
-
-        for name, value in zip(
-            feature_names,
-            values,
-        ):
+        for name, value in zip(feature_names, values):
 
             clean_name = str(name)
 
+            # Make preprocessing names easier to understand
             if "__" in clean_name:
+                clean_name = clean_name.split("__")[-1]
 
-                clean_name = (
-                    clean_name.split(
-                        "__",
-                        1,
-                    )[1]
-                )
-
-            results.append(
+            result.append(
                 {
                     "feature": clean_name,
-                    "impact": float(
-                        value
-                    ),
+                    "impact": float(value),
+                    "abs_impact": float(abs(value)),
                 }
             )
 
-        results.sort(
-            key=lambda item:
-                abs(item["impact"]),
-            reverse=True,
+        # Sort by importance
+        result.sort(
+            key=lambda x: x["abs_impact"],
+            reverse=True
         )
 
         return {
             "available": True,
-            "features": results[:10],
+            "features": result[:15],
         }
 
-    except Exception as exc:
-
-        print(
-            "SHAP error:",
-            exc,
-        )
+    except Exception as e:
 
         return {
             "available": False,
             "features": [],
-            "error": str(exc),
+            "error": str(e),
         }
 
 
 # ============================================================
-# COUNTERFACTUAL VALUES
+# COUNTERFACTUAL HELPERS
 # ============================================================
+
+def safe_predict(df: pd.DataFrame):
+
+    try:
+        prediction = model.predict(df)
+        return np.asarray(prediction).astype(int)
+
+    except Exception:
+        return None
+
 
 def create_candidate_values(
     feature: str,
-    current_value: float,
-) -> List[float]:
+    current_value: Any
+) -> List[Any]:
 
-    current = float(
-        current_value
-    )
+    try:
+
+        current = float(current_value)
+
+    except Exception:
+
+        return []
+
+
+    # --------------------------------------------------------
+    # AGE
+    # --------------------------------------------------------
 
     if feature == "age":
 
@@ -592,18 +430,18 @@ def create_candidate_values(
             current + 15,
         ]
 
-        values = [
-            max(
-                1.0,
-                min(
-                    100.0,
-                    value,
-                ),
-            )
-            for value in values
+        return [
+            float(round(max(1, min(100, x)), 2))
+            for x in values
+            if abs(x - current) > 0.001
         ]
 
-    elif feature == "TSH":
+
+    # --------------------------------------------------------
+    # TSH
+    # --------------------------------------------------------
+
+    if feature == "TSH":
 
         values = [
             0.1,
@@ -622,24 +460,44 @@ def create_candidate_values(
             20.0,
         ]
 
-    elif feature == "TT4":
-
-        values = [
-            40.0,
-            50.0,
-            60.0,
-            75.0,
-            90.0,
-            100.0,
-            110.0,
-            125.0,
-            140.0,
-            160.0,
-            180.0,
-            200.0,
+        return [
+            x for x in values
+            if abs(x - current) > 0.001
         ]
 
-    elif feature == "T4U":
+
+    # --------------------------------------------------------
+    # TT4
+    # --------------------------------------------------------
+
+    if feature == "TT4":
+
+        values = [
+            40,
+            50,
+            60,
+            75,
+            90,
+            100,
+            110,
+            125,
+            140,
+            160,
+            180,
+            200,
+        ]
+
+        return [
+            float(x) for x in values
+            if abs(x - current) > 0.001
+        ]
+
+
+    # --------------------------------------------------------
+    # T4U
+    # --------------------------------------------------------
+
+    if feature == "T4U":
 
         values = [
             0.4,
@@ -655,637 +513,476 @@ def create_candidate_values(
             1.5,
         ]
 
-    elif feature == "FTI":
-
-        values = [
-            40.0,
-            50.0,
-            60.0,
-            75.0,
-            90.0,
-            100.0,
-            110.0,
-            125.0,
-            140.0,
-            160.0,
-            180.0,
-            200.0,
+        return [
+            float(x) for x in values
+            if abs(x - current) > 0.001
         ]
 
-    else:
+
+    # --------------------------------------------------------
+    # FTI
+    # --------------------------------------------------------
+
+    if feature == "FTI":
 
         values = [
-            0
-            if int(round(current)) == 1
-            else 1
+            40,
+            50,
+            60,
+            75,
+            90,
+            100,
+            110,
+            125,
+            140,
+            160,
+            180,
+            200,
         ]
 
-    cleaned = []
+        return [
+            float(x) for x in values
+            if abs(x - current) > 0.001
+        ]
 
-    for value in values:
 
-        value = float(value)
+    # --------------------------------------------------------
+    # BINARY
+    # --------------------------------------------------------
 
-        if abs(
-            value - current
-        ) < 1e-9:
+    if feature in BINARY_FEATURES:
 
-            continue
+        if int(round(current)) == 0:
+            return [1]
 
-        if not any(
-            abs(
-                value - existing
-            ) < 1e-9
-            for existing in cleaned
-        ):
+        return [0]
 
-            cleaned.append(value)
 
-    return cleaned
+    return []
 
 
 # ============================================================
-# COUNTERFACTUAL DISTANCE
+# DISTANCE
 # ============================================================
 
 def feature_distance(
-    original: pd.Series,
-    candidate: pd.Series,
     feature: str,
+    old_value: Any,
+    new_value: Any
 ) -> float:
 
-    original_value = float(
-        original[feature]
-    )
+    try:
 
-    candidate_value = float(
-        candidate[feature]
-    )
+        old = float(old_value)
+        new = float(new_value)
 
-    if feature in CONTINUOUS_FEATURES:
+    except Exception:
 
-        if feature == "age":
+        return 1.0
 
-            scale = 20.0
 
-        elif feature == "TSH":
+    if feature == "age":
+        return abs(new - old) / 20.0
 
-            scale = max(
-                abs(original_value),
-                2.0,
-            )
+    if feature == "TSH":
+        return abs(new - old) / 10.0
 
-        elif feature == "TT4":
+    if feature == "TT4":
+        return abs(new - old) / 100.0
 
-            scale = max(
-                abs(original_value),
-                50.0,
-            )
+    if feature == "T4U":
+        return abs(new - old)
 
-        elif feature == "T4U":
+    if feature == "FTI":
+        return abs(new - old) / 100.0
 
-            scale = max(
-                abs(original_value),
-                0.5,
-            )
-
-        elif feature == "FTI":
-
-            scale = max(
-                abs(original_value),
-                50.0,
-            )
-
-        else:
-
-            scale = 1.0
-
-        return abs(
-            candidate_value
-            - original_value
-        ) / scale
-
-    return (
-        1.0
-        if candidate_value
-        != original_value
-        else 0.0
-    )
+    return abs(new - old)
 
 
 def total_distance(
-    original: pd.Series,
-    candidate: pd.Series,
+    original: pd.DataFrame,
+    modified: pd.DataFrame
 ) -> float:
 
     total = 0.0
 
     for feature in FEATURE_NAMES:
 
-        total += feature_distance(
-            original,
-            candidate,
-            feature,
-        )
+        old_value = original.iloc[0][feature]
+        new_value = modified.iloc[0][feature]
+
+        if old_value != new_value:
+
+            total += feature_distance(
+                feature,
+                old_value,
+                new_value
+            )
 
     return float(total)
 
 
 # ============================================================
-# MULTI-FEATURE COUNTERFACTUAL SEARCH
+# COUNTERFACTUAL GENERATION
 # ============================================================
 
 def generate_counterfactuals(
     original_df: pd.DataFrame,
     original_prediction: int,
-    shap_result: Dict[str, Any],
-) -> Dict[str, Any]:
+    shap_result: Dict[str, Any]
+):
 
-    try:
-
-        original_row = (
-            original_df.iloc[0].copy()
-        )
-
-        # Important continuous features
-        search_features = [
-            "TSH",
-            "TT4",
-            "T4U",
-            "FTI",
-            "age",
-        ]
-
-        # Add important SHAP features.
-        for item in shap_result.get(
-            "features",
-            [],
-        ):
-
-            feature = item.get(
-                "feature"
-            )
-
-            if not feature:
-                continue
-
-            if "__" in feature:
-
-                feature = feature.split(
-                    "__",
-                    1,
-                )[1]
-
-            if feature not in FEATURE_NAMES:
-                continue
-
-            if feature in MEASURED_FEATURES:
-                continue
-
-            if feature not in search_features:
-
-                search_features.append(
-                    feature
-                )
-
-        search_features = (
-            search_features[:10]
-        )
-
-        candidate_values = {}
-
-        for feature in search_features:
-
-            candidate_values[
-                feature
-            ] = create_candidate_values(
-                feature,
-                original_row[
-                    feature
-                ],
-            )
-
-        # Initial beam.
-        beam = [
-            {
-                "row":
-                    original_row.copy(),
-
-                "changed": [],
-
-                "distance": 0.0,
-            }
-        ]
-
-        found = []
-
-        MAX_DEPTH = 4
-
-        BEAM_WIDTH = 30
-
-        target_class = (
-            1 - int(
-                original_prediction
-            )
-        )
-
-        for depth in range(
-            1,
-            MAX_DEPTH + 1,
-        ):
-
-            generated = []
-
-            for state in beam:
-
-                current_row = (
-                    state["row"]
-                )
-
-                changed_features = set(
-                    state["changed"]
-                )
-
-                for feature in search_features:
-
-                    if feature in changed_features:
-                        continue
-
-                    for value in (
-                        candidate_values.get(
-                            feature,
-                            [],
-                        )
-                    ):
-
-                        new_row = (
-                            current_row.copy()
-                        )
-
-                        if (
-                            feature
-                            in BINARY_FEATURES
-                        ):
-
-                            new_row[
-                                feature
-                            ] = int(
-                                round(
-                                    value
-                                )
-                            )
-
-                        else:
-
-                            new_row[
-                                feature
-                            ] = float(value)
-
-                        changed = list(
-                            state["changed"]
-                        )
-
-                        changed.append(
-                            feature
-                        )
-
-                        generated.append(
-                            {
-                                "row":
-                                    new_row,
-
-                                "changed":
-                                    changed,
-
-                                "distance":
-                                    total_distance(
-                                        original_row,
-                                        new_row,
-                                    ),
-                            }
-                        )
-
-            if not generated:
-                break
-
-            # Remove duplicate states.
-            unique = {}
-
-            for state in generated:
-
-                key = tuple(
-                    (
-                        feature,
-                        round(
-                            float(
-                                state[
-                                    "row"
-                                ][feature]
-                            ),
-                            6,
-                        ),
-                    )
-                    for feature
-                    in FEATURE_NAMES
-                )
-
-                if key not in unique:
-
-                    unique[key] = state
-
-            generated = list(
-                unique.values()
-            )
-
-            # Batch prediction.
-            batch_df = pd.DataFrame(
-                [
-                    state["row"]
-                    for state in generated
-                ],
-                columns=FEATURE_NAMES,
-            )
-
-            predictions = MODEL.predict(
-                batch_df
-            )
-
-            probabilities = (
-                MODEL.predict_proba(
-                    batch_df
-                )
-            )
-
-            scored = []
-
-            for index, state in enumerate(
-                generated
-            ):
-
-                prediction = int(
-                    predictions[index]
-                )
-
-                class_0 = float(
-                    probabilities[
-                        index
-                    ][0]
-                )
-
-                class_1 = float(
-                    probabilities[
-                        index
-                    ][1]
-                )
-
-                target_probability = (
-                    class_1
-                    if target_class == 1
-                    else class_0
-                )
-
-                score = (
-                    target_probability
-                    - (
-                        0.08
-                        * state[
-                            "distance"
-                        ]
-                    )
-                )
-
-                state[
-                    "prediction"
-                ] = prediction
-
-                state[
-                    "class_0_probability"
-                ] = class_0
-
-                state[
-                    "class_1_probability"
-                ] = class_1
-
-                state[
-                    "target_probability"
-                ] = target_probability
-
-                state[
-                    "score"
-                ] = score
-
-                scored.append(
-                    state
-                )
-
-                if (
-                    prediction
-                    == target_class
-                ):
-
-                    found.append(
-                        state
-                    )
-
-            scored.sort(
-                key=lambda item: (
-                    item["score"],
-                    -item["distance"],
-                ),
-                reverse=True,
-            )
-
-            beam = scored[
-                :BEAM_WIDTH
-            ]
-
-            if found:
-                break
-
-        # No counterfactual.
-        if not found:
-
-            return {
-                "available": False,
-                "features": [],
-                "scenarios": [],
-                "message": (
-                    "No counterfactual was found "
-                    "within the tested feature ranges."
-                ),
-            }
-
-        # Sort found scenarios.
-        found.sort(
-            key=lambda item: (
-                len(item["changed"]),
-                item["distance"],
-                -item[
-                    "target_probability"
-                ],
-            )
-        )
-
-        best_scenarios = found[:3]
-
-        scenarios = []
-
-        for scenario_number, scenario in enumerate(
-            best_scenarios,
-            start=1,
-        ):
-
-            changes = []
-
-            for feature in scenario[
-                "changed"
-            ]:
-
-                original_value = (
-                    original_row[
-                        feature
-                    ]
-                )
-
-                new_value = (
-                    scenario["row"][
-                        feature
-                    ]
-                )
-
-                if (
-                    feature
-                    in BINARY_FEATURES
-                ):
-
-                    original_value = int(
-                        round(
-                            float(
-                                original_value
-                            )
-                        )
-                    )
-
-                    new_value = int(
-                        round(
-                            float(
-                                new_value
-                            )
-                        )
-                    )
-
-                else:
-
-                    original_value = float(
-                        original_value
-                    )
-
-                    new_value = float(
-                        new_value
-                    )
-
-                changes.append(
-                    {
-                        "feature": feature,
-                        "original_value":
-                            original_value,
-                        "counterfactual_value":
-                            new_value,
-                    }
-                )
-
-            target_prediction = int(
-                scenario[
-                    "prediction"
-                ]
-            )
-
-            if target_prediction == 1:
-
-                target_label = (
-                    "Thyroid Disease Predicted"
-                )
-
-            else:
-
-                target_label = (
-                    "Thyroid Disease Not Predicted"
-                )
-
-            scenarios.append(
-                {
-                    "scenario":
-                        scenario_number,
-
-                    "changes":
-                        changes,
-
-                    "prediction":
-                        target_prediction,
-
-                    "prediction_label":
-                        target_label,
-
-                    "class_0_probability":
-                        round(
-                            scenario[
-                                "class_0_probability"
-                            ],
-                            6,
-                        ),
-
-                    "class_1_probability":
-                        round(
-                            scenario[
-                                "class_1_probability"
-                            ],
-                            6,
-                        ),
-
-                    "distance":
-                        round(
-                            float(
-                                scenario[
-                                    "distance"
-                                ]
-                            ),
-                            6,
-                        ),
-                }
-            )
-
-        best = scenarios[0]
-
-        return {
-            "available": True,
-
-            # Compatible with current frontend.
-            "features":
-                best["changes"],
-
-            "scenarios":
-                scenarios,
-
-            "target_prediction":
-                best["prediction"],
-
-            "target_label":
-                best["prediction_label"],
-        }
-
-    except Exception as exc:
-
-        print(
-            "Counterfactual error:",
-            exc,
-        )
+    if model is None:
 
         return {
             "available": False,
             "features": [],
             "scenarios": [],
-            "error": str(exc),
+            "message": "Model is not loaded.",
         }
+
+
+    # --------------------------------------------------------
+    # Determine important features from SHAP
+    # --------------------------------------------------------
+
+    important_features = []
+
+    try:
+
+        shap_features = shap_result.get(
+            "features",
+            []
+        )
+
+        for item in shap_features:
+
+            name = item.get("feature")
+
+            if name in FEATURE_NAMES:
+                important_features.append(name)
+
+    except Exception:
+        pass
+
+
+    # --------------------------------------------------------
+    # Core continuous features
+    # --------------------------------------------------------
+
+    search_features = [
+        "TSH",
+        "TT4",
+        "T4U",
+        "FTI",
+        "age",
+    ]
+
+
+    # --------------------------------------------------------
+    # Add important binary features
+    # --------------------------------------------------------
+
+    for feature in important_features:
+
+        if feature not in search_features:
+
+            if feature not in MEASURED_FEATURES:
+
+                if feature in FEATURE_NAMES:
+
+                    search_features.append(feature)
+
+        if len(search_features) >= 10:
+            break
+
+
+    # --------------------------------------------------------
+    # Create candidate values
+    # --------------------------------------------------------
+
+    candidates = {}
+
+    for feature in search_features:
+
+        current_value = original_df.iloc[0][feature]
+
+        values = create_candidate_values(
+            feature,
+            current_value
+        )
+
+        if values:
+            candidates[feature] = values
+
+
+    # --------------------------------------------------------
+    # First search: one feature at a time
+    # --------------------------------------------------------
+
+    scenarios = []
+
+    for feature in search_features:
+
+        if feature not in candidates:
+            continue
+
+        for value in candidates[feature]:
+
+            candidate_df = original_df.copy()
+
+            candidate_df.at[
+                0,
+                feature
+            ] = value
+
+            prediction = safe_predict(candidate_df)
+
+            if prediction is None:
+                continue
+
+            new_prediction = int(prediction[0])
+
+            if new_prediction != original_prediction:
+
+                distance = total_distance(
+                    original_df,
+                    candidate_df
+                )
+
+                scenarios.append(
+                    {
+                        "features": {
+                            feature: value
+                        },
+                        "distance": distance,
+                        "prediction": new_prediction,
+                    }
+                )
+
+
+    # --------------------------------------------------------
+    # Multi-feature beam search
+    # --------------------------------------------------------
+
+    beam = [
+        (
+            original_df.copy(),
+            []
+        )
+    ]
+
+    MAX_DEPTH = 4
+    BEAM_WIDTH = 30
+
+
+    for depth in range(MAX_DEPTH):
+
+        next_beam = []
+
+        for current_df, changes in beam:
+
+            for feature in search_features:
+
+                # Avoid changing same feature repeatedly
+                changed_features = [
+                    item["feature"]
+                    for item in changes
+                ]
+
+                if feature in changed_features:
+                    continue
+
+                if feature not in candidates:
+                    continue
+
+                for value in candidates[feature]:
+
+                    candidate_df = current_df.copy()
+
+                    candidate_df.at[
+                        0,
+                        feature
+                    ] = value
+
+                    new_changes = changes + [
+                        {
+                            "feature": feature,
+                            "old_value": current_df.iloc[0][feature],
+                            "new_value": value,
+                        }
+                    ]
+
+                    prediction = safe_predict(
+                        candidate_df
+                    )
+
+                    if prediction is None:
+                        continue
+
+                    new_prediction = int(
+                        prediction[0]
+                    )
+
+                    distance = total_distance(
+                        original_df,
+                        candidate_df
+                    )
+
+                    if new_prediction != original_prediction:
+
+                        scenario_features = {}
+
+                        for change in new_changes:
+
+                            scenario_features[
+                                change["feature"]
+                            ] = change["new_value"]
+
+                        scenarios.append(
+                            {
+                                "features": scenario_features,
+                                "distance": distance,
+                                "prediction": new_prediction,
+                            }
+                        )
+
+                    else:
+
+                        next_beam.append(
+                            (
+                                candidate_df,
+                                new_changes
+                            )
+                        )
+
+
+        # Keep closest candidates
+        next_beam.sort(
+            key=lambda item: total_distance(
+                original_df,
+                item[0]
+            )
+        )
+
+        beam = next_beam[:BEAM_WIDTH]
+
+        if not beam:
+            break
+
+
+    # --------------------------------------------------------
+    # Remove duplicate scenarios
+    # --------------------------------------------------------
+
+    unique = {}
+
+    for scenario in scenarios:
+
+        key = tuple(
+            sorted(
+                scenario["features"].items()
+            )
+        )
+
+        if key not in unique:
+
+            unique[key] = scenario
+
+        else:
+
+            if (
+                scenario["distance"]
+                < unique[key]["distance"]
+            ):
+
+                unique[key] = scenario
+
+
+    scenarios = list(unique.values())
+
+
+    # --------------------------------------------------------
+    # Sort by smallest change
+    # --------------------------------------------------------
+
+    scenarios.sort(
+        key=lambda x: x["distance"]
+    )
+
+
+    # --------------------------------------------------------
+    # Return no-result response
+    # --------------------------------------------------------
+
+    if not scenarios:
+
+        return {
+            "available": False,
+            "features": [],
+            "scenarios": [],
+            "message": (
+                "No counterfactual scenario "
+                "was found within the tested feature ranges."
+            ),
+        }
+
+
+    # --------------------------------------------------------
+    # Top scenarios
+    # --------------------------------------------------------
+
+    top_scenarios = scenarios[:3]
+
+
+    best = top_scenarios[0]
+
+
+    # --------------------------------------------------------
+    # Format changes for frontend
+    # --------------------------------------------------------
+
+    formatted_changes = []
+
+    for feature, new_value in best["features"].items():
+
+        old_value = original_df.iloc[0][feature]
+
+        formatted_changes.append(
+            {
+                "feature": feature,
+                "old_value": (
+                    float(old_value)
+                    if isinstance(
+                        old_value,
+                        (np.integer, np.floating)
+                    )
+                    else old_value
+                ),
+                "new_value": (
+                    float(new_value)
+                    if isinstance(
+                        new_value,
+                        (np.integer, np.floating)
+                    )
+                    else new_value
+                ),
+            }
+        )
+
+
+    return {
+        "available": True,
+
+        # Compatible with existing App.jsx
+        "features": formatted_changes,
+
+        "scenarios": top_scenarios,
+
+        "message": (
+            "A model sensitivity scenario was found."
+        ),
+    }
 
 
 # ============================================================
@@ -1296,20 +993,10 @@ def generate_counterfactuals(
 def root():
 
     return {
+        "name": "ThyroCare AI API",
         "status": "online",
-        "service": "ThyroCare AI API",
-        "version": "2.1.0",
-        "model_loaded":
-            MODEL is not None,
-        "model": "XGBoost",
-        "features":
-            len(FEATURE_NAMES),
-        "endpoints": [
-            "/",
-            "/health",
-            "/info",
-            "/predict",
-        ],
+        "version": "2.2.0",
+        "model_loaded": model is not None,
     }
 
 
@@ -1321,11 +1008,9 @@ def root():
 def health():
 
     return {
-        "status": "healthy",
-        "model_loaded":
-            MODEL is not None,
-        "features":
-            len(FEATURE_NAMES),
+        "status": "healthy" if model is not None else "unhealthy",
+        "model_loaded": model is not None,
+        "features": len(FEATURE_NAMES),
         "shap_available": True,
         "counterfactual_available": True,
     }
@@ -1339,16 +1024,16 @@ def health():
 def info():
 
     return {
+        "name": "ThyroCare AI",
         "model": "XGBoost",
-        "version": "Tuned",
-        "feature_count":
-            len(FEATURE_NAMES),
-        "features":
-            FEATURE_NAMES,
-        "continuous_features":
-            CONTINUOUS_FEATURES,
-        "model_loaded":
-            MODEL is not None,
+        "features": FEATURE_NAMES,
+        "feature_count": len(FEATURE_NAMES),
+        "continuous_features": CONTINUOUS_FEATURES,
+        "binary_features": BINARY_FEATURES,
+        "explainability": {
+            "shap": True,
+            "counterfactual": True,
+        },
     }
 
 
@@ -1357,101 +1042,82 @@ def info():
 # ============================================================
 
 @app.post("/predict")
-def predict(
-    request: PredictionRequest,
-):
-
-    if MODEL is None:
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                MODEL_LOAD_ERROR
-                or "Model is not loaded."
-            ),
-        )
+def predict(req: PredictionRequest):
 
     try:
 
-        # Convert request.
-        df = request_to_dataframe(
-            request
+        # ----------------------------------------------------
+        # Convert request to dataframe
+        # ----------------------------------------------------
+
+        df = request_to_dataframe(req)
+
+
+        # ----------------------------------------------------
+        # Model prediction
+        # ----------------------------------------------------
+
+        result = get_prediction(df)
+
+
+        # ----------------------------------------------------
+        # SHAP
+        # ----------------------------------------------------
+
+        shap_result = generate_shap(df)
+
+
+        # ----------------------------------------------------
+        # Counterfactual
+        # ----------------------------------------------------
+
+        counterfactual_result = generate_counterfactuals(
+            df,
+            result["prediction"],
+            shap_result
         )
 
-        # Prediction.
-        (
-            prediction,
-            prediction_label,
-            class_0_probability,
-            class_1_probability,
-        ) = get_prediction(df)
 
-        # SHAP.
-        shap_result = generate_shap(
-            df
-        )
-
-        # Counterfactual.
-        counterfactual_result = (
-            generate_counterfactuals(
-                df,
-                prediction,
-                shap_result,
-            )
-        )
+        # ----------------------------------------------------
+        # Final response
+        # ----------------------------------------------------
 
         return {
-
             "success": True,
 
-            "prediction":
-                prediction,
+            "prediction": result["prediction"],
 
-            "prediction_label":
-                prediction_label,
+            "label": result["label"],
 
-            "probabilities": {
+            "probabilities": result["probabilities"],
 
-                "class_0":
-                    round(
-                        class_0_probability,
-                        6,
-                    ),
+            "model": "XGBoost",
 
-                "class_1":
-                    round(
-                        class_1_probability,
-                        6,
-                    ),
-            },
+            "shap": shap_result,
 
-            "model": {
-
-                "name":
-                    "XGBoost",
-
-                "version":
-                    "Tuned",
-
-                "feature_count":
-                    len(FEATURE_NAMES),
-            },
-
-            "shap":
-                shap_result,
-
-            "counterfactuals":
-                counterfactual_result,
+            "counterfactuals": counterfactual_result,
         }
 
-    except Exception as exc:
 
-        print(
-            "Prediction error:",
-            exc,
-        )
+    except Exception as e:
 
         raise HTTPException(
             status_code=500,
-            detail=str(exc),
-    )
+            detail=str(e)
+        )
+
+
+# ============================================================
+# RUN LOCALLY
+# ============================================================
+
+if __name__ == "__main__":
+
+    import uvicorn
+
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        )
