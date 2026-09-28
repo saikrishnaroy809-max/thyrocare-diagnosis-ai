@@ -1,8 +1,6 @@
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 from pathlib import Path
 
 import joblib
@@ -15,14 +13,13 @@ import shap
 # PATHS
 # ============================================================
 
-PROJECT_ROOT = Path("/content/drive/MyDrive/Thyroid-ML-XAI")
-
 BASE_DIR = Path(__file__).resolve().parent
+
 MODEL_PATH = BASE_DIR / "model" / "thyroid_xgboost_final.joblib"
 
 
 # ============================================================
-# FEATURE DEFINITIONS
+# FEATURES
 # ============================================================
 
 FEATURE_NAMES = [
@@ -53,6 +50,7 @@ FEATURE_NAMES = [
     "FTI"
 ]
 
+
 CONTINUOUS_FEATURES = [
     "age",
     "TSH",
@@ -61,14 +59,12 @@ CONTINUOUS_FEATURES = [
     "FTI"
 ]
 
+
 BINARY_FEATURES = [
     feature
     for feature in FEATURE_NAMES
     if feature not in CONTINUOUS_FEATURES
 ]
-
-# ColumnTransformer output order
-SHAP_FEATURE_NAMES = CONTINUOUS_FEATURES + BINARY_FEATURES
 
 
 # ============================================================
@@ -84,13 +80,16 @@ model = joblib.load(MODEL_PATH)
 
 
 # ============================================================
-# FASTAPI APP
+# FASTAPI
 # ============================================================
 
 app = FastAPI(
-    title="Thyroid ML XAI API",
-    description="Machine Learning and Explainable AI API for thyroid disease dataset analysis",
-    version="1.0.0"
+    title="ThyroCare AI API",
+    description=(
+        "Machine Learning and Explainable AI API "
+        "for thyroid disease prediction"
+    ),
+    version="2.0.0"
 )
 
 
@@ -130,8 +129,8 @@ class PredictionRequest(BaseModel):
     tumor: int
     hypopituitary: int
     psych: int
-    TSH_measured: int
 
+    TSH_measured: int
     TSH: float
 
     T3_measured: int
@@ -147,7 +146,7 @@ class PredictionRequest(BaseModel):
 
 
 # ============================================================
-# CONVERT REQUEST → DATAFRAME
+# REQUEST TO DATAFRAME
 # ============================================================
 
 def request_to_dataframe(request: PredictionRequest):
@@ -187,7 +186,477 @@ def request_to_dataframe(request: PredictionRequest):
 
 
 # ============================================================
-# HEALTH ROUTE
+# MODEL PREDICTION
+# ============================================================
+
+def get_prediction(df):
+
+    prediction = int(
+        model.predict(df)[0]
+    )
+
+    probabilities = model.predict_proba(df)[0]
+
+    return (
+        prediction,
+        float(probabilities[0]),
+        float(probabilities[1])
+    )
+
+
+# ============================================================
+# SHAP EXPLANATION
+# ============================================================
+
+def generate_shap(df):
+
+    try:
+
+        preprocessor = model.named_steps["preprocessor"]
+
+        classifier = model.named_steps["classifier"]
+
+        transformed = preprocessor.transform(df)
+
+        transformed_array = np.asarray(
+            transformed
+        )
+
+        explainer = shap.TreeExplainer(
+            classifier
+        )
+
+        shap_values = explainer.shap_values(
+            transformed_array
+        )
+
+        shap_array = np.asarray(
+            shap_values
+        )
+
+        # Handle different SHAP output shapes
+        if shap_array.ndim == 3:
+
+            shap_row = shap_array[0, :, 1]
+
+        elif shap_array.ndim == 2:
+
+            shap_row = shap_array[0]
+
+        else:
+
+            shap_row = shap_array.reshape(-1)
+
+        # Get transformed feature names
+        try:
+
+            feature_names = (
+                preprocessor
+                .get_feature_names_out()
+            )
+
+            feature_names = [
+                str(name)
+                for name in feature_names
+            ]
+
+        except Exception:
+
+            feature_names = FEATURE_NAMES
+
+        explanation = []
+
+        count = min(
+            len(shap_row),
+            len(feature_names)
+        )
+
+        for i in range(count):
+
+            feature_name = feature_names[i]
+
+            # Remove sklearn transformer prefix
+            if "__" in feature_name:
+
+                feature_name = feature_name.split(
+                    "__",
+                    1
+                )[1]
+
+            impact = float(
+                shap_row[i]
+            )
+
+            original_value = None
+
+            # Match feature to original input
+            for original_feature in FEATURE_NAMES:
+
+                if (
+                    feature_name == original_feature
+                    or
+                    feature_name.endswith(
+                        original_feature
+                    )
+                ):
+
+                    try:
+
+                        original_value = float(
+                            df.iloc[0][
+                                original_feature
+                            ]
+                        )
+
+                    except Exception:
+
+                        original_value = None
+
+                    break
+
+            if impact > 0:
+
+                direction = "increases_class_1"
+
+            elif impact < 0:
+
+                direction = "decreases_class_1"
+
+            else:
+
+                direction = "neutral"
+
+            explanation.append(
+                {
+                    "feature": feature_name,
+                    "value": original_value,
+                    "impact": impact,
+                    "direction": direction
+                }
+            )
+
+        explanation.sort(
+            key=lambda item: abs(
+                item["impact"]
+            ),
+            reverse=True
+        )
+
+        return explanation
+
+    except Exception as error:
+
+        print(
+            "SHAP error:",
+            str(error)
+        )
+
+        return []
+
+
+# ============================================================
+# COUNTERFACTUAL GENERATION
+# ============================================================
+
+def generate_counterfactuals(
+    original_df,
+    original_prediction
+):
+
+    candidates = []
+
+    original = original_df.iloc[0].copy()
+
+    # --------------------------------------------------------
+    # CONTINUOUS FEATURES
+    # --------------------------------------------------------
+
+    continuous_values = {}
+
+    age = float(original["age"])
+
+    continuous_values["age"] = [
+        max(1, age - 10),
+        max(1, age - 5),
+        max(1, age - 2),
+        min(100, age + 2),
+        min(100, age + 5),
+        min(100, age + 10)
+    ]
+
+    tsh = float(original["TSH"])
+
+    continuous_values["TSH"] = [
+        max(0.01, tsh * 0.25),
+        max(0.01, tsh * 0.50),
+        max(0.01, tsh * 0.75),
+        tsh * 1.25,
+        tsh * 1.50,
+        tsh * 2.00
+    ]
+
+    tt4 = float(original["TT4"])
+
+    continuous_values["TT4"] = [
+        max(1, tt4 * 0.60),
+        max(1, tt4 * 0.75),
+        max(1, tt4 * 0.90),
+        tt4 * 1.10,
+        tt4 * 1.25,
+        tt4 * 1.40
+    ]
+
+    t4u = float(original["T4U"])
+
+    continuous_values["T4U"] = [
+        max(0.01, t4u * 0.60),
+        max(0.01, t4u * 0.80),
+        max(0.01, t4u * 0.90),
+        t4u * 1.10,
+        t4u * 1.20,
+        t4u * 1.40
+    ]
+
+    fti = float(original["FTI"])
+
+    continuous_values["FTI"] = [
+        max(1, fti * 0.60),
+        max(1, fti * 0.75),
+        max(1, fti * 0.90),
+        fti * 1.10,
+        fti * 1.25,
+        fti * 1.40
+    ]
+
+    # --------------------------------------------------------
+    # TEST CONTINUOUS CHANGES
+    # --------------------------------------------------------
+
+    for feature in CONTINUOUS_FEATURES:
+
+        for new_value in continuous_values[feature]:
+
+            candidate = original.copy()
+
+            candidate[feature] = new_value
+
+            candidate_df = pd.DataFrame(
+                [candidate],
+                columns=FEATURE_NAMES
+            )
+
+            # Ensure binary values are integers
+            for binary_feature in BINARY_FEATURES:
+
+                candidate_df[
+                    binary_feature
+                ] = candidate_df[
+                    binary_feature
+                ].astype(int)
+
+            try:
+
+                new_prediction = int(
+                    model.predict(
+                        candidate_df
+                    )[0]
+                )
+
+                probabilities = (
+                    model.predict_proba(
+                        candidate_df
+                    )[0]
+                )
+
+                if new_prediction != original_prediction:
+
+                    original_value = float(
+                        original[feature]
+                    )
+
+                    distance = abs(
+                        new_value -
+                        original_value
+                    )
+
+                    candidates.append(
+                        {
+                            "feature": feature,
+                            "original_value":
+                                original_value,
+                            "counterfactual_value":
+                                float(new_value),
+                            "prediction":
+                                new_prediction,
+                            "class_0_probability":
+                                float(probabilities[0]),
+                            "class_1_probability":
+                                float(probabilities[1]),
+                            "distance":
+                                float(distance)
+                        }
+                    )
+
+            except Exception as error:
+
+                print(
+                    "Continuous CF error:",
+                    str(error)
+                )
+
+    # --------------------------------------------------------
+    # TEST BINARY CHANGES
+    # --------------------------------------------------------
+
+    for feature in BINARY_FEATURES:
+
+        current_value = int(
+            original[feature]
+        )
+
+        new_value = 1 - current_value
+
+        candidate = original.copy()
+
+        candidate[feature] = new_value
+
+        candidate_df = pd.DataFrame(
+            [candidate],
+            columns=FEATURE_NAMES
+        )
+
+        for binary_feature in BINARY_FEATURES:
+
+            candidate_df[
+                binary_feature
+            ] = candidate_df[
+                binary_feature
+            ].astype(int)
+
+        try:
+
+            new_prediction = int(
+                model.predict(
+                    candidate_df
+                )[0]
+            )
+
+            probabilities = (
+                model.predict_proba(
+                    candidate_df
+                )[0]
+            )
+
+            if new_prediction != original_prediction:
+
+                candidates.append(
+                    {
+                        "feature": feature,
+                        "original_value":
+                            current_value,
+                        "counterfactual_value":
+                            new_value,
+                        "prediction":
+                            new_prediction,
+                        "class_0_probability":
+                            float(probabilities[0]),
+                        "class_1_probability":
+                            float(probabilities[1]),
+                        "distance": 1.0
+                    }
+                )
+
+        except Exception as error:
+
+            print(
+                "Binary CF error:",
+                str(error)
+            )
+
+    # --------------------------------------------------------
+    # SORT
+    # --------------------------------------------------------
+
+    candidates.sort(
+        key=lambda item: item["distance"]
+    )
+
+    # --------------------------------------------------------
+    # REMOVE DUPLICATES
+    # --------------------------------------------------------
+
+    unique = []
+
+    seen = set()
+
+    for item in candidates:
+
+        key = (
+            item["feature"],
+            round(
+                float(
+                    item["counterfactual_value"]
+                ),
+                6
+            )
+        )
+
+        if key not in seen:
+
+            seen.add(key)
+
+            unique.append(item)
+
+    # --------------------------------------------------------
+    # FINAL RESULTS
+    # --------------------------------------------------------
+
+    results = []
+
+    for item in unique[:3]:
+
+        if item["prediction"] == 1:
+
+            label = (
+                "Thyroid Disease Predicted"
+            )
+
+        else:
+
+            label = (
+                "Thyroid Disease Not Predicted"
+            )
+
+        results.append(
+            {
+                "feature":
+                    item["feature"],
+
+                "original_value":
+                    item["original_value"],
+
+                "counterfactual_value":
+                    item["counterfactual_value"],
+
+                "prediction":
+                    item["prediction"],
+
+                "prediction_label":
+                    label,
+
+                "class_0_probability":
+                    item["class_0_probability"],
+
+                "class_1_probability":
+                    item["class_1_probability"]
+            }
+        )
+
+    return results
+
+
+# ============================================================
+# ROOT
 # ============================================================
 
 @app.get("/")
@@ -195,12 +664,18 @@ def root():
 
     return {
         "status": "online",
-        "project": "Thyroid ML XAI",
-        "version": "1.0.0",
+        "project": "ThyroCare AI",
+        "version": "2.0.0",
         "model": "XGBoost",
-        "message": "Thyroid ML XAI API is running"
+        "shap": True,
+        "counterfactual": True,
+        "message": "ThyroCare AI API is running"
     }
 
+
+# ============================================================
+# HEALTH
+# ============================================================
 
 @app.get("/health")
 def health():
@@ -208,12 +683,14 @@ def health():
     return {
         "status": "healthy",
         "model_loaded": model is not None,
-        "features": len(FEATURE_NAMES)
+        "features": len(FEATURE_NAMES),
+        "shap_available": True,
+        "counterfactual_available": True
     }
 
 
 # ============================================================
-# PREDICTION ROUTE
+# PREDICT
 # ============================================================
 
 @app.post("/predict")
@@ -222,136 +699,60 @@ def predict(request: PredictionRequest):
     try:
 
         # ----------------------------------------------------
-        # Create dataframe
+        # DATAFRAME
         # ----------------------------------------------------
 
-        df = request_to_dataframe(request)
-
+        df = request_to_dataframe(
+            request
+        )
 
         # ----------------------------------------------------
-        # Prediction
+        # PREDICTION
         # ----------------------------------------------------
 
-        prediction = int(model.predict(df)[0])
+        (
+            prediction,
+            class_0_probability,
+            class_1_probability
+        ) = get_prediction(df)
 
-        probabilities = model.predict_proba(df)[0]
+        # ----------------------------------------------------
+        # LABEL
+        # ----------------------------------------------------
 
-        class_0_probability = float(probabilities[0])
-        class_1_probability = float(probabilities[1])
+        if prediction == 1:
 
+            prediction_label = (
+                "Thyroid Disease Predicted"
+            )
+
+        else:
+
+            prediction_label = (
+                "Thyroid Disease Not Predicted"
+            )
 
         # ----------------------------------------------------
         # SHAP
         # ----------------------------------------------------
 
-        try:
-
-            # Get preprocessing transformer
-            preprocessor = model.named_steps["preprocessor"]
-
-            # Get classifier
-            classifier = model.named_steps["classifier"]
-
-            # Transform input
-            transformed = preprocessor.transform(df)
-
-            transformed_array = np.asarray(transformed)
-
-            # SHAP TreeExplainer
-            explainer = shap.TreeExplainer(classifier)
-
-            shap_values = explainer.shap_values(
-                transformed_array
-            )
-
-            shap_array = np.asarray(shap_values)
-
-            # Handle binary classification shape variations
-            if shap_array.ndim == 3:
-
-                # Possible shape:
-                # samples x features x classes
-
-                shap_row = shap_array[0, :, 1]
-
-            elif shap_array.ndim == 2:
-
-                shap_row = shap_array[0]
-
-            else:
-
-                shap_row = shap_array.reshape(-1)
-
-
-            # Make sure length matches features
-            shap_row = shap_row[:len(SHAP_FEATURE_NAMES)]
-
-
-            # Values in transformed feature order
-            transformed_values = []
-
-            for feature in SHAP_FEATURE_NAMES:
-
-                transformed_values.append(
-                    float(df.iloc[0][feature])
-                )
-
-
-            # Build explanation
-            explanation = []
-
-            for feature, value, impact in zip(
-                SHAP_FEATURE_NAMES,
-                transformed_values,
-                shap_row
-            ):
-
-                explanation.append({
-                    "feature": feature,
-                    "value": value,
-                    "impact": float(impact),
-                    "direction": (
-                        "increases_class_1"
-                        if impact > 0
-                        else "decreases_class_1"
-                        if impact < 0
-                        else "neutral"
-                    )
-                })
-
-
-            # Sort by absolute SHAP impact
-            explanation.sort(
-                key=lambda x: abs(x["impact"]),
-                reverse=True
-            )
-
-
-        except Exception as shap_error:
-
-            explanation = []
-
-            print(
-                "SHAP explanation error:",
-                str(shap_error)
-            )
-
+        shap_features = generate_shap(
+            df
+        )
 
         # ----------------------------------------------------
-        # Class label
+        # COUNTERFACTUAL
         # ----------------------------------------------------
 
-        if prediction == 1:
-
-            prediction_label = "Thyroid Disease Predicted"
-
-        else:
-
-            prediction_label = "Thyroid Disease Not Predicted"
-
+        counterfactual_features = (
+            generate_counterfactuals(
+                df,
+                prediction
+            )
+        )
 
         # ----------------------------------------------------
-        # Response
+        # RESPONSE
         # ----------------------------------------------------
 
         return {
@@ -364,9 +765,11 @@ def predict(request: PredictionRequest):
 
             "probabilities": {
 
-                "class_0": class_0_probability,
+                "class_0":
+                    class_0_probability,
 
-                "class_1": class_1_probability
+                "class_1":
+                    class_1_probability
 
             },
 
@@ -376,22 +779,41 @@ def predict(request: PredictionRequest):
 
                 "version": "Tuned",
 
-                "feature_count": len(FEATURE_NAMES)
+                "feature_count":
+                    len(FEATURE_NAMES)
 
             },
 
             "shap": {
 
-                "available": len(explanation) > 0,
+                "available":
+                    len(shap_features) > 0,
 
-                "features": explanation
+                "features":
+                    shap_features
+
+            },
+
+            "counterfactuals": {
+
+                "available":
+                    len(
+                        counterfactual_features
+                    ) > 0,
+
+                "features":
+                    counterfactual_features
 
             }
 
         }
 
-
     except Exception as error:
+
+        print(
+            "Prediction error:",
+            str(error)
+        )
 
         raise HTTPException(
             status_code=500,
@@ -400,7 +822,7 @@ def predict(request: PredictionRequest):
 
 
 # ============================================================
-# RUN INFORMATION
+# INFO
 # ============================================================
 
 @app.get("/info")
@@ -408,7 +830,11 @@ def info():
 
     return {
 
-        "project": "Enhancing Thyroid Disease Diagnosis With Machine Learning and Counterfactual Explainable AI",
+        "project": (
+            "Enhancing Thyroid Disease Diagnosis "
+            "With Machine Learning and "
+            "Counterfactual Explainable AI"
+        ),
 
         "model": "XGBoost",
 
@@ -416,10 +842,21 @@ def info():
 
         "features": FEATURE_NAMES,
 
-        "continuous_features": CONTINUOUS_FEATURES,
+        "continuous_features":
+            CONTINUOUS_FEATURES,
 
-        "binary_features": BINARY_FEATURES,
+        "binary_features":
+            BINARY_FEATURES,
 
-        "feature_count": len(FEATURE_NAMES)
+        "feature_count":
+            len(FEATURE_NAMES),
+
+        "explainability": {
+
+            "SHAP": True,
+
+            "counterfactual": True
+
+        }
 
     }
