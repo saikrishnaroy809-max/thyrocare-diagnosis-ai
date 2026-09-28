@@ -6,9 +6,9 @@ import {
   ChevronRight,
   Download,
   HeartPulse,
-  Home as HomeIcon,
   Info,
   Loader2,
+  Home as HomeIcon,
   Menu,
   RotateCcw,
   ShieldCheck,
@@ -20,10 +20,11 @@ import {
 } from "lucide-react";
 
 /* =========================================================
-   CONFIGURATION
+   BACKEND
 ========================================================= */
 
-const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
+const API_URL =
+  "https://thyrocare-diagnosis-ai.onrender.com";
 
 /* =========================================================
    DEFAULT FORM
@@ -50,24 +51,26 @@ const defaultForm = {
 
   "TSH measured": 1,
   TSH: 2.5,
-
   "T3 measured": 1,
-
   "TT4 measured": 1,
   TT4: 110,
-
   "T4U measured": 1,
   T4U: 1,
-
   "FTI measured": 1,
   FTI: 110,
 };
 
-/* =========================================================
-   FEATURE GROUPS
-========================================================= */
+const numericFields = [
+  "age",
+  "TSH",
+  "TT4",
+  "T4U",
+  "FTI",
+];
 
-const numericFields = ["age", "TSH", "TT4", "T4U", "FTI"];
+/* =========================================================
+   FIELD GROUPS
+========================================================= */
 
 const featureGroups = [
   {
@@ -113,7 +116,7 @@ const featureGroups = [
 ];
 
 /* =========================================================
-   LABELS
+   DISPLAY LABELS
 ========================================================= */
 
 const labels = {
@@ -121,7 +124,8 @@ const labels = {
   sex: "Sex",
   "on thyroxine": "On Thyroxine",
   "query on thyroxine": "Query on Thyroxine",
-  "on antithyroid medication": "On Antithyroid Medication",
+  "on antithyroid medication":
+    "On Antithyroid Medication",
   sick: "Sick",
   pregnant: "Pregnant",
   "thyroid surgery": "Thyroid Surgery",
@@ -149,22 +153,86 @@ const labels = {
 ========================================================= */
 
 function toNumber(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function percent(value) {
-  const n = Number(value);
+  const number = Number(value);
 
-  if (!Number.isFinite(n)) return 0;
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
 
-  // Backend probabilities are normally 0-1.
-  return n <= 1 ? n * 100 : n;
+  return number <= 1
+    ? number * 100
+    : number;
 }
 
 function percentText(value) {
   return `${percent(value).toFixed(2)}%`;
 }
+
+/* =========================================================
+   ERROR FORMATTER
+   Prevents [object Object]
+========================================================= */
+
+function formatApiError(data, status) {
+  if (!data) {
+    return `Server returned HTTP ${status}.`;
+  }
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data.detail)) {
+    return data.detail
+      .map((item) => {
+        if (typeof item === "string") {
+          return item;
+        }
+
+        const location = Array.isArray(item?.loc)
+          ? item.loc.join(" → ")
+          : "";
+
+        const message =
+          item?.msg ||
+          item?.message ||
+          item?.detail ||
+          JSON.stringify(item);
+
+        return location
+          ? `${location}: ${message}`
+          : message;
+      })
+      .join("\n");
+  }
+
+  if (typeof data.detail === "string") {
+    return data.detail;
+  }
+
+  if (data.detail) {
+    return JSON.stringify(
+      data.detail,
+      null,
+      2
+    );
+  }
+
+  if (data.message) {
+    return String(data.message);
+  }
+
+  return `Server returned HTTP ${status}.`;
+}
+
+/* =========================================================
+   PREDICTION HELPERS
+========================================================= */
 
 function getPrediction(data) {
   const value =
@@ -175,8 +243,21 @@ function getPrediction(data) {
     0;
 
   if (typeof value === "string") {
-    if (value.toLowerCase().includes("predicted")) return 1;
-    if (value.toLowerCase().includes("disease")) return 1;
+    const lower = value.toLowerCase();
+
+    if (
+      lower.includes("predicted") &&
+      !lower.includes("not predicted")
+    ) {
+      return 1;
+    }
+
+    if (
+      lower.includes("disease") &&
+      !lower.includes("not")
+    ) {
+      return 1;
+    }
   }
 
   return Number(value) === 1 ? 1 : 0;
@@ -207,7 +288,7 @@ function getProbability(data, classNumber) {
 }
 
 /* =========================================================
-   SHAP NORMALIZATION
+   SHAP
 ========================================================= */
 
 function normalizeShap(data) {
@@ -224,7 +305,6 @@ function normalizeShap(data) {
         if (typeof item === "number") {
           return {
             feature: "Feature",
-            value: item,
             impact: item,
           };
         }
@@ -235,13 +315,7 @@ function normalizeShap(data) {
             item?.name ??
             item?.feature_name ??
             "Feature",
-          value:
-            Number(
-              item?.value ??
-                item?.shap_value ??
-                item?.impact ??
-                0
-            ) || 0,
+
           impact:
             Number(
               item?.impact ??
@@ -253,20 +327,24 @@ function normalizeShap(data) {
       })
       .sort(
         (a, b) =>
-          Math.abs(b.impact) - Math.abs(a.impact)
+          Math.abs(b.impact) -
+          Math.abs(a.impact)
       );
   }
 
-  if (typeof raw === "object" && raw !== null) {
+  if (
+    typeof raw === "object" &&
+    raw !== null
+  ) {
     return Object.entries(raw)
       .map(([feature, value]) => ({
         feature,
-        value: Number(value) || 0,
         impact: Number(value) || 0,
       }))
       .sort(
         (a, b) =>
-          Math.abs(b.impact) - Math.abs(a.impact)
+          Math.abs(b.impact) -
+          Math.abs(a.impact)
       );
   }
 
@@ -274,7 +352,7 @@ function normalizeShap(data) {
 }
 
 /* =========================================================
-   COUNTERFACTUAL NORMALIZATION
+   COUNTERFACTUALS
 ========================================================= */
 
 function normalizeCounterfactuals(data) {
@@ -295,27 +373,34 @@ function normalizeCounterfactuals(data) {
     };
   }
 
-  // Current backend format
   if (
     typeof raw === "object" &&
     !Array.isArray(raw)
   ) {
     return {
       available: Boolean(raw.available),
-      features: Array.isArray(raw.features)
+
+      features: Array.isArray(
+        raw.features
+      )
         ? raw.features
         : [],
-      scenarios: Array.isArray(raw.scenarios)
+
+      scenarios: Array.isArray(
+        raw.scenarios
+      )
         ? raw.scenarios
         : [],
+
       target_prediction:
-        raw.target_prediction ?? null,
+        raw.target_prediction ??
+        null,
+
       target_label:
         raw.target_label ?? "",
     };
   }
 
-  // Older array format
   if (Array.isArray(raw)) {
     return {
       available: raw.length > 0,
@@ -336,7 +421,7 @@ function normalizeCounterfactuals(data) {
 }
 
 /* =========================================================
-   PAYLOAD BUILDER
+   PAYLOAD
 ========================================================= */
 
 function buildPayload(form) {
@@ -344,15 +429,22 @@ function buildPayload(form) {
     age: toNumber(form.age),
     sex: toNumber(form.sex),
 
-    "on thyroxine": toNumber(form["on thyroxine"]),
+    "on thyroxine": toNumber(
+      form["on thyroxine"]
+    ),
+
     "query on thyroxine": toNumber(
       form["query on thyroxine"]
     ),
-    "on antithyroid medication": toNumber(
-      form["on antithyroid medication"]
-    ),
+
+    "on antithyroid medication":
+      toNumber(
+        form["on antithyroid medication"]
+      ),
+
     sick: toNumber(form.sick),
     pregnant: toNumber(form.pregnant),
+
     "thyroid surgery": toNumber(
       form["thyroid surgery"]
     ),
@@ -364,20 +456,25 @@ function buildPayload(form) {
     "query hypothyroid": toNumber(
       form["query hypothyroid"]
     ),
+
     "query hyperthyroid": toNumber(
       form["query hyperthyroid"]
     ),
+
     lithium: toNumber(form.lithium),
     goitre: toNumber(form.goitre),
     tumor: toNumber(form.tumor),
+
     hypopituitary: toNumber(
       form.hypopituitary
     ),
+
     psych: toNumber(form.psych),
 
     TSH_measured: toNumber(
       form["TSH measured"]
     ),
+
     TSH: toNumber(form.TSH),
 
     T3_measured: toNumber(
@@ -387,26 +484,31 @@ function buildPayload(form) {
     TT4_measured: toNumber(
       form["TT4 measured"]
     ),
+
     TT4: toNumber(form.TT4),
 
     T4U_measured: toNumber(
       form["T4U measured"]
     ),
+
     T4U: toNumber(form.T4U),
 
     FTI_measured: toNumber(
       form["FTI measured"]
     ),
+
     FTI: toNumber(form.FTI),
   };
 }
 
 /* =========================================================
-   MAIN APP
+   APP
 ========================================================= */
 
 export default function App() {
-  const [page, setPage] = useState("home");
+  const [page, setPage] =
+    useState("home");
+
   const [mobileMenu, setMobileMenu] =
     useState(false);
 
@@ -423,17 +525,35 @@ export default function App() {
     useState("");
 
   /* =====================================================
-     FORM HANDLING
+     NAVIGATION
   ===================================================== */
 
-  const handleChange = (field, value) => {
+  const navigate = (target) => {
+    setPage(target);
+    setMobileMenu(false);
+  };
+
+  /* =====================================================
+     FORM CHANGE
+  ===================================================== */
+
+  const handleChange = (
+    field,
+    value
+  ) => {
     setForm((previous) => ({
       ...previous,
-      [field]: numericFields.includes(field)
+      [field]: numericFields.includes(
+        field
+      )
         ? value
         : Number(value),
     }));
   };
+
+  /* =====================================================
+     RESET
+  ===================================================== */
 
   const resetForm = () => {
     setForm(defaultForm);
@@ -445,250 +565,267 @@ export default function App() {
      PREDICTION
   ===================================================== */
 
-  const handlePrediction = async () => {
-    setLoading(true);
-    setError("");
-    setResult(null);
+  const handlePrediction =
+    async () => {
+      setLoading(true);
+      setError("");
+      setResult(null);
 
-    const controller =
-      new AbortController();
+      const controller =
+        new AbortController();
 
-    // 3-minute timeout.
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, 180000);
-
-    try {
-      const payload = buildPayload(form);
-
-      const response = await fetch(
-        `${API_URL}/predict`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-            Accept: "application/json",
-          },
-
-          body: JSON.stringify(payload),
-
-          signal: controller.signal,
-        }
-      );
-
-      clearTimeout(timeoutId);
-
-      let data;
+      const timeoutId =
+        setTimeout(() => {
+          controller.abort();
+        }, 180000);
 
       try {
-        data = await response.json();
-      } catch {
-        throw new Error(
-          "The prediction server returned an invalid response."
+        const payload =
+          buildPayload(form);
+
+        console.log(
+          "Sending prediction payload:",
+          payload
         );
+
+        const response =
+          await fetch(
+            `${API_URL}/predict`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body: JSON.stringify(
+                payload
+              ),
+
+              signal:
+                controller.signal,
+            }
+          );
+
+        clearTimeout(timeoutId);
+
+        let data = null;
+
+        try {
+          data =
+            await response.json();
+        } catch {
+          throw new Error(
+            "The prediction server returned an invalid response."
+          );
+        }
+
+        console.log(
+          "Prediction response:",
+          data
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            formatApiError(
+              data,
+              response.status
+            )
+          );
+        }
+
+        const prediction =
+          getPrediction(data);
+
+        const normalized = {
+          prediction,
+
+          prediction_label:
+            data?.prediction_label ??
+            (prediction === 1
+              ? "Thyroid Disease Predicted"
+              : "Thyroid Disease Not Predicted"),
+
+          model:
+            getModel(data),
+
+          probabilities: {
+            class_0:
+              getProbability(
+                data,
+                0
+              ),
+
+            class_1:
+              getProbability(
+                data,
+                1
+              ),
+          },
+
+          shap:
+            normalizeShap(data),
+
+          counterfactuals:
+            normalizeCounterfactuals(
+              data
+            ),
+
+          raw: data,
+        };
+
+        setResult(normalized);
+        setPage("results");
+      } catch (err) {
+        clearTimeout(timeoutId);
+
+        console.error(
+          "Prediction error:",
+          err
+        );
+
+        if (
+          err.name ===
+          "AbortError"
+        ) {
+          setError(
+            "The prediction server took too long to respond. Render may be waking up. Please try again."
+          );
+        } else {
+          setError(
+            err?.message ||
+              "Prediction failed. Please try again."
+          );
+        }
+      } finally {
+        setLoading(false);
       }
-
-      if (!response.ok) {
-        throw new Error(
-          data?.detail ||
-            `Server returned HTTP ${response.status}`
-        );
-      }
-
-      const prediction =
-        getPrediction(data);
-
-      const normalized = {
-        prediction,
-
-        prediction_label:
-          data?.prediction_label ??
-          (prediction === 1
-            ? "Thyroid Disease Predicted"
-            : "Thyroid Disease Not Predicted"),
-
-        model: getModel(data),
-
-        probabilities: {
-          class_0: getProbability(
-            data,
-            0
-          ),
-          class_1: getProbability(
-            data,
-            1
-          ),
-        },
-
-        shap: normalizeShap(data),
-
-        counterfactuals:
-          normalizeCounterfactuals(data),
-
-        raw: data,
-      };
-
-      setResult(normalized);
-      setPage("results");
-    } catch (err) {
-      clearTimeout(timeoutId);
-
-      if (err.name === "AbortError") {
-        setError(
-          "The prediction server took too long to respond. Render may be waking up. Please try the prediction again."
-        );
-      } else if (
-        err instanceof TypeError
-      ) {
-        setError(
-          "Unable to connect to the prediction server. Please check that the backend is online."
-        );
-      } else {
-        setError(
-          err?.message ||
-            "Prediction failed. Please try again."
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   /* =====================================================
      REPORT
   ===================================================== */
 
-  const downloadReport = () => {
-    if (!result) return;
+  const downloadReport =
+    () => {
+      if (!result) return;
 
-    const cf =
-      result.counterfactuals;
+      const cf =
+        result.counterfactuals;
 
-    let report = "";
+      let report =
+        "THYROCARE AI - THYROID ANALYSIS REPORT\n";
 
-    report +=
-      "THYROCARE AI - THYROID ANALYSIS REPORT\n";
-    report +=
-      "========================================\n\n";
+      report +=
+        "========================================\n\n";
 
-    report += `Model: ${result.model}\n`;
+      report += `Model: ${result.model}\n`;
 
-    report += `Prediction: ${result.prediction_label}\n`;
+      report += `Prediction: ${result.prediction_label}\n`;
 
-    report += `Class 0 Probability: ${percentText(
-      result.probabilities.class_0
-    )}\n`;
+      report += `Class 0 Probability: ${percentText(
+        result.probabilities
+          .class_0
+      )}\n`;
 
-    report += `Class 1 Probability: ${percentText(
-      result.probabilities.class_1
-    )}\n\n`;
+      report += `Class 1 Probability: ${percentText(
+        result.probabilities
+          .class_1
+      )}\n\n`;
 
-    report +=
-      "SHAP FEATURE CONTRIBUTIONS\n";
-    report +=
-      "---------------------------\n";
+      report +=
+        "SHAP FEATURE CONTRIBUTIONS\n";
+      report +=
+        "---------------------------\n";
 
-    result.shap.forEach((item) => {
-      report += `${item.feature}: ${Number(
-        item.impact
-      ).toFixed(6)}\n`;
-    });
-
-    report += "\n";
-
-    report +=
-      "COUNTERFACTUAL SCENARIOS\n";
-    report +=
-      "------------------------\n";
-
-    if (
-      cf?.available &&
-      cf.scenarios?.length
-    ) {
-      cf.scenarios.forEach(
-        (scenario) => {
-          report += `Scenario ${scenario.scenario}\n`;
-
-          if (
-            Array.isArray(
-              scenario.changes
-            )
-          ) {
-            scenario.changes.forEach(
-              (change) => {
-                report += `  ${
-                  change.feature
-                }: ${
-                  change.original_value
-                } -> ${
-                  change.counterfactual_value
-                }\n`;
-              }
-            );
-          }
-
-          report += `  Prediction: ${
-            scenario.prediction_label ??
-            scenario.prediction
-          }\n`;
-
-          report += `  Class 0: ${percentText(
-            scenario.class_0_probability
-          )}\n`;
-
-          report += `  Class 1: ${percentText(
-            scenario.class_1_probability
-          )}\n\n`;
+      result.shap.forEach(
+        (item) => {
+          report += `${item.feature}: ${Number(
+            item.impact
+          ).toFixed(6)}\n`;
         }
       );
-    } else {
+
       report +=
-        "No counterfactual scenarios available.\n";
-    }
+        "\nCOUNTERFACTUAL SCENARIOS\n";
+      report +=
+        "------------------------\n";
 
-    report +=
-      "\nEducational and research purposes only. This output should not replace professional medical advice.\n";
+      if (
+        cf?.available &&
+        cf.scenarios?.length
+      ) {
+        cf.scenarios.forEach(
+          (scenario) => {
+            report += `Scenario ${scenario.scenario}\n`;
 
-    const blob =
-      new Blob([report], {
-        type: "text/plain",
-      });
+            if (
+              Array.isArray(
+                scenario.changes
+              )
+            ) {
+              scenario.changes.forEach(
+                (change) => {
+                  report += `  ${change.feature}: ${change.original_value} -> ${change.counterfactual_value}\n`;
+                }
+              );
+            }
 
-    const url =
-      URL.createObjectURL(blob);
+            report += `  Prediction: ${
+              scenario.prediction_label ??
+              scenario.prediction
+            }\n`;
 
-    const link =
-      document.createElement("a");
+            report += `  Class 0: ${percentText(
+              scenario.class_0_probability
+            )}\n`;
 
-    link.href = url;
-    link.download =
-      "thyrocare-ai-report.txt";
+            report += `  Class 1: ${percentText(
+              scenario.class_1_probability
+            )}\n\n`;
+          }
+        );
+      } else {
+        report +=
+          "No counterfactual scenarios available.\n";
+      }
 
-    document.body.appendChild(link);
+      report +=
+        "\nEducational and research purposes only. This output should not replace professional medical advice.\n";
 
-    link.click();
+      const blob =
+        new Blob([report], {
+          type: "text/plain",
+        });
 
-    link.remove();
+      const url =
+        URL.createObjectURL(blob);
 
-    URL.revokeObjectURL(url);
-  };
+      const link =
+        document.createElement("a");
 
-  /* =====================================================
-     NAVIGATION
-  ===================================================== */
+      link.href = url;
+      link.download =
+        "thyrocare-ai-report.txt";
 
-  const navigate = (target) => {
-    setPage(target);
-    setMobileMenu(false);
-  };
+      document.body.appendChild(
+        link
+      );
+
+      link.click();
+
+      link.remove();
+
+      URL.revokeObjectURL(url);
+    };
 
   return (
     <div className="app">
-      {/* =================================================
-          NAVBAR
-      ================================================= */}
+      {/* NAVBAR */}
 
       <header className="navbar">
         <div
@@ -734,7 +871,9 @@ export default function App() {
                 : "nav-link"
             }
             onClick={() =>
-              navigate("prediction")
+              navigate(
+                "prediction"
+              )
             }
           >
             <Brain size={16} />
@@ -800,7 +939,9 @@ export default function App() {
 
           <button
             onClick={() =>
-              navigate("prediction")
+              navigate(
+                "prediction"
+              )
             }
           >
             Prediction
@@ -826,9 +967,7 @@ export default function App() {
         </div>
       )}
 
-      {/* =================================================
-          HOME
-      ================================================= */}
+      {/* HOME */}
 
       {page === "home" && (
         <main>
@@ -849,8 +988,8 @@ export default function App() {
 
               <p>
                 Analyze thyroid-related
-                clinical features using a
-                machine-learning model with
+                clinical features using
+                machine learning and
                 explainable AI.
               </p>
 
@@ -858,7 +997,9 @@ export default function App() {
                 <button
                   className="primary-button"
                   onClick={() =>
-                    navigate("prediction")
+                    navigate(
+                      "prediction"
+                    )
                   }
                 >
                   Start Analysis
@@ -870,7 +1011,9 @@ export default function App() {
                 <button
                   className="secondary-button"
                   onClick={() =>
-                    navigate("about")
+                    navigate(
+                      "about"
+                    )
                   }
                 >
                   Learn More
@@ -899,9 +1042,7 @@ export default function App() {
 
             <div className="hero-visual">
               <div className="orb">
-                <Activity
-                  size={80}
-                />
+                <Activity size={80} />
               </div>
             </div>
           </section>
@@ -918,9 +1059,10 @@ export default function App() {
               </h2>
 
               <p>
-                The system combines machine
-                learning with explainable AI
-                techniques.
+                Machine learning,
+                explainable AI and
+                counterfactual analysis
+                in one application.
               </p>
             </div>
 
@@ -928,28 +1070,26 @@ export default function App() {
               <FeatureCard
                 icon={<Brain />}
                 title="Machine Learning"
-                text="Uses an XGBoost model trained on thyroid-related features."
+                text="Uses an XGBoost classification model for thyroid-related prediction."
               />
 
               <FeatureCard
                 icon={<Sparkles />}
                 title="SHAP Explainability"
-                text="Shows which input features contributed to the model prediction."
+                text="Shows which input features contributed to the model output."
               />
 
               <FeatureCard
                 icon={<Zap />}
                 title="Counterfactual Analysis"
-                text="Explores hypothetical input changes that can alter the model output."
+                text="Explores hypothetical input changes and their effect on the model."
               />
             </div>
           </section>
         </main>
       )}
 
-      {/* =================================================
-          PREDICTION
-      ================================================= */}
+      {/* PREDICTION */}
 
       {page === "prediction" && (
         <PredictionPage
@@ -964,9 +1104,7 @@ export default function App() {
         />
       )}
 
-      {/* =================================================
-          RESULTS
-      ================================================= */}
+      {/* RESULTS */}
 
       {page === "results" && (
         <ResultsPage
@@ -981,9 +1119,7 @@ export default function App() {
         />
       )}
 
-      {/* =================================================
-          ABOUT
-      ================================================= */}
+      {/* ABOUT */}
 
       {page === "about" && (
         <main className="page-container">
@@ -997,12 +1133,12 @@ export default function App() {
             </h1>
 
             <p>
-              ThyroCare AI is an educational
-              and research project that
-              demonstrates how machine
-              learning and explainable AI can
-              be applied to thyroid disease
-              classification.
+              ThyroCare AI is an
+              educational and research
+              project demonstrating
+              machine learning and
+              explainable AI for thyroid
+              disease classification.
             </p>
 
             <div className="about-grid">
@@ -1013,24 +1149,22 @@ export default function App() {
 
               <InfoCard
                 title="Explainable AI"
-                text="SHAP values provide feature-level explanations of model predictions."
+                text="SHAP values provide feature-level explanations."
               />
 
               <InfoCard
                 title="Counterfactuals"
-                text="The application explores hypothetical feature changes and their effect on the model."
+                text="The application explores hypothetical feature changes."
               />
 
               <InfoCard
                 title="Research Purpose"
-                text="The system is designed for academic, educational and research demonstration."
+                text="Designed for academic, educational and research demonstration."
               />
             </div>
 
             <div className="disclaimer">
-              <AlertCircle
-                size={20}
-              />
+              <AlertCircle size={20} />
 
               <div>
                 <strong>
@@ -1040,11 +1174,9 @@ export default function App() {
                 <p>
                   This application is for
                   educational and research
-                  purposes only. Model
-                  predictions should not be
-                  treated as a medical diagnosis
-                  or a replacement for advice
-                  from a qualified healthcare
+                  purposes only and should
+                  not replace advice from a
+                  qualified healthcare
                   professional.
                 </p>
               </div>
@@ -1053,9 +1185,7 @@ export default function App() {
         </main>
       )}
 
-      {/* =================================================
-          FOOTER
-      ================================================= */}
+      {/* FOOTER */}
 
       <footer className="footer">
         <div>
@@ -1110,6 +1240,7 @@ function InfoCard({
   return (
     <div className="info-card">
       <h3>{title}</h3>
+
       <p>{text}</p>
     </div>
   );
@@ -1141,30 +1272,34 @@ function PredictionPage({
 
           <p>
             Enter the clinical features
-            below and run the machine
-            learning analysis.
+            and run the machine learning
+            analysis.
           </p>
         </div>
       </div>
 
       {error && (
         <div className="error-box">
-          <AlertCircle
-            size={22}
-          />
+          <AlertCircle size={22} />
 
           <div>
             <strong>
               Prediction Error
             </strong>
 
-            <p>{error}</p>
+            <p
+              style={{
+                whiteSpace:
+                  "pre-line",
+              }}
+            >
+              {error}
+            </p>
 
             <small>
               If this is the first request
               after inactivity, Render may
-              need some time to wake the
-              backend.
+              need some time to wake up.
             </small>
           </div>
         </div>
@@ -1267,9 +1402,7 @@ function PredictionPage({
               onClick={resetForm}
               disabled={loading}
             >
-              <RotateCcw
-                size={17}
-              />
+              <RotateCcw size={17} />
               Reset
             </button>
 
@@ -1290,9 +1423,7 @@ function PredictionPage({
                 </>
               ) : (
                 <>
-                  <Sparkles
-                    size={18}
-                  />
+                  <Sparkles size={18} />
                   Analyze Thyroid
                 </>
               )}
@@ -1307,11 +1438,10 @@ function PredictionPage({
               />
 
               <span>
-                Running XGBoost,
-                SHAP and counterfactual
-                analysis. The first request
-                may take longer while the
-                server wakes up.
+                Running prediction, SHAP
+                and counterfactual analysis.
+                The first request may take
+                longer while Render wakes up.
               </span>
             </div>
           )}
@@ -1319,19 +1449,17 @@ function PredictionPage({
 
         <aside className="side-info">
           <div className="side-card">
-            <ShieldCheck
-              size={25}
-            />
+            <ShieldCheck size={25} />
 
             <h3>
               Explainable Analysis
             </h3>
 
             <p>
-              After prediction, the system
-              provides SHAP-based feature
-              explanations and hypothetical
-              counterfactual scenarios.
+              SHAP feature explanations
+              and hypothetical
+              counterfactual scenarios are
+              provided with the prediction.
             </p>
           </div>
 
@@ -1345,8 +1473,7 @@ function PredictionPage({
             <p>
               Results are intended for
               educational and research
-              purposes and should not replace
-              professional medical advice.
+              purposes only.
             </p>
           </div>
         </aside>
@@ -1376,7 +1503,9 @@ function ResultsPage({
 
           <button
             className="primary-button"
-            onClick={onNewPrediction}
+            onClick={
+              onNewPrediction
+            }
           >
             Start Prediction
           </button>
@@ -1412,27 +1541,27 @@ function ResultsPage({
         <div className="result-actions">
           <button
             className="secondary-button"
-            onClick={onNewPrediction}
+            onClick={
+              onNewPrediction
+            }
           >
-            <RotateCcw
-              size={17}
-            />
+            <RotateCcw size={17} />
             New Prediction
           </button>
 
           <button
             className="primary-button"
-            onClick={downloadReport}
+            onClick={
+              downloadReport
+            }
           >
-            <Download
-              size={17}
-            />
+            <Download size={17} />
             Download Report
           </button>
         </div>
       </div>
 
-      {/* MAIN RESULT */}
+      {/* PREDICTION */}
 
       <section
         className={
@@ -1445,9 +1574,7 @@ function ResultsPage({
           {disease ? (
             <AlertCircle size={38} />
           ) : (
-            <CheckCircle2
-              size={38}
-            />
+            <CheckCircle2 size={38} />
           )}
         </div>
 
@@ -1472,83 +1599,23 @@ function ResultsPage({
       {/* PROBABILITIES */}
 
       <section className="results-grid">
-        <div className="result-card">
-          <div className="result-card-top">
-            <span>
-              Class 0
-            </span>
+        <ProbabilityCard
+          title="Class 0"
+          value={
+            result.probabilities
+              .class_0
+          }
+          description="Not Predicted"
+        />
 
-            <strong>
-              {percentText(
-                result
-                  .probabilities
-                  .class_0
-              )}
-            </strong>
-          </div>
-
-          <div className="progress">
-            <div
-              className="progress-bar"
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    percent(
-                      result
-                        .probabilities
-                        .class_0
-                    )
-                  )
-                )}%`,
-              }}
-            />
-          </div>
-
-          <p>
-            Not Predicted
-          </p>
-        </div>
-
-        <div className="result-card">
-          <div className="result-card-top">
-            <span>
-              Class 1
-            </span>
-
-            <strong>
-              {percentText(
-                result
-                  .probabilities
-                  .class_1
-              )}
-            </strong>
-          </div>
-
-          <div className="progress">
-            <div
-              className="progress-bar"
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    percent(
-                      result
-                        .probabilities
-                        .class_1
-                    )
-                  )
-                )}%`,
-              }}
-            />
-          </div>
-
-          <p>
-            Thyroid Disease Predicted
-          </p>
-        </div>
+        <ProbabilityCard
+          title="Class 1"
+          value={
+            result.probabilities
+              .class_1
+          }
+          description="Thyroid Disease Predicted"
+        />
       </section>
 
       {/* SHAP */}
@@ -1578,56 +1645,58 @@ function ResultsPage({
           <div className="shap-list">
             {result.shap
               .slice(0, 10)
-              .map((item, index) => {
-                const impact =
-                  Number(
-                    item.impact
-                  ) || 0;
+              .map(
+                (item, index) => {
+                  const impact =
+                    Number(
+                      item.impact
+                    ) || 0;
 
-                return (
-                  <div
-                    className="shap-item"
-                    key={`${item.feature}-${index}`}
-                  >
-                    <div className="shap-info">
-                      <span>
-                        {item.feature}
-                      </span>
+                  return (
+                    <div
+                      className="shap-item"
+                      key={`${item.feature}-${index}`}
+                    >
+                      <div className="shap-info">
+                        <span>
+                          {item.feature}
+                        </span>
 
-                      <strong>
-                        {impact > 0
-                          ? "+"
-                          : ""}
-                        {impact.toFixed(
-                          4
-                        )}
-                      </strong>
+                        <strong>
+                          {impact > 0
+                            ? "+"
+                            : ""}
+                          {impact.toFixed(
+                            4
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="shap-track">
+                        <div
+                          className="shap-value"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(
+                                3,
+                                Math.abs(
+                                  impact
+                                ) * 20
+                              )
+                            )}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-
-                    <div className="shap-track">
-                      <div
-                        className="shap-value"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.max(
-                              3,
-                              Math.abs(
-                                impact
-                              ) * 20
-                            )
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                }
+              )}
           </div>
         )}
       </section>
 
-      {/* COUNTERFACTUAL */}
+      {/* COUNTERFACTUALS */}
 
       <section className="results-section">
         <div className="results-section-heading">
@@ -1664,31 +1733,37 @@ function ResultsPage({
               </div>
             )}
 
-            {cf.features?.length > 0 && (
+            {cf.features?.length >
+              0 && (
               <div className="cf-feature-box">
                 <h3>
-                  Key change
+                  Key Change
                 </h3>
 
                 {cf.features.map(
-                  (feature, index) => (
+                  (
+                    feature,
+                    index
+                  ) => (
                     <div
                       className="cf-change"
                       key={index}
                     >
                       <span>
-                        {feature.feature}
+                        {
+                          feature.feature
+                        }
                       </span>
 
                       <strong>
-                        {String(
+                        {
                           feature.original_value
-                        )}{" "}
+                        }{" "}
                         →
                         {" "}
-                        {String(
+                        {
                           feature.counterfactual_value
-                        )}
+                        }
                       </strong>
                     </div>
                   )
@@ -1722,9 +1797,7 @@ function ResultsPage({
                           </h3>
                         </div>
 
-                        <Sparkles
-                          size={20}
-                        />
+                        <Sparkles size={20} />
                       </div>
 
                       {Array.isArray(
@@ -1820,16 +1893,12 @@ function ResultsPage({
                 These are hypothetical
                 machine-learning sensitivity
                 scenarios. They are not medical
-                recommendations and should not
-                be interpreted as instructions to
-                change real clinical values.
+                recommendations.
               </span>
             </div>
           </>
         )}
       </section>
-
-      {/* DISCLAIMER */}
 
       <div className="disclaimer">
         <ShieldCheck size={20} />
@@ -1841,13 +1910,51 @@ function ResultsPage({
           </strong>
 
           <p>
-            This model output should not be
-            used as a substitute for
-            professional medical evaluation,
-            diagnosis or treatment.
+            This model output should not
+            replace professional medical
+            evaluation, diagnosis or
+            treatment.
           </p>
         </div>
       </div>
     </main>
   );
-  }
+}
+
+/* =========================================================
+   PROBABILITY CARD
+========================================================= */
+
+function ProbabilityCard({
+  title,
+  value,
+  description,
+}) {
+  const width = Math.min(
+    100,
+    Math.max(0, percent(value))
+  );
+
+  return (
+    <div className="result-card">
+      <div className="result-card-top">
+        <span>{title}</span>
+
+        <strong>
+          {percentText(value)}
+        </strong>
+      </div>
+
+      <div className="progress">
+        <div
+          className="progress-bar"
+          style={{
+            width: `${width}%`,
+          }}
+        />
+      </div>
+
+      <p>{description}</p>
+    </div>
+  );
+          }
