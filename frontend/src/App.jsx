@@ -78,10 +78,7 @@ const binaryFields = [
   ["sex", "Sex"],
   ["on thyroxine", "On thyroxine"],
   ["query on thyroxine", "Query on thyroxine"],
-  [
-    "on antithyroid medication",
-    "On antithyroid medication",
-  ],
+  ["on antithyroid medication", "On antithyroid medication"],
   ["sick", "Sick"],
   ["pregnant", "Pregnant"],
   ["thyroid surgery", "Thyroid surgery"],
@@ -105,19 +102,24 @@ const binaryFields = [
 ===================================================== */
 
 function toNumber(value, fallback = 0) {
-  const n = Number(value);
+  const number = Number(value);
 
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(number)
+    ? number
+    : fallback;
 }
 
 function toPercent(value) {
-  let n = toNumber(value);
+  let number = toNumber(value);
 
-  if (n >= 0 && n <= 1) {
-    n *= 100;
+  if (number >= 0 && number <= 1) {
+    number *= 100;
   }
 
-  return Math.max(0, Math.min(100, n));
+  return Math.max(
+    0,
+    Math.min(100, number)
+  );
 }
 
 function percentText(value) {
@@ -125,11 +127,14 @@ function percentText(value) {
 }
 
 /* =====================================================
-   OBJECT -> READABLE TEXT
+   READABLE VALUE
 ===================================================== */
 
 function readable(value) {
-  if (value === null || value === undefined) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
     return "";
   }
 
@@ -164,7 +169,7 @@ function readable(value) {
 }
 
 /* =====================================================
-   READ PREDICTION
+   PREDICTION
 ===================================================== */
 
 function getPrediction(data) {
@@ -203,7 +208,7 @@ function getPrediction(data) {
 }
 
 /* =====================================================
-   READ MODEL
+   MODEL
 ===================================================== */
 
 function getModel(data) {
@@ -227,10 +232,13 @@ function getModel(data) {
 }
 
 /* =====================================================
-   READ PROBABILITY
+   PROBABILITIES
 ===================================================== */
 
-function getProbability(data, classNumber) {
+function getProbability(
+  data,
+  classNumber
+) {
   const candidates =
     classNumber === 0
       ? [
@@ -251,17 +259,24 @@ function getProbability(data, classNumber) {
         ];
 
   for (const value of candidates) {
-    if (value !== undefined && value !== null) {
+    if (
+      value !== undefined &&
+      value !== null
+    ) {
       return toNumber(value);
     }
   }
 
   if (Array.isArray(data?.probabilities)) {
-    return toNumber(data.probabilities[classNumber]);
+    return toNumber(
+      data.probabilities[classNumber]
+    );
   }
 
   if (Array.isArray(data?.probability)) {
-    return toNumber(data.probability[classNumber]);
+    return toNumber(
+      data.probability[classNumber]
+    );
   }
 
   return 0;
@@ -271,105 +286,120 @@ function getProbability(data, classNumber) {
    SHAP
 ===================================================== */
 
+/*
+   IMPORTANT:
+
+   Backend response:
+
+   "shap": {
+      "available": true,
+      "features": [
+         {
+            "feature": "...",
+            "impact": 0.123,
+            "direction": "..."
+         }
+      ]
+   }
+
+   Therefore we MUST read:
+
+   data.shap.features
+
+   and NOT:
+
+   data.shap
+*/
+
 function normalizeShap(data) {
   const raw =
-    data?.shap ??
+    data?.shap?.features ??
     data?.shap_values ??
     data?.explanation ??
     data?.feature_importance ??
     [];
 
-  if (Array.isArray(raw)) {
-    return raw
-      .map((item, index) => {
-        if (typeof item === "number") {
-          return {
-            feature: `Feature ${index + 1}`,
-            value: item,
-          };
-        }
-
-        if (
-          typeof item === "object" &&
-          item !== null
-        ) {
-          const feature =
-            item.feature ??
-            item.name ??
-            item.feature_name ??
-            item.column ??
-            `Feature ${index + 1}`;
-
-          const value =
-            item.value ??
-            item.shap_value ??
-            item.impact ??
-            item.contribution ??
-            item.mean_abs_shap ??
-            0;
-
-          return {
-            feature: readable(feature),
-            value: toNumber(value),
-          };
-        }
-
-        return null;
-      })
-      .filter(Boolean)
-      .sort(
-        (a, b) =>
-          Math.abs(b.value) -
-          Math.abs(a.value)
-      )
-      .slice(0, 10);
+  if (!Array.isArray(raw)) {
+    return [];
   }
 
-  if (
-    typeof raw === "object" &&
-    raw !== null
-  ) {
-    return Object.entries(raw)
-      .map(([feature, value]) => {
-        let actualValue = value;
+  return raw
+    .map((item, index) => {
+      if (typeof item === "number") {
+        return {
+          feature: `Feature ${index + 1}`,
+          value: item,
+          impact: item,
+          direction:
+            item > 0
+              ? "increases_class_1"
+              : item < 0
+              ? "decreases_class_1"
+              : "neutral",
+        };
+      }
 
-        if (
-          typeof value === "object" &&
-          value !== null
-        ) {
-          actualValue =
-            value.value ??
-            value.impact ??
-            value.shap_value ??
-            value.contribution ??
-            0;
-        }
+      if (
+        typeof item === "object" &&
+        item !== null
+      ) {
+        const feature =
+          item.feature ??
+          item.name ??
+          item.feature_name ??
+          item.column ??
+          `Feature ${index + 1}`;
+
+        const impact =
+          item.impact ??
+          item.shap_value ??
+          item.contribution ??
+          item.value ??
+          0;
 
         return {
-          feature: String(feature),
-          value: toNumber(actualValue),
-        };
-      })
-      .sort(
-        (a, b) =>
-          Math.abs(b.value) -
-          Math.abs(a.value)
-      )
-      .slice(0, 10);
-  }
+          feature: readable(feature),
 
-  return [];
+          value: toNumber(impact),
+
+          impact: toNumber(impact),
+
+          direction:
+            item.direction ??
+            (
+              toNumber(impact) > 0
+                ? "increases_class_1"
+                : toNumber(impact) < 0
+                ? "decreases_class_1"
+                : "neutral"
+            ),
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        Math.abs(b.value) -
+        Math.abs(a.value)
+    )
+    .slice(0, 10);
 }
 
 /* =====================================================
    COUNTERFACTUALS
 ===================================================== */
 
-function normalizeCounterfactuals(data) {
+function normalizeCounterfactuals(
+  data
+) {
   const raw =
     data?.counterfactuals ??
     data?.counterfactual ??
     data?.counterfactual_explanations ??
+    data?.cf_explanation ??
+    data?.counterfactual_explanation ??
     [];
 
   if (Array.isArray(raw)) {
@@ -402,12 +432,23 @@ function normalizeCounterfactuals(data) {
 ===================================================== */
 
 export default function App() {
-  const [page, setPage] = useState("home");
-  const [form, setForm] = useState(defaultForm);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [page, setPage] =
+    useState("home");
+
+  const [form, setForm] =
+    useState(defaultForm);
+
+  const [result, setResult] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
   /* ===================================================
      NAVIGATION
@@ -427,7 +468,10 @@ export default function App() {
      UPDATE FIELD
   =================================================== */
 
-  function updateField(key, value) {
+  function updateField(
+    key,
+    value
+  ) {
     setForm((previous) => ({
       ...previous,
       [key]: value,
@@ -438,19 +482,15 @@ export default function App() {
      PREDICTION
   =================================================== */
 
-  async function handlePrediction(event) {
+  async function handlePrediction(
+    event
+  ) {
     event.preventDefault();
 
     setLoading(true);
     setError("");
 
     try {
-      /*
-       * IMPORTANT:
-       * The frontend uses readable names with spaces.
-       * FastAPI expects underscore names.
-       */
-
       const payload = {
         age: Number(form.age),
         sex: Number(form.sex),
@@ -463,12 +503,18 @@ export default function App() {
           form["query on thyroxine"]
         ),
 
-        on_antithyroid_medication: Number(
-          form["on antithyroid medication"]
-        ),
+        on_antithyroid_medication:
+          Number(
+            form[
+              "on antithyroid medication"
+            ]
+          ),
 
         sick: Number(form.sick),
-        pregnant: Number(form.pregnant),
+
+        pregnant: Number(
+          form.pregnant
+        ),
 
         thyroid_surgery: Number(
           form["thyroid surgery"]
@@ -486,13 +532,25 @@ export default function App() {
           form["query hyperthyroid"]
         ),
 
-        lithium: Number(form.lithium),
-        goitre: Number(form.goitre),
-        tumor: Number(form.tumor),
+        lithium: Number(
+          form.lithium
+        ),
+
+        goitre: Number(
+          form.goitre
+        ),
+
+        tumor: Number(
+          form.tumor
+        ),
+
         hypopituitary: Number(
           form.hypopituitary
         ),
-        psych: Number(form.psych),
+
+        psych: Number(
+          form.psych
+        ),
 
         TSH_measured: Number(
           form["TSH measured"]
@@ -528,24 +586,26 @@ export default function App() {
         payload
       );
 
-      const response = await axios.post(
-        `${API_URL}/predict`,
-        payload,
-        {
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          timeout: 60000,
-        }
-      );
+      const response =
+        await axios.post(
+          `${API_URL}/predict`,
+          payload,
+          {
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            timeout: 60000,
+          }
+        );
 
       console.log(
         "Backend response:",
         response.data
       );
 
-      const data = response.data || {};
+      const data =
+        response.data || {};
 
       const prediction =
         getPrediction(data);
@@ -564,27 +624,34 @@ export default function App() {
             ? "Thyroid Disease Predicted"
             : "Thyroid Disease Not Predicted",
 
-        model: getModel(data),
+        model:
+          getModel(data),
 
         probabilities: {
           class_0: class0,
           class_1: class1,
         },
 
-        shap: normalizeShap(data),
+        shap:
+          normalizeShap(data),
 
         counterfactuals:
-          normalizeCounterfactuals(data),
+          normalizeCounterfactuals(
+            data
+          ),
 
         raw: data,
       };
 
       console.log(
-        "Final result:",
+        "Normalized result:",
         normalizedResult
       );
 
-      setResult(normalizedResult);
+      setResult(
+        normalizedResult
+      );
+
       setPage("results");
 
       window.scrollTo({
@@ -597,7 +664,9 @@ export default function App() {
         err
       );
 
-      if (err.response?.data?.detail) {
+      if (
+        err.response?.data?.detail
+      ) {
         setError(
           readable(
             err.response.data.detail
@@ -612,7 +681,8 @@ export default function App() {
           )
         );
       } else if (
-        err.code === "ECONNABORTED"
+        err.code ===
+        "ECONNABORTED"
       ) {
         setError(
           "The prediction server took too long to respond."
@@ -639,16 +709,19 @@ export default function App() {
         ? result.shap
             .map(
               (item) =>
-                `${item.feature}: ${item.value.toFixed(
-                  6
-                )}`
+                `${item.feature}: ${toNumber(
+                  item.value
+                ).toFixed(6)}`
             )
             .join("\n")
         : "SHAP data not available.";
 
     const cfText =
-      result.counterfactuals.length > 0
-        ? result.counterfactuals.join("\n")
+      result.counterfactuals
+        .length > 0
+        ? result.counterfactuals.join(
+            "\n"
+          )
         : "Counterfactual data not available.";
 
     const report = `
@@ -693,9 +766,12 @@ It is not a substitute for professional
 medical diagnosis.
 `;
 
-    const blob = new Blob([report], {
-      type: "text/plain",
-    });
+    const blob = new Blob(
+      [report],
+      {
+        type: "text/plain",
+      }
+    );
 
     const url =
       URL.createObjectURL(blob);
@@ -704,14 +780,19 @@ medical diagnosis.
       document.createElement("a");
 
     link.href = url;
+
     link.download =
       "thyrocare-ai-report.txt";
 
-    document.body.appendChild(link);
+    document.body.appendChild(
+      link
+    );
 
     link.click();
 
-    document.body.removeChild(link);
+    document.body.removeChild(
+      link
+    );
 
     URL.revokeObjectURL(url);
   }
@@ -734,8 +815,13 @@ medical diagnosis.
           </span>
 
           <span>
-            <strong>ThyroCare</strong>
-            <small>AI DIAGNOSIS</small>
+            <strong>
+              ThyroCare
+            </strong>
+
+            <small>
+              AI DIAGNOSIS
+            </small>
           </span>
         </button>
 
@@ -771,6 +857,21 @@ medical diagnosis.
           >
             Prediction
           </button>
+
+          {result && (
+            <button
+              className={
+                page === "results"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                navigate("results")
+              }
+            >
+              Results
+            </button>
+          )}
 
           <button
             className={
@@ -891,7 +992,10 @@ medical diagnosis.
               <Brain size={25} />
 
               <span>
-                <strong>XGBoost</strong>
+                <strong>
+                  XGBoost
+                </strong>
+
                 <small>
                   Prediction model
                 </small>
@@ -902,7 +1006,10 @@ medical diagnosis.
               <Sparkles size={25} />
 
               <span>
-                <strong>SHAP</strong>
+                <strong>
+                  SHAP
+                </strong>
+
                 <small>
                   Explainable result
                 </small>
@@ -1022,7 +1129,9 @@ medical diagnosis.
                     className="input-group"
                     key={key}
                   >
-                    <span>{label}</span>
+                    <span>
+                      {label}
+                    </span>
 
                     <input
                       type="number"
@@ -1070,7 +1179,9 @@ medical diagnosis.
                     className="toggle-row"
                     key={key}
                   >
-                    <span>{label}</span>
+                    <span>
+                      {label}
+                    </span>
 
                     <select
                       value={form[key]}
@@ -1100,7 +1211,9 @@ medical diagnosis.
           {error && (
             <div className="error-box">
               <CircleAlert size={20} />
-              <span>{error}</span>
+              <span>
+                {error}
+              </span>
             </div>
           )}
 
@@ -1343,7 +1456,11 @@ medical diagnosis.
                         )}
                       </span>
 
-                      <strong>
+                      <strong
+                        title={
+                          item.direction
+                        }
+                      >
                         {toNumber(
                           item.value
                         ).toFixed(4)}
@@ -1396,7 +1513,7 @@ medical diagnosis.
               <div className="empty-small">
                 Counterfactual explanation
                 was not returned by the
-                backend.
+                backend yet.
               </div>
             )}
           </div>
@@ -1411,6 +1528,16 @@ medical diagnosis.
           >
             <Download size={18} />
             Download Report
+          </button>
+
+          <button
+            className="secondary-button"
+            onClick={() =>
+              navigate("predict")
+            }
+          >
+            New Prediction
+            <ArrowRight size={18} />
           </button>
         </div>
 
@@ -1554,7 +1681,9 @@ medical diagnosis.
     <div className="app-shell">
       <Navbar />
 
-      {page === "home" && <Home />}
+      {page === "home" && (
+        <Home />
+      )}
 
       {page === "predict" && (
         <Prediction />
