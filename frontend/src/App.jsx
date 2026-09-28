@@ -16,6 +16,9 @@ import {
   Sparkles,
   Stethoscope,
   X,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
 } from "lucide-react";
 
 const API_URL =
@@ -159,6 +162,69 @@ function readable(value) {
           : key;
       })
       .join(" • ");
+  }
+
+  return String(value);
+}
+
+function formatFeatureName(name) {
+  if (!name) return "Feature";
+
+  const text = String(name);
+
+  const replacements = {
+    TSH: "TSH",
+    TT4: "TT4",
+    T4U: "T4U",
+    FTI: "FTI",
+    "on thyroxine": "On thyroxine",
+    "query on thyroxine":
+      "Query on thyroxine",
+    "thyroid surgery": "Thyroid surgery",
+    "I131 treatment": "I131 treatment",
+    "query hypothyroid":
+      "Query hypothyroid",
+    "query hyperthyroid":
+      "Query hyperthyroid",
+    goitre: "Goitre",
+    tumor: "Tumor",
+    hypopituitary:
+      "Hypopituitary",
+    psych: "Psych",
+    "TSH measured":
+      "TSH measured",
+    "T3 measured":
+      "T3 measured",
+    "TT4 measured":
+      "TT4 measured",
+    "T4U measured":
+      "T4U measured",
+    "FTI measured":
+      "FTI measured",
+  };
+
+  return replacements[text] || text;
+}
+
+function formatValue(value) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "—";
+  }
+
+  const number = Number(value);
+
+  if (Number.isFinite(number)) {
+    if (Number.isInteger(number)) {
+      return String(number);
+    }
+
+    return number
+      .toFixed(4)
+      .replace(/0+$/, "")
+      .replace(/\.$/, "");
   }
 
   return String(value);
@@ -325,19 +391,19 @@ function normalizeShap(data) {
           item.value ??
           0;
 
+        const numericImpact =
+          toNumber(impact);
+
         return {
           feature: readable(feature),
-
-          value: toNumber(impact),
-
-          impact: toNumber(impact),
-
+          value: numericImpact,
+          impact: numericImpact,
           direction:
             item.direction ??
             (
-              toNumber(impact) > 0
+              numericImpact > 0
                 ? "increases_class_1"
-                : toNumber(impact) < 0
+                : numericImpact < 0
                 ? "decreases_class_1"
                 : "neutral"
             ),
@@ -357,6 +423,7 @@ function normalizeShap(data) {
 
 /* =====================================================
    COUNTERFACTUALS
+   KEEP STRUCTURED DATA
 ===================================================== */
 
 function normalizeCounterfactuals(data) {
@@ -366,38 +433,85 @@ function normalizeCounterfactuals(data) {
     data?.counterfactual_explanations ??
     data?.cf_explanation ??
     data?.counterfactual_explanation ??
-    [];
+    null;
+
+  if (!raw) {
+    return {
+      available: false,
+      features: [],
+      scenarios: [],
+      message: "",
+      targetPrediction: null,
+      targetLabel: "",
+    };
+  }
 
   if (Array.isArray(raw)) {
-    return raw
-      .map((item) => readable(item))
-      .filter(Boolean);
+    return {
+      available: raw.length > 0,
+      features: [],
+      scenarios: [],
+      message: "",
+      targetPrediction: null,
+      targetLabel: "",
+      legacy: raw
+        .map((item) => readable(item))
+        .filter(Boolean),
+    };
   }
 
-  if (
-    typeof raw === "object" &&
-    raw !== null
-  ) {
-    return Object.entries(raw)
-      .map(
-        ([key, value]) =>
-          `${key}: ${readable(value)}`
-      )
-      .filter(Boolean);
+  if (typeof raw !== "object") {
+    return {
+      available: Boolean(raw),
+      features: [],
+      scenarios: [],
+      message: readable(raw),
+      targetPrediction: null,
+      targetLabel: "",
+    };
   }
 
-  if (raw) {
-    return [readable(raw)];
-  }
+  const features = Array.isArray(
+    raw.features
+  )
+    ? raw.features
+    : [];
 
-  return [];
+  const scenarios = Array.isArray(
+    raw.scenarios
+  )
+    ? raw.scenarios
+    : [];
+
+  return {
+    available:
+      raw.available === true ||
+      features.length > 0 ||
+      scenarios.length > 0,
+
+    features,
+
+    scenarios,
+
+    message:
+      raw.message
+        ? String(raw.message)
+        : "",
+
+    targetPrediction:
+      raw.target_prediction ??
+      null,
+
+    targetLabel:
+      raw.target_label ??
+      "",
+
+    legacy: [],
+  };
 }
 
 /* =====================================================
    PREDICTION FORM
-   IMPORTANT:
-   THIS COMPONENT IS OUTSIDE APP.
-   THIS PREVENTS MOBILE INPUT FOCUS LOSS.
 ===================================================== */
 
 function Prediction({
@@ -754,11 +868,6 @@ export default function App() {
         FTI: Number(form.FTI),
       };
 
-      console.log(
-        "Sending prediction payload:",
-        payload
-      );
-
       const response =
         await axios.post(
           `${API_URL}/predict`,
@@ -771,11 +880,6 @@ export default function App() {
             timeout: 60000,
           }
         );
-
-      console.log(
-        "Backend response:",
-        response.data
-      );
 
       const data =
         response.data || {};
@@ -815,11 +919,6 @@ export default function App() {
 
         raw: data,
       };
-
-      console.log(
-        "Normalized result:",
-        normalizedResult
-      );
 
       setResult(
         normalizedResult
@@ -889,13 +988,54 @@ export default function App() {
             .join("\n")
         : "SHAP data not available.";
 
-    const cfText =
-      result.counterfactuals
-        .length > 0
-        ? result.counterfactuals.join(
-            "\n"
-          )
-        : "Counterfactual data not available.";
+    const cf =
+      result.counterfactuals;
+
+    let cfText =
+      "Counterfactual data not available.";
+
+    if (cf.available) {
+      if (
+        cf.features &&
+        cf.features.length > 0
+      ) {
+        cfText =
+          "Best model sensitivity scenario:\n";
+
+        cf.features.forEach(
+          (item) => {
+            cfText += `${item.feature}: ${item.old_value} -> ${item.new_value}\n`;
+          }
+        );
+      }
+
+      if (
+        cf.scenarios &&
+        cf.scenarios.length > 0
+      ) {
+        cfText +=
+          "\nAlternative scenarios:\n";
+
+        cf.scenarios.forEach(
+          (scenario, index) => {
+            cfText += `\nScenario ${
+              index + 1
+            }\n`;
+
+            Object.entries(
+              scenario.features || {}
+            ).forEach(
+              ([feature, value]) => {
+                cfText += `${feature}: ${value}\n`;
+              }
+            );
+
+            cfText += `Prediction: ${scenario.prediction}\n`;
+            cfText += `Distance: ${scenario.distance}\n`;
+          }
+        );
+      }
+    }
 
     const report = `
 THYROCARE AI
@@ -972,7 +1112,7 @@ medical diagnosis.
 
   /* ===================================================
      NAVBAR
-===================================================== */
+  =================================================== */
 
   function Navbar() {
     return (
@@ -1230,6 +1370,425 @@ medical diagnosis.
   }
 
   /* ===================================================
+     SHAP CARD
+  =================================================== */
+
+  function ShapCard() {
+    return (
+      <section className="result-card">
+        <div className="result-card-title">
+          <Sparkles size={19} />
+          Explainable AI
+        </div>
+
+        <p className="result-text">
+          SHAP shows which features
+          influenced the model prediction.
+        </p>
+
+        {result.shap.length > 0 ? (
+          <div className="shap-list">
+            {result.shap.map(
+              (item, index) => {
+                const positive =
+                  item.value > 0;
+
+                const neutral =
+                  Math.abs(item.value) <
+                  0.000001;
+
+                return (
+                  <div
+                    className={`shap-item ${
+                      neutral
+                        ? "neutral"
+                        : positive
+                        ? "shap-positive"
+                        : "shap-negative"
+                    }`}
+                    key={`${item.feature}-${index}`}
+                  >
+                    <div className="shap-item-top">
+                      <div className="shap-feature">
+                        <span className="shap-number">
+                          {index + 1}
+                        </span>
+
+                        <strong>
+                          {formatFeatureName(
+                            item.feature
+                          )}
+                        </strong>
+                      </div>
+
+                      <strong className="shap-value">
+                        {item.value > 0
+                          ? "+"
+                          : ""}
+                        {toNumber(
+                          item.value
+                        ).toFixed(4)}
+                      </strong>
+                    </div>
+
+                    <div className="shap-description">
+                      {neutral ? (
+                        <>
+                          <Activity
+                            size={14}
+                          />
+                          Minimal model
+                          contribution
+                        </>
+                      ) : positive ? (
+                        <>
+                          <TrendingUp
+                            size={14}
+                          />
+                          Pushes the model
+                          toward Class 1
+                        </>
+                      ) : (
+                        <>
+                          <TrendingDown
+                            size={14}
+                          />
+                          Pushes the model
+                          toward Class 0
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+            )}
+          </div>
+        ) : (
+          <div className="empty-small">
+            SHAP explanation was not
+            returned by the backend.
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  /* ===================================================
+     COUNTERFACTUAL CARD
+  =================================================== */
+
+  function CounterfactualCard() {
+    const cf =
+      result.counterfactuals;
+
+    return (
+      <section className="result-card wide-card counterfactual-card">
+        <div className="result-card-title">
+          <Brain size={19} />
+          Counterfactual explanation
+        </div>
+
+        <p className="result-text">
+          These are model sensitivity
+          scenarios showing how changing
+          input values can alter the
+          model's output. They are not
+          medical treatment recommendations.
+        </p>
+
+        {!cf.available ? (
+          <div className="cf-empty">
+            <div className="cf-empty-icon">
+              <RefreshCw size={22} />
+            </div>
+
+            <div>
+              <strong>
+                No counterfactual scenario
+                found
+              </strong>
+
+              <p>
+                The model did not find a
+                tested input combination
+                that changed the prediction.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {cf.message && (
+              <div className="cf-message">
+                <CheckCircle2 size={17} />
+
+                <span>
+                  {cf.message}
+                </span>
+              </div>
+            )}
+
+            {cf.features &&
+              cf.features.length > 0 && (
+                <div className="cf-best">
+                  <div className="cf-best-heading">
+                    <span>
+                      BEST MODEL SENSITIVITY
+                      SCENARIO
+                    </span>
+
+                    <Sparkles size={17} />
+                  </div>
+
+                  <div className="cf-change-list">
+                    {cf.features.map(
+                      (
+                        item,
+                        index
+                      ) => (
+                        <div
+                          className="cf-change"
+                          key={index}
+                        >
+                          <div className="cf-feature-name">
+                            {formatFeatureName(
+                              item.feature
+                            )}
+                          </div>
+
+                          <div className="cf-values">
+                            <span className="cf-old">
+                              {formatValue(
+                                item.old_value
+                              )}
+                            </span>
+
+                            <ArrowRight
+                              size={18}
+                            />
+
+                            <span className="cf-new">
+                              {formatValue(
+                                item.new_value
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+            {cf.scenarios &&
+              cf.scenarios.length > 0 && (
+                <div className="cf-scenarios">
+                  <div className="cf-scenarios-heading">
+                    <span>
+                      ALTERNATIVE SCENARIOS
+                    </span>
+
+                    <small>
+                      {cf.scenarios.length}{" "}
+                      found
+                    </small>
+                  </div>
+
+                  <div className="scenario-grid">
+                    {cf.scenarios.map(
+                      (
+                        scenario,
+                        index
+                      ) => {
+                        const prediction =
+                          Number(
+                            scenario.prediction
+                          );
+
+                        const isClass1 =
+                          prediction === 1;
+
+                        const scenarioProbability =
+                          isClass1
+                            ? scenario.class_1_probability
+                            : scenario.class_0_probability;
+
+                        return (
+                          <div
+                            className="scenario-card"
+                            key={index}
+                          >
+                            <div className="scenario-top">
+                              <span>
+                                Scenario{" "}
+                                {index + 1}
+                              </span>
+
+                              <span className="scenario-badge">
+                                {isClass1
+                                  ? "Class 1"
+                                  : "Class 0"}
+                              </span>
+                            </div>
+
+                            <div className="scenario-changes">
+                              {scenario.features &&
+                              typeof scenario.features ===
+                                "object" ? (
+                                Object.entries(
+                                  scenario.features
+                                ).map(
+                                  (
+                                    [
+                                      feature,
+                                      value,
+                                    ],
+                                    changeIndex
+                                  ) => {
+                                    const original =
+                                      cf.features?.find(
+                                        (
+                                          item
+                                        ) =>
+                                          item.feature ===
+                                          feature
+                                      )?.old_value;
+
+                                    return (
+                                      <div
+                                        className="scenario-change"
+                                        key={
+                                          changeIndex
+                                        }
+                                      >
+                                        <span>
+                                          {formatFeatureName(
+                                            feature
+                                          )}
+                                        </span>
+
+                                        <strong>
+                                          {formatValue(
+                                            original
+                                          )}
+
+                                          <ArrowRight
+                                            size={
+                                              14
+                                            }
+                                          />
+
+                                          {formatValue(
+                                            value
+                                          )}
+                                        </strong>
+                                      </div>
+                                    );
+                                  }
+                                )
+                              ) : (
+                                <div className="empty-small">
+                                  No feature
+                                  changes
+                                  available.
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="scenario-result">
+                              <span>
+                                Model prediction
+                              </span>
+
+                              <strong
+                                className={
+                                  isClass1
+                                    ? "scenario-positive"
+                                    : "scenario-negative"
+                                }
+                              >
+                                {scenario.prediction_label ||
+                                  (isClass1
+                                    ? "Thyroid Disease Predicted"
+                                    : "Thyroid Disease Not Predicted")}
+                              </strong>
+                            </div>
+
+                            {scenarioProbability !==
+                              undefined && (
+                              <div className="scenario-probability">
+                                <span>
+                                  Target class
+                                  probability
+                                </span>
+
+                                <strong>
+                                  {percentText(
+                                    scenarioProbability
+                                  )}
+                                </strong>
+                              </div>
+                            )}
+
+                            {scenario.distance !==
+                              undefined && (
+                              <div className="scenario-distance">
+                                <span>
+                                  Change distance
+                                </span>
+
+                                <strong>
+                                  {formatValue(
+                                    scenario.distance
+                                  )}
+                                </strong>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                </div>
+              )}
+
+            {cf.targetLabel && (
+              <div className="cf-target">
+                <div>
+                  <small>
+                    TARGET OUTPUT
+                  </small>
+
+                  <strong>
+                    {cf.targetLabel}
+                  </strong>
+                </div>
+
+                <CheckCircle2 size={22} />
+              </div>
+            )}
+          </>
+        )}
+
+        {cf.legacy &&
+          cf.legacy.length > 0 && (
+            <div className="counterfactual-list">
+              {cf.legacy.map(
+                (item, index) => (
+                  <div
+                    className="counterfactual-item"
+                    key={index}
+                  >
+                    {item}
+                  </div>
+                )
+              )}
+            </div>
+          )}
+      </section>
+    );
+  }
+
+  /* ===================================================
      RESULTS
   =================================================== */
 
@@ -1397,89 +1956,10 @@ medical diagnosis.
             </div>
           </section>
 
-          <section className="result-card">
-            <div className="result-card-title">
-              <Sparkles size={19} />
-              Explainable AI
-            </div>
-
-            <p className="result-text">
-              SHAP explains which input
-              features contributed to the
-              model prediction.
-            </p>
-
-            <div className="shap-list">
-              {result.shap.length > 0 ? (
-                result.shap.map(
-                  (item, index) => (
-                    <div
-                      className="shap-row"
-                      key={index}
-                    >
-                      <span>
-                        {readable(
-                          item.feature
-                        )}
-                      </span>
-
-                      <strong
-                        title={
-                          item.direction
-                        }
-                      >
-                        {toNumber(
-                          item.value
-                        ).toFixed(4)}
-                      </strong>
-                    </div>
-                  )
-                )
-              ) : (
-                <div className="empty-small">
-                  SHAP explanation was
-                  not returned by the
-                  backend.
-                </div>
-              )}
-            </div>
-          </section>
+          <ShapCard />
         </div>
 
-        <section className="result-card wide-card">
-          <div className="result-card-title">
-            <Brain size={19} />
-            Counterfactual explanation
-          </div>
-
-          <p className="result-text">
-            Counterfactual explanations
-            show changes that could
-            potentially change the model
-            prediction.
-          </p>
-
-          <div className="counterfactual-list">
-            {result.counterfactuals.length > 0 ? (
-              result.counterfactuals.map(
-                (item, index) => (
-                  <div
-                    className="counterfactual-item"
-                    key={index}
-                  >
-                    {readable(item)}
-                  </div>
-                )
-              )
-            ) : (
-              <div className="empty-small">
-                Counterfactual explanation
-                was not returned by the
-                backend yet.
-              </div>
-            )}
-          </div>
-        </section>
+        <CounterfactualCard />
 
         <div className="result-actions">
           <button
@@ -1661,4 +2141,4 @@ medical diagnosis.
       <Footer />
     </div>
   );
-}
+    }
