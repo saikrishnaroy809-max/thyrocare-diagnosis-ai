@@ -26,7 +26,7 @@ const API_URL =
 ===================================================== */
 
 const defaultForm = {
-  age: 45,
+  age: "45",
   sex: 1,
 
   "on thyroxine": 0,
@@ -48,18 +48,18 @@ const defaultForm = {
   psych: 0,
 
   "TSH measured": 1,
-  TSH: 2.5,
+  TSH: "2.5",
 
   "T3 measured": 1,
 
   "TT4 measured": 1,
-  TT4: 110,
+  TT4: "110",
 
   "T4U measured": 1,
-  T4U: 1,
+  T4U: "1",
 
   "FTI measured": 1,
-  FTI: 110,
+  FTI: "110",
 };
 
 /* =====================================================
@@ -67,11 +67,11 @@ const defaultForm = {
 ===================================================== */
 
 const numericFields = [
-  ["age", "Age", 1, 120, 1],
-  ["TSH", "TSH", 0, 100, 0.01],
-  ["TT4", "TT4", 0, 1000, 0.1],
-  ["T4U", "T4U", 0, 10, 0.01],
-  ["FTI", "FTI", 0, 1000, 0.1],
+  ["age", "Age", 1, 120, 1, "decimal"],
+  ["TSH", "TSH", 0, 100, 0.01, "decimal"],
+  ["TT4", "TT4", 0, 1000, 0.1, "decimal"],
+  ["T4U", "T4U", 0, 10, 0.01, "decimal"],
+  ["FTI", "FTI", 0, 1000, 0.1, "decimal"],
 ];
 
 const binaryFields = [
@@ -125,10 +125,6 @@ function toPercent(value) {
 function percentText(value) {
   return `${toPercent(value).toFixed(2)}%`;
 }
-
-/* =====================================================
-   READABLE VALUE
-===================================================== */
 
 function readable(value) {
   if (
@@ -235,10 +231,7 @@ function getModel(data) {
    PROBABILITIES
 ===================================================== */
 
-function getProbability(
-  data,
-  classNumber
-) {
+function getProbability(data, classNumber) {
   const candidates =
     classNumber === 0
       ? [
@@ -285,31 +278,6 @@ function getProbability(
 /* =====================================================
    SHAP
 ===================================================== */
-
-/*
-   IMPORTANT:
-
-   Backend response:
-
-   "shap": {
-      "available": true,
-      "features": [
-         {
-            "feature": "...",
-            "impact": 0.123,
-            "direction": "..."
-         }
-      ]
-   }
-
-   Therefore we MUST read:
-
-   data.shap.features
-
-   and NOT:
-
-   data.shap
-*/
 
 function normalizeShap(data) {
   const raw =
@@ -391,9 +359,7 @@ function normalizeShap(data) {
    COUNTERFACTUALS
 ===================================================== */
 
-function normalizeCounterfactuals(
-  data
-) {
+function normalizeCounterfactuals(data) {
   const raw =
     data?.counterfactuals ??
     data?.counterfactual ??
@@ -425,6 +391,218 @@ function normalizeCounterfactuals(
   }
 
   return [];
+}
+
+/* =====================================================
+   PREDICTION FORM
+   IMPORTANT:
+   THIS COMPONENT IS OUTSIDE APP.
+   THIS PREVENTS MOBILE INPUT FOCUS LOSS.
+===================================================== */
+
+function Prediction({
+  form,
+  updateField,
+  handlePrediction,
+  loading,
+  error,
+  navigate,
+}) {
+  return (
+    <main className="page-section">
+      <button
+        className="back-button"
+        type="button"
+        onClick={() => navigate("home")}
+      >
+        <ArrowLeft size={17} />
+        Back to home
+      </button>
+
+      <div className="page-heading">
+        <div className="eyebrow">
+          <Stethoscope size={15} />
+          THYROID PREDICTION
+        </div>
+
+        <h2>
+          Enter clinical information
+        </h2>
+
+        <p>
+          Enter the available clinical
+          information below. The trained
+          machine learning model will
+          analyze the values.
+        </p>
+      </div>
+
+      <form
+        className="prediction-form"
+        onSubmit={handlePrediction}
+      >
+        <div className="form-card">
+          <div className="form-card-heading">
+            <div className="section-icon">
+              <Activity size={22} />
+            </div>
+
+            <div>
+              <h3>
+                Clinical measurements
+              </h3>
+
+              <p>
+                Enter the patient's
+                measurements and laboratory
+                values.
+              </p>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            {numericFields.map(
+              ([
+                key,
+                label,
+                min,
+                max,
+                step,
+                inputMode,
+              ]) => (
+                <label
+                  className="input-group"
+                  key={key}
+                >
+                  <span>
+                    {label}
+                  </span>
+
+                  <input
+                    type="number"
+                    inputMode={inputMode}
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={
+                      form[key] ?? ""
+                    }
+                    onChange={(event) => {
+                      updateField(
+                        key,
+                        event.target.value
+                      );
+                    }}
+                    onFocus={(event) => {
+                      event.currentTarget.select();
+                    }}
+                    autoComplete="off"
+                  />
+                </label>
+              )
+            )}
+          </div>
+        </div>
+
+        <div className="form-card">
+          <div className="form-card-heading">
+            <div className="section-icon">
+              <ShieldCheck size={22} />
+            </div>
+
+            <div>
+              <h3>
+                Clinical indicators
+              </h3>
+
+              <p>
+                Select Yes or No for each
+                indicator.
+              </p>
+            </div>
+          </div>
+
+          <div className="indicator-grid">
+            {binaryFields.map(
+              ([key, label]) => (
+                <label
+                  className="toggle-row"
+                  key={key}
+                >
+                  <span>
+                    {label}
+                  </span>
+
+                  <select
+                    value={form[key]}
+                    onChange={(event) =>
+                      updateField(
+                        key,
+                        Number(
+                          event.target.value
+                        )
+                      )
+                    }
+                  >
+                    <option value={0}>
+                      No (0)
+                    </option>
+
+                    <option value={1}>
+                      Yes (1)
+                    </option>
+                  </select>
+                </label>
+              )
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="error-box">
+            <CircleAlert size={20} />
+
+            <span>
+              {error}
+            </span>
+          </div>
+        )}
+
+        <button
+          className="predict-button"
+          type="submit"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Activity
+                className="spin"
+                size={20}
+              />
+
+              Analyzing...
+            </>
+          ) : (
+            <>
+              Analyze with AI
+              <ArrowRight size={20} />
+            </>
+          )}
+        </button>
+
+        <div className="medical-disclaimer">
+          <Info size={18} />
+
+          <span>
+            This tool is intended for
+            educational and research
+            purposes and should not replace
+            professional medical advice.
+          </span>
+        </div>
+      </form>
+    </main>
+  );
 }
 
 /* =====================================================
@@ -468,10 +646,7 @@ export default function App() {
      UPDATE FIELD
   =================================================== */
 
-  function updateField(
-    key,
-    value
-  ) {
+  function updateField(key, value) {
     setForm((previous) => ({
       ...previous,
       [key]: value,
@@ -482,9 +657,7 @@ export default function App() {
      PREDICTION
   =================================================== */
 
-  async function handlePrediction(
-    event
-  ) {
+  async function handlePrediction(event) {
     event.preventDefault();
 
     setLoading(true);
@@ -799,7 +972,7 @@ medical diagnosis.
 
   /* ===================================================
      NAVBAR
-  =================================================== */
+===================================================== */
 
   function Navbar() {
     return (
@@ -1057,204 +1230,6 @@ medical diagnosis.
   }
 
   /* ===================================================
-     PREDICTION
-  =================================================== */
-
-  function Prediction() {
-    return (
-      <main className="page-section">
-        <button
-          className="back-button"
-          onClick={() =>
-            navigate("home")
-          }
-        >
-          <ArrowLeft size={17} />
-          Back to home
-        </button>
-
-        <div className="page-heading">
-          <div className="eyebrow">
-            <Stethoscope size={15} />
-            THYROID PREDICTION
-          </div>
-
-          <h2>
-            Enter clinical information
-          </h2>
-
-          <p>
-            Enter the available clinical
-            information below. The trained
-            machine learning model will
-            analyze the values.
-          </p>
-        </div>
-
-        <form
-          className="prediction-form"
-          onSubmit={
-            handlePrediction
-          }
-        >
-          <div className="form-card">
-            <div className="form-card-heading">
-              <div className="section-icon">
-                <Activity size={22} />
-              </div>
-
-              <div>
-                <h3>
-                  Clinical measurements
-                </h3>
-
-                <p>
-                  Enter the patient's
-                  measurements and laboratory
-                  values.
-                </p>
-              </div>
-            </div>
-
-            <div className="form-grid">
-              {numericFields.map(
-                ([
-                  key,
-                  label,
-                  min,
-                  max,
-                  step,
-                ]) => (
-                  <label
-                    className="input-group"
-                    key={key}
-                  >
-                    <span>
-                      {label}
-                    </span>
-
-                    <input
-                      type="number"
-                      min={min}
-                      max={max}
-                      step={step}
-                      value={form[key]}
-                      onChange={(e) =>
-                        updateField(
-                          key,
-                          e.target.value
-                        )
-                      }
-                    />
-                  </label>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="form-card">
-            <div className="form-card-heading">
-              <div className="section-icon">
-                <ShieldCheck
-                  size={22}
-                />
-              </div>
-
-              <div>
-                <h3>
-                  Clinical indicators
-                </h3>
-
-                <p>
-                  Select Yes or No for each
-                  indicator.
-                </p>
-              </div>
-            </div>
-
-            <div className="indicator-grid">
-              {binaryFields.map(
-                ([key, label]) => (
-                  <label
-                    className="toggle-row"
-                    key={key}
-                  >
-                    <span>
-                      {label}
-                    </span>
-
-                    <select
-                      value={form[key]}
-                      onChange={(e) =>
-                        updateField(
-                          key,
-                          Number(
-                            e.target.value
-                          )
-                        )
-                      }
-                    >
-                      <option value={0}>
-                        No (0)
-                      </option>
-
-                      <option value={1}>
-                        Yes (1)
-                      </option>
-                    </select>
-                  </label>
-                )
-              )}
-            </div>
-          </div>
-
-          {error && (
-            <div className="error-box">
-              <CircleAlert size={20} />
-              <span>
-                {error}
-              </span>
-            </div>
-          )}
-
-          <button
-            className="predict-button"
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Activity
-                  className="spin"
-                  size={20}
-                />
-
-                Analyzing...
-              </>
-            ) : (
-              <>
-                Analyze with AI
-                <ArrowRight size={20} />
-              </>
-            )}
-          </button>
-
-          <div className="medical-disclaimer">
-            <Info size={18} />
-
-            <span>
-              This tool is intended for
-              educational and research
-              purposes and should not replace
-              professional medical advice.
-            </span>
-          </div>
-        </form>
-      </main>
-    );
-  }
-
-  /* ===================================================
      RESULTS
   =================================================== */
 
@@ -1332,13 +1307,9 @@ medical diagnosis.
         >
           <div className="result-icon">
             {positive ? (
-              <CircleAlert
-                size={34}
-              />
+              <CircleAlert size={34} />
             ) : (
-              <CheckCircle2
-                size={34}
-              />
+              <CheckCircle2 size={34} />
             )}
           </div>
 
@@ -1439,13 +1410,9 @@ medical diagnosis.
             </p>
 
             <div className="shap-list">
-              {result.shap.length >
-              0 ? (
+              {result.shap.length > 0 ? (
                 result.shap.map(
-                  (
-                    item,
-                    index
-                  ) => (
+                  (item, index) => (
                     <div
                       className="shap-row"
                       key={index}
@@ -1493,14 +1460,9 @@ medical diagnosis.
           </p>
 
           <div className="counterfactual-list">
-            {result
-              .counterfactuals
-              .length > 0 ? (
+            {result.counterfactuals.length > 0 ? (
               result.counterfactuals.map(
-                (
-                  item,
-                  index
-                ) => (
+                (item, index) => (
                   <div
                     className="counterfactual-item"
                     key={index}
@@ -1522,9 +1484,7 @@ medical diagnosis.
         <div className="result-actions">
           <button
             className="primary-button"
-            onClick={
-              downloadReport
-            }
+            onClick={downloadReport}
           >
             <Download size={18} />
             Download Report
@@ -1681,23 +1641,24 @@ medical diagnosis.
     <div className="app-shell">
       <Navbar />
 
-      {page === "home" && (
-        <Home />
-      )}
+      {page === "home" && <Home />}
 
       {page === "predict" && (
-        <Prediction />
+        <Prediction
+          form={form}
+          updateField={updateField}
+          handlePrediction={handlePrediction}
+          loading={loading}
+          error={error}
+          navigate={navigate}
+        />
       )}
 
-      {page === "results" && (
-        <Results />
-      )}
+      {page === "results" && <Results />}
 
-      {page === "about" && (
-        <About />
-      )}
+      {page === "about" && <About />}
 
       <Footer />
     </div>
   );
-        }
+}
