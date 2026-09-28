@@ -18,39 +18,53 @@ import {
   X,
 } from "lucide-react";
 
-const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
+const API_URL =
+  "https://thyrocare-diagnosis-ai.onrender.com";
 
-/* =========================================================
-   DEFAULT VALUES
-========================================================= */
+/* =====================================================
+   DEFAULT FORM
+===================================================== */
 
 const defaultForm = {
   age: 45,
   sex: 1,
+
   "on thyroxine": 0,
   "query on thyroxine": 0,
   "on antithyroid medication": 0,
+
   sick: 0,
   pregnant: 0,
   "thyroid surgery": 0,
   "I131 treatment": 0,
+
   "query hypothyroid": 0,
   "query hyperthyroid": 0,
+
   lithium: 0,
   goitre: 0,
   tumor: 0,
   hypopituitary: 0,
   psych: 0,
+
   "TSH measured": 1,
   TSH: 2.5,
+
   "T3 measured": 1,
+
   "TT4 measured": 1,
   TT4: 110,
+
   "T4U measured": 1,
   T4U: 1,
+
   "FTI measured": 1,
   FTI: 110,
 };
+
+/* =====================================================
+   FORM FIELDS
+===================================================== */
 
 const numericFields = [
   ["age", "Age", 1, 120, 1],
@@ -64,7 +78,10 @@ const binaryFields = [
   ["sex", "Sex"],
   ["on thyroxine", "On thyroxine"],
   ["query on thyroxine", "Query on thyroxine"],
-  ["on antithyroid medication", "On antithyroid medication"],
+  [
+    "on antithyroid medication",
+    "On antithyroid medication",
+  ],
   ["sick", "Sick"],
   ["pregnant", "Pregnant"],
   ["thyroid surgery", "Thyroid surgery"],
@@ -83,17 +100,18 @@ const binaryFields = [
   ["FTI measured", "FTI measured"],
 ];
 
-/* =========================================================
+/* =====================================================
    HELPERS
-========================================================= */
+===================================================== */
 
-function numberValue(value, fallback = 0) {
+function toNumber(value, fallback = 0) {
   const n = Number(value);
+
   return Number.isFinite(n) ? n : fallback;
 }
 
-function percent(value) {
-  let n = numberValue(value);
+function toPercent(value) {
+  let n = toNumber(value);
 
   if (n >= 0 && n <= 1) {
     n *= 100;
@@ -103,111 +121,12 @@ function percent(value) {
 }
 
 function percentText(value) {
-  return `${percent(value).toFixed(2)}%`;
+  return `${toPercent(value).toFixed(2)}%`;
 }
 
-/* =========================================================
-   GET PREDICTION
-========================================================= */
-
-function readPrediction(data) {
-  const values = [
-    data?.prediction,
-    data?.predicted_class,
-    data?.predictedClass,
-    data?.class,
-  ];
-
-  for (const value of values) {
-    if (typeof value === "number") {
-      return value === 1 ? 1 : 0;
-    }
-
-    if (typeof value === "string") {
-      const text = value.toLowerCase();
-
-      if (text === "1" || text.includes("disease predicted")) {
-        return 1;
-      }
-
-      if (text === "0" || text.includes("not predicted")) {
-        return 0;
-      }
-    }
-  }
-
-  return 0;
-}
-
-/* =========================================================
-   GET MODEL NAME
-========================================================= */
-
-function readModel(data) {
-  if (typeof data?.model === "string") {
-    return data.model;
-  }
-
-  if (data?.model?.name) {
-    return String(data.model.name);
-  }
-
-  if (data?.model?.model_name) {
-    return String(data.model.model_name);
-  }
-
-  if (data?.model_name) {
-    return String(data.model_name);
-  }
-
-  return "XGBoost";
-}
-
-/* =========================================================
-   GET PROBABILITIES
-========================================================= */
-
-function readProbability(data, classNumber) {
-  const candidates =
-    classNumber === 0
-      ? [
-          data?.probability_class_0,
-          data?.class_0_probability,
-          data?.probabilities?.class_0,
-          data?.probabilities?.["0"],
-          data?.probability?.class_0,
-          data?.probability?.["0"],
-        ]
-      : [
-          data?.probability_class_1,
-          data?.class_1_probability,
-          data?.probabilities?.class_1,
-          data?.probabilities?.["1"],
-          data?.probability?.class_1,
-          data?.probability?.["1"],
-        ];
-
-  for (const value of candidates) {
-    if (value !== undefined && value !== null) {
-      return numberValue(value);
-    }
-  }
-
-  if (Array.isArray(data?.probabilities)) {
-    return numberValue(data.probabilities[classNumber]);
-  }
-
-  if (Array.isArray(data?.probability)) {
-    return numberValue(data.probability[classNumber]);
-  }
-
-  return 0;
-}
-
-/* =========================================================
-   CONVERT ANY OBJECT TO READABLE TEXT
-   THIS FIXES [object Object]
-========================================================= */
+/* =====================================================
+   OBJECT -> READABLE TEXT
+===================================================== */
 
 function readable(value) {
   if (value === null || value === undefined) {
@@ -244,9 +163,113 @@ function readable(value) {
   return String(value);
 }
 
-/* =========================================================
-   SHAP NORMALIZER
-========================================================= */
+/* =====================================================
+   READ PREDICTION
+===================================================== */
+
+function getPrediction(data) {
+  const values = [
+    data?.prediction,
+    data?.predicted_class,
+    data?.predictedClass,
+    data?.class,
+  ];
+
+  for (const value of values) {
+    if (typeof value === "number") {
+      return value === 1 ? 1 : 0;
+    }
+
+    if (typeof value === "string") {
+      const text = value.toLowerCase();
+
+      if (
+        text === "1" ||
+        text.includes("disease predicted")
+      ) {
+        return 1;
+      }
+
+      if (
+        text === "0" ||
+        text.includes("not predicted")
+      ) {
+        return 0;
+      }
+    }
+  }
+
+  return 0;
+}
+
+/* =====================================================
+   READ MODEL
+===================================================== */
+
+function getModel(data) {
+  if (typeof data?.model === "string") {
+    return data.model;
+  }
+
+  if (data?.model?.name) {
+    return String(data.model.name);
+  }
+
+  if (data?.model?.model_name) {
+    return String(data.model.model_name);
+  }
+
+  if (data?.model_name) {
+    return String(data.model_name);
+  }
+
+  return "XGBoost";
+}
+
+/* =====================================================
+   READ PROBABILITY
+===================================================== */
+
+function getProbability(data, classNumber) {
+  const candidates =
+    classNumber === 0
+      ? [
+          data?.probability_class_0,
+          data?.class_0_probability,
+          data?.probabilities?.class_0,
+          data?.probabilities?.["0"],
+          data?.probability?.class_0,
+          data?.probability?.["0"],
+        ]
+      : [
+          data?.probability_class_1,
+          data?.class_1_probability,
+          data?.probabilities?.class_1,
+          data?.probabilities?.["1"],
+          data?.probability?.class_1,
+          data?.probability?.["1"],
+        ];
+
+  for (const value of candidates) {
+    if (value !== undefined && value !== null) {
+      return toNumber(value);
+    }
+  }
+
+  if (Array.isArray(data?.probabilities)) {
+    return toNumber(data.probabilities[classNumber]);
+  }
+
+  if (Array.isArray(data?.probability)) {
+    return toNumber(data.probability[classNumber]);
+  }
+
+  return 0;
+}
+
+/* =====================================================
+   SHAP
+===================================================== */
 
 function normalizeShap(data) {
   const raw =
@@ -266,7 +289,10 @@ function normalizeShap(data) {
           };
         }
 
-        if (typeof item === "object" && item !== null) {
+        if (
+          typeof item === "object" &&
+          item !== null
+        ) {
           const feature =
             item.feature ??
             item.name ??
@@ -279,11 +305,12 @@ function normalizeShap(data) {
             item.shap_value ??
             item.impact ??
             item.contribution ??
+            item.mean_abs_shap ??
             0;
 
           return {
             feature: readable(feature),
-            value: numberValue(value),
+            value: toNumber(value),
           };
         }
 
@@ -292,18 +319,25 @@ function normalizeShap(data) {
       .filter(Boolean)
       .sort(
         (a, b) =>
-          Math.abs(b.value) - Math.abs(a.value)
+          Math.abs(b.value) -
+          Math.abs(a.value)
       )
       .slice(0, 10);
   }
 
-  if (typeof raw === "object" && raw !== null) {
+  if (
+    typeof raw === "object" &&
+    raw !== null
+  ) {
     return Object.entries(raw)
       .map(([feature, value]) => {
-        let actual = value;
+        let actualValue = value;
 
-        if (typeof value === "object" && value !== null) {
-          actual =
+        if (
+          typeof value === "object" &&
+          value !== null
+        ) {
+          actualValue =
             value.value ??
             value.impact ??
             value.shap_value ??
@@ -312,13 +346,14 @@ function normalizeShap(data) {
         }
 
         return {
-          feature: readable(feature),
-          value: numberValue(actual),
+          feature: String(feature),
+          value: toNumber(actualValue),
         };
       })
       .sort(
         (a, b) =>
-          Math.abs(b.value) - Math.abs(a.value)
+          Math.abs(b.value) -
+          Math.abs(a.value)
       )
       .slice(0, 10);
   }
@@ -326,9 +361,9 @@ function normalizeShap(data) {
   return [];
 }
 
-/* =========================================================
-   COUNTERFACTUAL NORMALIZER
-========================================================= */
+/* =====================================================
+   COUNTERFACTUALS
+===================================================== */
 
 function normalizeCounterfactuals(data) {
   const raw =
@@ -343,11 +378,15 @@ function normalizeCounterfactuals(data) {
       .filter(Boolean);
   }
 
-  if (typeof raw === "object" && raw !== null) {
+  if (
+    typeof raw === "object" &&
+    raw !== null
+  ) {
     return Object.entries(raw)
-      .map(([key, value]) => {
-        return `${key}: ${readable(value)}`;
-      })
+      .map(
+        ([key, value]) =>
+          `${key}: ${readable(value)}`
+      )
       .filter(Boolean);
   }
 
@@ -358,9 +397,9 @@ function normalizeCounterfactuals(data) {
   return [];
 }
 
-/* =========================================================
+/* =====================================================
    APP
-========================================================= */
+===================================================== */
 
 export default function App() {
   const [page, setPage] = useState("home");
@@ -370,9 +409,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  /* =======================================================
+  /* ===================================================
      NAVIGATION
-  ======================================================= */
+  =================================================== */
 
   function navigate(target) {
     setPage(target);
@@ -384,20 +423,20 @@ export default function App() {
     });
   }
 
-  /* =======================================================
-     UPDATE FORM
-  ======================================================= */
+  /* ===================================================
+     UPDATE FIELD
+  =================================================== */
 
   function updateField(key, value) {
-    setForm((old) => ({
-      ...old,
+    setForm((previous) => ({
+      ...previous,
       [key]: value,
     }));
   }
 
-  /* =======================================================
+  /* ===================================================
      PREDICTION
-  ======================================================= */
+  =================================================== */
 
   async function handlePrediction(event) {
     event.preventDefault();
@@ -406,34 +445,118 @@ export default function App() {
     setError("");
 
     try {
-      const payload = {};
+      /*
+       * IMPORTANT:
+       * The frontend uses readable names with spaces.
+       * FastAPI expects underscore names.
+       */
 
-      Object.entries(form).forEach(([key, value]) => {
-        payload[key] = Number(value);
-      });
+      const payload = {
+        age: Number(form.age),
+        sex: Number(form.sex),
 
-      console.log("Prediction request:", payload);
+        on_thyroxine: Number(
+          form["on thyroxine"]
+        ),
+
+        query_on_thyroxine: Number(
+          form["query on thyroxine"]
+        ),
+
+        on_antithyroid_medication: Number(
+          form["on antithyroid medication"]
+        ),
+
+        sick: Number(form.sick),
+        pregnant: Number(form.pregnant),
+
+        thyroid_surgery: Number(
+          form["thyroid surgery"]
+        ),
+
+        I131_treatment: Number(
+          form["I131 treatment"]
+        ),
+
+        query_hypothyroid: Number(
+          form["query hypothyroid"]
+        ),
+
+        query_hyperthyroid: Number(
+          form["query hyperthyroid"]
+        ),
+
+        lithium: Number(form.lithium),
+        goitre: Number(form.goitre),
+        tumor: Number(form.tumor),
+        hypopituitary: Number(
+          form.hypopituitary
+        ),
+        psych: Number(form.psych),
+
+        TSH_measured: Number(
+          form["TSH measured"]
+        ),
+
+        TSH: Number(form.TSH),
+
+        T3_measured: Number(
+          form["T3 measured"]
+        ),
+
+        TT4_measured: Number(
+          form["TT4 measured"]
+        ),
+
+        TT4: Number(form.TT4),
+
+        T4U_measured: Number(
+          form["T4U measured"]
+        ),
+
+        T4U: Number(form.T4U),
+
+        FTI_measured: Number(
+          form["FTI measured"]
+        ),
+
+        FTI: Number(form.FTI),
+      };
+
+      console.log(
+        "Sending prediction payload:",
+        payload
+      );
 
       const response = await axios.post(
         `${API_URL}/predict`,
         payload,
         {
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           timeout: 60000,
         }
       );
 
-      console.log("Backend response:", response.data);
+      console.log(
+        "Backend response:",
+        response.data
+      );
 
       const data = response.data || {};
 
-      const prediction = readPrediction(data);
-      const class0 = readProbability(data, 0);
-      const class1 = readProbability(data, 1);
+      const prediction =
+        getPrediction(data);
 
-      const normalized = {
+      const class0 =
+        getProbability(data, 0);
+
+      const class1 =
+        getProbability(data, 1);
+
+      const normalizedResult = {
         prediction,
 
         prediction_label:
@@ -441,7 +564,7 @@ export default function App() {
             ? "Thyroid Disease Predicted"
             : "Thyroid Disease Not Predicted",
 
-        model: readModel(data),
+        model: getModel(data),
 
         probabilities: {
           class_0: class0,
@@ -457,11 +580,11 @@ export default function App() {
       };
 
       console.log(
-        "Normalized prediction:",
-        normalized
+        "Final result:",
+        normalizedResult
       );
 
-      setResult(normalized);
+      setResult(normalizedResult);
       setPage("results");
 
       window.scrollTo({
@@ -469,17 +592,28 @@ export default function App() {
         behavior: "smooth",
       });
     } catch (err) {
-      console.error("Prediction error:", err);
+      console.error(
+        "Prediction error:",
+        err
+      );
 
       if (err.response?.data?.detail) {
         setError(
-          readable(err.response.data.detail)
+          readable(
+            err.response.data.detail
+          )
         );
-      } else if (err.response?.data?.message) {
+      } else if (
+        err.response?.data?.message
+      ) {
         setError(
-          readable(err.response.data.message)
+          readable(
+            err.response.data.message
+          )
         );
-      } else if (err.code === "ECONNABORTED") {
+      } else if (
+        err.code === "ECONNABORTED"
+      ) {
         setError(
           "The prediction server took too long to respond."
         );
@@ -493,9 +627,9 @@ export default function App() {
     }
   }
 
-  /* =======================================================
+  /* ===================================================
      DOWNLOAD REPORT
-  ======================================================= */
+  =================================================== */
 
   function downloadReport() {
     if (!result) return;
@@ -505,19 +639,21 @@ export default function App() {
         ? result.shap
             .map(
               (item) =>
-                `${item.feature}: ${item.value.toFixed(6)}`
+                `${item.feature}: ${item.value.toFixed(
+                  6
+                )}`
             )
             .join("\n")
-        : "SHAP data not returned.";
+        : "SHAP data not available.";
 
-    const counterfactualText =
+    const cfText =
       result.counterfactuals.length > 0
         ? result.counterfactuals.join("\n")
-        : "Counterfactual data not returned.";
+        : "Counterfactual data not available.";
 
     const report = `
 THYROCARE AI
-====================================
+========================================
 
 MODEL PREDICTION
 ${result.prediction_label}
@@ -526,26 +662,30 @@ MODEL
 ${result.model}
 
 CLASS 0 PROBABILITY
-${percentText(result.probabilities.class_0)}
+${percentText(
+  result.probabilities.class_0
+)}
 
 CLASS 1 PROBABILITY
-${percentText(result.probabilities.class_1)}
+${percentText(
+  result.probabilities.class_1
+)}
 
-====================================
+========================================
 SHAP EXPLANATION
-====================================
+========================================
 
 ${shapText}
 
-====================================
+========================================
 COUNTERFACTUAL EXPLANATION
-====================================
+========================================
 
-${counterfactualText}
+${cfText}
 
-====================================
+========================================
 DISCLAIMER
-====================================
+========================================
 
 This application is intended for
 educational and research purposes.
@@ -557,30 +697,37 @@ medical diagnosis.
       type: "text/plain",
     });
 
-    const url = URL.createObjectURL(blob);
+    const url =
+      URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
+    const link =
+      document.createElement("a");
 
     link.href = url;
-    link.download = "thyrocare-ai-report.txt";
+    link.download =
+      "thyrocare-ai-report.txt";
 
     document.body.appendChild(link);
+
     link.click();
+
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
   }
 
-  /* =========================================================
+  /* ===================================================
      NAVBAR
-  ========================================================= */
+  =================================================== */
 
   function Navbar() {
     return (
       <header className="navbar">
         <button
           className="brand"
-          onClick={() => navigate("home")}
+          onClick={() =>
+            navigate("home")
+          }
         >
           <span className="brand-icon">
             <HeartPulse size={24} />
@@ -594,26 +741,46 @@ medical diagnosis.
 
         <nav
           className={`nav-links ${
-            menuOpen ? "mobile-open" : ""
+            menuOpen
+              ? "mobile-open"
+              : ""
           }`}
         >
           <button
-            className={page === "home" ? "active" : ""}
-            onClick={() => navigate("home")}
+            className={
+              page === "home"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              navigate("home")
+            }
           >
             Home
           </button>
 
           <button
-            className={page === "predict" ? "active" : ""}
-            onClick={() => navigate("predict")}
+            className={
+              page === "predict"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              navigate("predict")
+            }
           >
             Prediction
           </button>
 
           <button
-            className={page === "about" ? "active" : ""}
-            onClick={() => navigate("about")}
+            className={
+              page === "about"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              navigate("about")
+            }
           >
             About
           </button>
@@ -621,7 +788,9 @@ medical diagnosis.
 
         <button
           className="nav-cta"
-          onClick={() => navigate("predict")}
+          onClick={() =>
+            navigate("predict")
+          }
         >
           Start Test
           <ArrowRight size={17} />
@@ -629,7 +798,11 @@ medical diagnosis.
 
         <button
           className="mobile-menu-button"
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() =>
+            setMenuOpen(
+              !menuOpen
+            )
+          }
         >
           {menuOpen ? (
             <X size={23} />
@@ -641,9 +814,9 @@ medical diagnosis.
     );
   }
 
-  /* =========================================================
+  /* ===================================================
      HOME
-  ========================================================= */
+  =================================================== */
 
   function Home() {
     return (
@@ -657,19 +830,25 @@ medical diagnosis.
 
             <h1>
               Understand your thyroid
-              <span>with intelligent AI.</span>
+              <span>
+                with intelligent AI.
+              </span>
             </h1>
 
             <p className="hero-description">
-              ThyroCare combines machine learning with
-              explainable AI to provide thyroid disease
-              predictions and understandable insights.
+              ThyroCare combines machine
+              learning with explainable AI
+              to provide thyroid disease
+              predictions and understandable
+              insights.
             </p>
 
             <div className="hero-actions">
               <button
                 className="primary-button"
-                onClick={() => navigate("predict")}
+                onClick={() =>
+                  navigate("predict")
+                }
               >
                 Start Prediction
                 <ArrowRight size={20} />
@@ -677,7 +856,9 @@ medical diagnosis.
 
               <button
                 className="secondary-button"
-                onClick={() => navigate("about")}
+                onClick={() =>
+                  navigate("about")
+                }
               >
                 Learn About AI
                 <ChevronRight size={20} />
@@ -711,7 +892,9 @@ medical diagnosis.
 
               <span>
                 <strong>XGBoost</strong>
-                <small>Prediction model</small>
+                <small>
+                  Prediction model
+                </small>
               </span>
             </div>
 
@@ -720,14 +903,18 @@ medical diagnosis.
 
               <span>
                 <strong>SHAP</strong>
-                <small>Explainable result</small>
+                <small>
+                  Explainable result
+                </small>
               </span>
             </div>
 
             <div className="medical-card">
               <div className="card-top">
                 <span className="status-dot" />
+
                 AI DIAGNOSTIC ENGINE
+
                 <Activity size={22} />
               </div>
 
@@ -742,11 +929,18 @@ medical diagnosis.
 
               <div className="analysis-line">
                 <div>
-                  <small>MODEL STATUS</small>
-                  <strong>Ready for analysis</strong>
+                  <small>
+                    MODEL STATUS
+                  </small>
+
+                  <strong>
+                    Ready for analysis
+                  </strong>
                 </div>
 
-                <CheckCircle2 size={25} />
+                <CheckCircle2
+                  size={25}
+                />
               </div>
             </div>
           </div>
@@ -755,16 +949,18 @@ medical diagnosis.
     );
   }
 
-  /* =========================================================
+  /* ===================================================
      PREDICTION
-  ========================================================= */
+  =================================================== */
 
   function Prediction() {
     return (
       <main className="page-section">
         <button
           className="back-button"
-          onClick={() => navigate("home")}
+          onClick={() =>
+            navigate("home")
+          }
         >
           <ArrowLeft size={17} />
           Back to home
@@ -776,18 +972,23 @@ medical diagnosis.
             THYROID PREDICTION
           </div>
 
-          <h2>Enter clinical information</h2>
+          <h2>
+            Enter clinical information
+          </h2>
 
           <p>
-            Enter the available clinical information below.
-            The trained machine learning model will analyze
-            the values.
+            Enter the available clinical
+            information below. The trained
+            machine learning model will
+            analyze the values.
           </p>
         </div>
 
         <form
           className="prediction-form"
-          onSubmit={handlePrediction}
+          onSubmit={
+            handlePrediction
+          }
         >
           <div className="form-card">
             <div className="form-card-heading">
@@ -796,17 +997,27 @@ medical diagnosis.
               </div>
 
               <div>
-                <h3>Clinical measurements</h3>
+                <h3>
+                  Clinical measurements
+                </h3>
+
                 <p>
-                  Enter the patient's measurements and
-                  laboratory values.
+                  Enter the patient's
+                  measurements and laboratory
+                  values.
                 </p>
               </div>
             </div>
 
             <div className="form-grid">
               {numericFields.map(
-                ([key, label, min, max, step]) => (
+                ([
+                  key,
+                  label,
+                  min,
+                  max,
+                  step,
+                ]) => (
                   <label
                     className="input-group"
                     key={key}
@@ -835,44 +1046,54 @@ medical diagnosis.
           <div className="form-card">
             <div className="form-card-heading">
               <div className="section-icon">
-                <ShieldCheck size={22} />
+                <ShieldCheck
+                  size={22}
+                />
               </div>
 
               <div>
-                <h3>Clinical indicators</h3>
+                <h3>
+                  Clinical indicators
+                </h3>
+
                 <p>
-                  Select Yes or No for each indicator.
+                  Select Yes or No for each
+                  indicator.
                 </p>
               </div>
             </div>
 
             <div className="indicator-grid">
-              {binaryFields.map(([key, label]) => (
-                <label
-                  className="toggle-row"
-                  key={key}
-                >
-                  <span>{label}</span>
-
-                  <select
-                    value={form[key]}
-                    onChange={(e) =>
-                      updateField(
-                        key,
-                        Number(e.target.value)
-                      )
-                    }
+              {binaryFields.map(
+                ([key, label]) => (
+                  <label
+                    className="toggle-row"
+                    key={key}
                   >
-                    <option value={0}>
-                      No (0)
-                    </option>
+                    <span>{label}</span>
 
-                    <option value={1}>
-                      Yes (1)
-                    </option>
-                  </select>
-                </label>
-              ))}
+                    <select
+                      value={form[key]}
+                      onChange={(e) =>
+                        updateField(
+                          key,
+                          Number(
+                            e.target.value
+                          )
+                        )
+                      }
+                    >
+                      <option value={0}>
+                        No (0)
+                      </option>
+
+                      <option value={1}>
+                        Yes (1)
+                      </option>
+                    </select>
+                  </label>
+                )
+              )}
             </div>
           </div>
 
@@ -894,6 +1115,7 @@ medical diagnosis.
                   className="spin"
                   size={20}
                 />
+
                 Analyzing...
               </>
             ) : (
@@ -908,8 +1130,9 @@ medical diagnosis.
             <Info size={18} />
 
             <span>
-              This tool is intended for educational and
-              research purposes and should not replace
+              This tool is intended for
+              educational and research
+              purposes and should not replace
               professional medical advice.
             </span>
           </div>
@@ -918,9 +1141,9 @@ medical diagnosis.
     );
   }
 
-  /* =========================================================
+  /* ===================================================
      RESULTS
-  ========================================================= */
+  =================================================== */
 
   function Results() {
     if (!result) {
@@ -932,15 +1155,20 @@ medical diagnosis.
               NO RESULT
             </div>
 
-            <h2>No prediction available</h2>
+            <h2>
+              No prediction available
+            </h2>
 
             <p>
-              Run a prediction first to view the result.
+              Run a prediction first to
+              view the result.
             </p>
 
             <button
               className="primary-button"
-              onClick={() => navigate("predict")}
+              onClick={() =>
+                navigate("predict")
+              }
             >
               Start Prediction
               <ArrowRight size={19} />
@@ -950,13 +1178,16 @@ medical diagnosis.
       );
     }
 
-    const positive = result.prediction === 1;
+    const positive =
+      result.prediction === 1;
 
     return (
       <main className="page-section">
         <button
           className="back-button"
-          onClick={() => navigate("predict")}
+          onClick={() =>
+            navigate("predict")
+          }
         >
           <ArrowLeft size={17} />
           New prediction
@@ -968,34 +1199,50 @@ medical diagnosis.
             YOUR PREDICTION RESULT
           </div>
 
-          <h2>AI analysis completed</h2>
+          <h2>
+            AI analysis completed
+          </h2>
 
           <p>
-            The machine learning model has analyzed the
-            submitted clinical information.
+            The machine learning model has
+            analyzed the submitted clinical
+            information.
           </p>
         </div>
 
         <div
           className={`result-banner ${
-            positive ? "positive" : "negative"
+            positive
+              ? "positive"
+              : "negative"
           }`}
         >
           <div className="result-icon">
             {positive ? (
-              <CircleAlert size={34} />
+              <CircleAlert
+                size={34}
+              />
             ) : (
-              <CheckCircle2 size={34} />
+              <CheckCircle2
+                size={34}
+              />
             )}
           </div>
 
           <div>
-            <span>MODEL PREDICTION</span>
+            <span>
+              MODEL PREDICTION
+            </span>
 
-            <h2>{result.prediction_label}</h2>
+            <h2>
+              {result.prediction_label}
+            </h2>
 
             <p>
-              Model: <strong>{result.model}</strong>
+              Model:{" "}
+              <strong>
+                {result.model}
+              </strong>
             </p>
           </div>
         </div>
@@ -1009,11 +1256,15 @@ medical diagnosis.
 
             <div className="probability">
               <div className="probability-head">
-                <span>Class 0</span>
+                <span>
+                  Class 0
+                </span>
 
                 <strong>
                   {percentText(
-                    result.probabilities.class_0
+                    result
+                      .probabilities
+                      .class_0
                   )}
                 </strong>
               </div>
@@ -1022,8 +1273,10 @@ medical diagnosis.
                 <div
                   className="progress-bar"
                   style={{
-                    width: `${percent(
-                      result.probabilities.class_0
+                    width: `${toPercent(
+                      result
+                        .probabilities
+                        .class_0
                     )}%`,
                   }}
                 />
@@ -1032,11 +1285,15 @@ medical diagnosis.
 
             <div className="probability">
               <div className="probability-head">
-                <span>Class 1</span>
+                <span>
+                  Class 1
+                </span>
 
                 <strong>
                   {percentText(
-                    result.probabilities.class_1
+                    result
+                      .probabilities
+                      .class_1
                   )}
                 </strong>
               </div>
@@ -1045,8 +1302,10 @@ medical diagnosis.
                 <div
                   className="progress-bar"
                   style={{
-                    width: `${percent(
-                      result.probabilities.class_1
+                    width: `${toPercent(
+                      result
+                        .probabilities
+                        .class_1
                     )}%`,
                   }}
                 />
@@ -1061,32 +1320,42 @@ medical diagnosis.
             </div>
 
             <p className="result-text">
-              SHAP explains which input features contributed
-              to the model prediction.
+              SHAP explains which input
+              features contributed to the
+              model prediction.
             </p>
 
             <div className="shap-list">
-              {result.shap.length > 0 ? (
-                result.shap.map((item, index) => (
-                  <div
-                    className="shap-row"
-                    key={index}
-                  >
-                    <span>
-                      {readable(item.feature)}
-                    </span>
+              {result.shap.length >
+              0 ? (
+                result.shap.map(
+                  (
+                    item,
+                    index
+                  ) => (
+                    <div
+                      className="shap-row"
+                      key={index}
+                    >
+                      <span>
+                        {readable(
+                          item.feature
+                        )}
+                      </span>
 
-                    <strong>
-                      {numberValue(
-                        item.value
-                      ).toFixed(4)}
-                    </strong>
-                  </div>
-                ))
+                      <strong>
+                        {toNumber(
+                          item.value
+                        ).toFixed(4)}
+                      </strong>
+                    </div>
+                  )
+                )
               ) : (
                 <div className="empty-small">
-                  SHAP explanation was not returned
-                  by the backend.
+                  SHAP explanation was
+                  not returned by the
+                  backend.
                 </div>
               )}
             </div>
@@ -1100,14 +1369,21 @@ medical diagnosis.
           </div>
 
           <p className="result-text">
-            Counterfactual explanations show changes that
-            could potentially change the model prediction.
+            Counterfactual explanations
+            show changes that could
+            potentially change the model
+            prediction.
           </p>
 
           <div className="counterfactual-list">
-            {result.counterfactuals.length > 0 ? (
+            {result
+              .counterfactuals
+              .length > 0 ? (
               result.counterfactuals.map(
-                (item, index) => (
+                (
+                  item,
+                  index
+                ) => (
                   <div
                     className="counterfactual-item"
                     key={index}
@@ -1118,8 +1394,9 @@ medical diagnosis.
               )
             ) : (
               <div className="empty-small">
-                Counterfactual explanation was not
-                returned by the backend.
+                Counterfactual explanation
+                was not returned by the
+                backend.
               </div>
             )}
           </div>
@@ -1128,7 +1405,9 @@ medical diagnosis.
         <div className="result-actions">
           <button
             className="primary-button"
-            onClick={downloadReport}
+            onClick={
+              downloadReport
+            }
           >
             <Download size={18} />
             Download Report
@@ -1139,8 +1418,9 @@ medical diagnosis.
           <Info size={18} />
 
           <span>
-            This prediction is generated by a machine
-            learning model for educational and research
+            This prediction is generated
+            by a machine learning model for
+            educational and research
             purposes.
           </span>
         </div>
@@ -1148,9 +1428,9 @@ medical diagnosis.
     );
   }
 
-  /* =========================================================
+  /* ===================================================
      ABOUT
-  ========================================================= */
+  =================================================== */
 
   function About() {
     return (
@@ -1162,12 +1442,15 @@ medical diagnosis.
           </div>
 
           <h2>
-            AI with understandable results.
+            AI with understandable
+            results.
           </h2>
 
           <p>
-            ThyroCare combines machine learning prediction
-            with explainable artificial intelligence.
+            ThyroCare combines machine
+            learning prediction with
+            explainable artificial
+            intelligence.
           </p>
         </div>
 
@@ -1175,44 +1458,55 @@ medical diagnosis.
           <section className="about-card">
             <Brain size={30} />
 
-            <h3>Machine Learning</h3>
+            <h3>
+              Machine Learning
+            </h3>
 
             <p>
-              Uses a trained XGBoost model to analyze
-              thyroid-related clinical features.
+              Uses a trained XGBoost model
+              to analyze thyroid-related
+              clinical features.
             </p>
           </section>
 
           <section className="about-card">
             <Sparkles size={30} />
 
-            <h3>Explainable AI</h3>
+            <h3>
+              Explainable AI
+            </h3>
 
             <p>
-              SHAP explanations help identify features
-              that influence the model output.
+              SHAP explanations help
+              identify features that
+              influence the model output.
             </p>
           </section>
 
           <section className="about-card">
             <ShieldCheck size={30} />
 
-            <h3>Transparent Results</h3>
+            <h3>
+              Transparent Results
+            </h3>
 
             <p>
-              Displays prediction classes and probability
-              information.
+              Displays prediction classes
+              and probability information.
             </p>
           </section>
 
           <section className="about-card">
             <HeartPulse size={30} />
 
-            <h3>Academic Project</h3>
+            <h3>
+              Academic Project
+            </h3>
 
             <p>
-              Designed as a machine learning and
-              explainable AI project.
+              Designed as a machine
+              learning and explainable AI
+              project.
             </p>
           </section>
         </div>
@@ -1220,9 +1514,9 @@ medical diagnosis.
     );
   }
 
-  /* =========================================================
+  /* ===================================================
      FOOTER
-  ========================================================= */
+  =================================================== */
 
   function Footer() {
     return (
@@ -1233,7 +1527,9 @@ medical diagnosis.
           </span>
 
           <div>
-            <strong>ThyroCare AI</strong>
+            <strong>
+              ThyroCare AI
+            </strong>
 
             <p>
               Intelligent thyroid analysis.
@@ -1243,15 +1539,16 @@ medical diagnosis.
 
         <div className="footer-note">
           <ShieldCheck size={15} />
-          Educational and research purposes
+          Educational and research
+          purposes
         </div>
       </footer>
     );
   }
 
-  /* =========================================================
-     FINAL UI
-  ========================================================= */
+  /* ===================================================
+     MAIN
+  =================================================== */
 
   return (
     <div className="app-shell">
@@ -1259,13 +1556,19 @@ medical diagnosis.
 
       {page === "home" && <Home />}
 
-      {page === "predict" && <Prediction />}
+      {page === "predict" && (
+        <Prediction />
+      )}
 
-      {page === "results" && <Results />}
+      {page === "results" && (
+        <Results />
+      )}
 
-      {page === "about" && <About />}
+      {page === "about" && (
+        <About />
+      )}
 
       <Footer />
     </div>
   );
-}
+        }
