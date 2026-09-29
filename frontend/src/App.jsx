@@ -1,19 +1,4 @@
-import React, { useState } from "react";
-import {
-  Activity,
-  Brain,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  HeartPulse,
-  Info,
-  Loader2,
-  RotateCcw,
-  ShieldCheck,
-  Sparkles,
-  Stethoscope,
-  TrendingUp,
-} from "lucide-react";
+import React, { useMemo, useState } from "react";
 import "./index.css";
 
 const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
@@ -28,6 +13,7 @@ const initialForm = {
 
   sick: 0,
   pregnant: 0,
+
   "thyroid surgery": 0,
   "I131 treatment": 0,
 
@@ -49,376 +35,292 @@ const initialForm = {
   TT4: 110,
 
   "T4U measured": 1,
-  T4U: 1,
+  T4U: 1.0,
 
   "FTI measured": 1,
   FTI: 110,
 };
 
-const labels = {
-  age: "Age",
-  sex: "Sex",
-  "on thyroxine": "On Thyroxine",
-  "query on thyroxine": "Query on Thyroxine",
-  "on antithyroid medication": "On Antithyroid Medication",
-  sick: "Sick",
-  pregnant: "Pregnant",
-  "thyroid surgery": "Thyroid Surgery",
-  "I131 treatment": "I-131 Treatment",
-  "query hypothyroid": "Query Hypothyroid",
-  "query hyperthyroid": "Query Hyperthyroid",
-  lithium: "Lithium",
-  goitre: "Goitre",
-  tumor: "Tumor",
-  hypopituitary: "Hypopituitary",
-  psych: "Psych",
-  "TSH measured": "TSH Measured",
-  TSH: "TSH",
-  "T3 measured": "T3 Measured",
-  "TT4 measured": "TT4 Measured",
-  TT4: "TT4",
-  "T4U measured": "T4U Measured",
-  T4U: "T4U",
-  "FTI measured": "FTI Measured",
-  FTI: "FTI",
-};
-
-const numericFields = ["age", "TSH", "TT4", "T4U", "FTI"];
-
-const groups = [
-  {
-    title: "Patient Information",
-    icon: <HeartPulse size={20} />,
-    fields: ["age", "sex"],
-  },
-  {
-    title: "Medical History",
-    icon: <Stethoscope size={20} />,
-    fields: [
-      "on thyroxine",
-      "query on thyroxine",
-      "on antithyroid medication",
-      "sick",
-      "pregnant",
-      "thyroid surgery",
-      "I131 treatment",
-      "query hypothyroid",
-      "query hyperthyroid",
-      "lithium",
-      "goitre",
-      "tumor",
-      "hypopituitary",
-      "psych",
-    ],
-  },
-  {
-    title: "Thyroid Measurements",
-    icon: <Activity size={20} />,
-    fields: [
-      "TSH measured",
-      "TSH",
-      "T3 measured",
-      "TT4 measured",
-      "TT4",
-      "T4U measured",
-      "T4U",
-      "FTI measured",
-      "FTI",
-    ],
-  },
+const binaryFields = [
+  ["sex", "Sex"],
+  ["on thyroxine", "On thyroxine"],
+  ["query on thyroxine", "Query on thyroxine"],
+  ["on antithyroid medication", "On antithyroid medication"],
+  ["sick", "Sick"],
+  ["pregnant", "Pregnant"],
+  ["thyroid surgery", "Thyroid surgery"],
+  ["I131 treatment", "I131 treatment"],
+  ["query hypothyroid", "Query hypothyroid"],
+  ["query hyperthyroid", "Query hyperthyroid"],
+  ["lithium", "Lithium"],
+  ["goitre", "Goitre"],
+  ["tumor", "Tumor"],
+  ["hypopituitary", "Hypopituitary"],
+  ["psych", "Psych"],
+  ["TSH measured", "TSH measured"],
+  ["T3 measured", "T3 measured"],
+  ["TT4 measured", "TT4 measured"],
+  ["T4U measured", "T4U measured"],
+  ["FTI measured", "FTI measured"],
 ];
 
-function numberValue(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+function formatNumber(value, digits = 2) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "—";
+  }
+
+  return number.toFixed(digits);
 }
 
-/* Convert FastAPI validation errors into readable text */
-function formatApiError(data, status) {
-  if (!data) {
-    return `Request failed with status ${status}.`;
+function formatPercent(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "—";
   }
 
-  if (Array.isArray(data.detail)) {
-    return data.detail
-      .map((error, index) => {
-        const location = Array.isArray(error?.loc)
-          ? error.loc.join(" → ")
-          : "field";
+  return `${(number * 100).toFixed(2)}%`;
+}
 
-        const message =
-          error?.msg ||
-          error?.message ||
-          "Invalid value";
-
-        return `${index + 1}. ${location}: ${message}`;
-      })
-      .join("\n");
-  }
+function getErrorMessage(data, fallback = "Prediction failed.") {
+  if (!data) return fallback;
 
   if (typeof data.detail === "string") {
     return data.detail;
   }
 
-  if (data.detail && typeof data.detail === "object") {
-    return JSON.stringify(data.detail, null, 2);
+  if (Array.isArray(data.detail)) {
+    return data.detail
+      .map((item, index) => {
+        if (typeof item === "string") {
+          return `${index + 1}. ${item}`;
+        }
+
+        if (item?.loc && item?.msg) {
+          const location = Array.isArray(item.loc)
+            ? item.loc.join(" → ")
+            : String(item.loc);
+
+          return `${index + 1}. ${location}: ${item.msg}`;
+        }
+
+        if (item?.msg) {
+          return `${index + 1}. ${item.msg}`;
+        }
+
+        return `${index + 1}. ${JSON.stringify(item)}`;
+      })
+      .join("\n");
   }
 
   if (typeof data.message === "string") {
     return data.message;
   }
 
-  return JSON.stringify(data, null, 2);
+  return fallback;
 }
 
-/*
-  Payload matches the current FastAPI backend.
-*/
-function createPayload(form) {
-  return {
-    age: numberValue(form.age),
-    sex: numberValue(form.sex),
+function normalizeShap(shap) {
+  if (!shap) return [];
 
-    "on thyroxine": numberValue(form["on thyroxine"]),
-    "query on thyroxine": numberValue(
-      form["query on thyroxine"]
-    ),
-    "on antithyroid medication": numberValue(
-      form["on antithyroid medication"]
-    ),
+  if (Array.isArray(shap)) {
+    return shap
+      .map((item) => {
+        if (typeof item === "object" && item !== null) {
+          return {
+            feature:
+              item.feature ??
+              item.name ??
+              item.feature_name ??
+              "Feature",
+            value: Number(item.value ?? item.shap_value ?? item.impact ?? 0),
+          };
+        }
 
-    sick: numberValue(form.sick),
-    pregnant: numberValue(form.pregnant),
+        return null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  }
 
-    "thyroid surgery": numberValue(
-      form["thyroid surgery"]
-    ),
+  if (typeof shap === "object") {
+    return Object.entries(shap)
+      .map(([feature, value]) => ({
+        feature,
+        value: Number(
+          typeof value === "object"
+            ? value.value ?? value.shap_value ?? value.impact ?? 0
+            : value
+        ),
+      }))
+      .filter((item) => Number.isFinite(item.value))
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  }
 
-    I131_treatment: numberValue(
-      form["I131 treatment"]
-    ),
-
-    "query hypothyroid": numberValue(
-      form["query hypothyroid"]
-    ),
-    "query hyperthyroid": numberValue(
-      form["query hyperthyroid"]
-    ),
-
-    lithium: numberValue(form.lithium),
-    goitre: numberValue(form.goitre),
-    tumor: numberValue(form.tumor),
-    hypopituitary: numberValue(form.hypopituitary),
-    psych: numberValue(form.psych),
-
-    TSH_measured: numberValue(form["TSH measured"]),
-    TSH: numberValue(form.TSH),
-
-    T3_measured: numberValue(form["T3 measured"]),
-
-    TT4_measured: numberValue(form["TT4 measured"]),
-    TT4: numberValue(form.TT4),
-
-    T4U_measured: numberValue(form["T4U measured"]),
-    T4U: numberValue(form.T4U),
-
-    FTI_measured: numberValue(form["FTI measured"]),
-    FTI: numberValue(form.FTI),
-  };
+  return [];
 }
 
-function extractPrediction(data) {
-  if (data?.prediction !== undefined) {
-    return Number(data.prediction);
-  }
-
-  if (data?.predicted_class !== undefined) {
-    return Number(data.predicted_class);
-  }
-
-  if (data?.class_prediction !== undefined) {
-    return Number(data.class_prediction);
-  }
-
-  if (data?.result?.prediction !== undefined) {
-    return Number(data.result.prediction);
-  }
-
-  return 0;
-}
-
-function extractModel(data) {
-  return (
-    data?.model ||
-    data?.model_name ||
-    data?.result?.model ||
-    "XGBoost"
-  );
-}
-
-function extractProbability(data, classNumber) {
-  const directKey = `class_${classNumber}_probability`;
-
-  if (data?.[directKey] !== undefined) {
-    return Number(data[directKey]);
-  }
-
-  if (data?.probabilities?.[classNumber] !== undefined) {
-    return Number(data.probabilities[classNumber]);
-  }
-
-  if (
-    data?.probabilities?.[`class_${classNumber}`] !==
-    undefined
-  ) {
-    return Number(
-      data.probabilities[`class_${classNumber}`]
-    );
-  }
-
-  return 0;
-}
-
-function extractShap(data) {
-  const raw =
-    data?.shap_values ||
-    data?.shap ||
-    data?.explanation ||
-    data?.result?.shap_values ||
-    [];
-
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-
-  return raw
-    .map((item) => {
-      if (Array.isArray(item)) {
-        return {
-          feature: item[0],
-          value: Number(item[1]) || 0,
-        };
-      }
-
-      return {
-        feature:
-          item?.feature ||
-          item?.feature_name ||
-          item?.name ||
-          "Feature",
-        value:
-          Number(
-            item?.value ??
-              item?.shap_value ??
-              item?.impact ??
-              0
-          ) || 0,
-      };
-    })
-    .filter((item) => item.feature)
-    .sort(
-      (a, b) => Math.abs(b.value) - Math.abs(a.value)
-    )
-    .slice(0, 10);
-}
-
-function extractCounterfactuals(data) {
-  const cf =
-    data?.counterfactuals ||
-    data?.counterfactual ||
-    data?.result?.counterfactuals;
-
-  if (!cf) {
+function normalizeCounterfactuals(counterfactuals) {
+  if (!counterfactuals) {
     return {
       available: false,
+      features: [],
       scenarios: [],
     };
   }
 
   return {
-    available: Boolean(cf.available),
-    scenarios: Array.isArray(cf.scenarios)
-      ? cf.scenarios
+    available: Boolean(counterfactuals.available),
+    features: Array.isArray(counterfactuals.features)
+      ? counterfactuals.features
       : [],
+    scenarios: Array.isArray(counterfactuals.scenarios)
+      ? counterfactuals.scenarios
+      : [],
+    target_prediction: counterfactuals.target_prediction,
+    target_label: counterfactuals.target_label,
   };
-}
-
-function percentage(value) {
-  const n = Number(value);
-
-  if (!Number.isFinite(n)) {
-    return "0.00%";
-  }
-
-  return `${(n <= 1 ? n * 100 : n).toFixed(2)}%`;
-}
-
-function displayNumber(value) {
-  const n = Number(value);
-
-  if (!Number.isFinite(n)) {
-    return String(value);
-  }
-
-  return Number.isInteger(n)
-    ? String(n)
-    : n.toFixed(4);
 }
 
 export default function App() {
   const [page, setPage] = useState("home");
+
   const [form, setForm] = useState(initialForm);
+
   const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
+
   const [loading, setLoading] = useState(false);
 
-  const [openGroups, setOpenGroups] = useState({
-    "Patient Information": true,
-    "Medical History": true,
-    "Thyroid Measurements": true,
-  });
+  const [error, setError] = useState("");
 
-  const updateField = (field, value) => {
-    setForm((old) => ({
-      ...old,
-      [field]: numericFields.includes(field)
-        ? value
-        : Number(value),
+  const [serverMessage, setServerMessage] = useState("");
+
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const shapValues = useMemo(() => {
+    return normalizeShap(
+      result?.shap_values ??
+        result?.shap ??
+        result?.explanation?.shap_values ??
+        result?.explanation?.shap
+    );
+  }, [result]);
+
+  const counterfactuals = useMemo(() => {
+    return normalizeCounterfactuals(
+      result?.counterfactuals ??
+        result?.explanation?.counterfactuals
+    );
+  }, [result]);
+
+  const prediction = result?.prediction;
+
+  const isDisease =
+    prediction === 1 ||
+    prediction === "1" ||
+    result?.prediction_label === "Thyroid Disease Predicted";
+
+  const predictionLabel = isDisease
+    ? "Thyroid Disease Predicted"
+    : "Thyroid Disease Not Predicted";
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
     }));
   };
 
-  const resetForm = () => {
-    setForm(initialForm);
-    setResult(null);
-    setError("");
-  };
+  const handleBinaryChange = (event) => {
+    const { name, value } = event.target;
 
-  const toggleGroup = (title) => {
-    setOpenGroups((old) => ({
-      ...old,
-      [title]: !old[title],
+    setForm((previous) => ({
+      ...previous,
+      [name]: Number(value),
     }));
   };
 
-  const predict = async () => {
+  /*
+   * IMPORTANT:
+   * These are the exact field names expected by the FastAPI backend.
+   *
+   * The frontend form can continue using human-readable names
+   * such as "on thyroxine", but the API payload must use:
+   *
+   * on_thyroxine
+   * query_on_thyroxine
+   * on_antithyroid_medication
+   * thyroid_surgery
+   * query_hypothyroid
+   * query_hyperthyroid
+   */
+  const buildPayload = () => {
+    return {
+      age: Number(form.age),
+      sex: Number(form.sex),
+
+      on_thyroxine: Number(form["on thyroxine"]),
+      query_on_thyroxine: Number(form["query on thyroxine"]),
+      on_antithyroid_medication: Number(
+        form["on antithyroid medication"]
+      ),
+
+      sick: Number(form.sick),
+      pregnant: Number(form.pregnant),
+
+      thyroid_surgery: Number(form["thyroid surgery"]),
+      I131_treatment: Number(form["I131 treatment"]),
+
+      query_hypothyroid: Number(form["query hypothyroid"]),
+      query_hyperthyroid: Number(form["query hyperthyroid"]),
+
+      lithium: Number(form.lithium),
+      goitre: Number(form.goitre),
+      tumor: Number(form.tumor),
+      hypopituitary: Number(form.hypopituitary),
+      psych: Number(form.psych),
+
+      TSH_measured: Number(form["TSH measured"]),
+      TSH: Number(form.TSH),
+
+      T3_measured: Number(form["T3 measured"]),
+
+      TT4_measured: Number(form["TT4 measured"]),
+      TT4: Number(form.TT4),
+
+      T4U_measured: Number(form["T4U measured"]),
+      T4U: Number(form.T4U),
+
+      FTI_measured: Number(form["FTI measured"]),
+      FTI: Number(form.FTI),
+    };
+  };
+
+  const handleAnalyze = async () => {
     setLoading(true);
     setError("");
+    setServerMessage("");
     setResult(null);
 
-    const controller = new AbortController();
-
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 180000);
-
     try {
-      const payload = createPayload(form);
+      const payload = buildPayload();
 
-      console.log("THYROCARE REQUEST:", payload);
+      console.log("Sending prediction payload:", payload);
 
-      const response = await fetch(
-        `${API_URL}/predict`,
-        {
+      const controller = new AbortController();
+
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, 180000);
+
+      let response;
+
+      try {
+        response = await fetch(`${API_URL}/predict`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -426,188 +328,993 @@ export default function App() {
           },
           body: JSON.stringify(payload),
           signal: controller.signal,
-        }
-      );
-
-      const responseText = await response.text();
-
-      let data;
-
-      try {
-        data = responseText
-          ? JSON.parse(responseText)
-          : {};
-      } catch {
-        data = {
-          detail:
-            responseText ||
-            "Invalid response received from server.",
-        };
+        });
+      } finally {
+        clearTimeout(timeout);
       }
 
-      console.log("THYROCARE RESPONSE:", data);
+      let data = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      console.log("Prediction API response:", data);
 
       if (!response.ok) {
         throw new Error(
-          formatApiError(data, response.status)
+          getErrorMessage(
+            data,
+            `Server returned HTTP ${response.status}.`
+          )
         );
       }
 
-      const prediction = extractPrediction(data);
-
-      setResult({
-        prediction,
-        model: extractModel(data),
-        class0: extractProbability(data, 0),
-        class1: extractProbability(data, 1),
-        shap: extractShap(data),
-        counterfactuals: extractCounterfactuals(data),
-        raw: data,
-      });
+      setResult(data);
 
       setPage("results");
     } catch (err) {
-      console.error("PREDICTION ERROR:", err);
+      console.error("Prediction error:", err);
 
       if (err?.name === "AbortError") {
         setError(
-          "The prediction server took too long to respond.\n\n" +
-            "Render may be waking the backend after inactivity. " +
-            "Please wait a little and try again."
+          "The prediction server took too long to respond. Render may be waking up. Please wait a little and try again."
+        );
+      } else if (
+        err?.message?.includes("Failed to fetch")
+      ) {
+        setError(
+          "Unable to connect to the prediction server. Please check that the Render backend is online and try again."
         );
       } else {
         setError(
-          err?.message ||
-            "Unable to connect to the prediction server."
+          err?.message || "An unexpected prediction error occurred."
         );
       }
     } finally {
-      clearTimeout(timeout);
       setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setForm(initialForm);
+    setResult(null);
+    setError("");
+    setServerMessage("");
+    setPage("prediction");
+  };
+
+  const goTo = (target) => {
+    setPage(target);
+    setMenuOpen(false);
+
+    if (target !== "results") {
+      setError("");
     }
   };
 
   const downloadReport = () => {
     if (!result) return;
 
-    const prediction =
-      result.prediction === 1
-        ? "Thyroid Disease Predicted"
-        : "Thyroid Disease Not Predicted";
+    const report = `
+THYROCARE — AI THYROID ANALYSIS
+================================
 
-    let report = "";
+Final Year B.Tech Project
 
-    report += "THYROCARE - THYROID DIAGNOSIS AI\n";
-    report += "====================================\n\n";
-    report += `Prediction: ${prediction}\n`;
-    report += `Model: ${result.model}\n\n`;
+MODEL
+-----
+XGBoost
 
-    report += "CLASS PROBABILITIES\n";
-    report += "-------------------\n";
-    report += `Class 0: ${percentage(result.class0)}\n`;
-    report += `Class 1: ${percentage(result.class1)}\n\n`;
+PREDICTION
+----------
+${predictionLabel}
 
-    report += "SHAP EXPLANATION\n";
-    report += "----------------\n";
+Class 0 Probability:
+${formatPercent(result.class_0_probability)}
 
-    if (result.shap.length === 0) {
-      report += "No SHAP values available.\n";
-    } else {
-      result.shap.forEach((item, index) => {
-        report += `${index + 1}. ${item.feature}: ${displayNumber(
-          item.value
-        )}\n`;
-      });
-    }
+Class 1 Probability:
+${formatPercent(result.class_1_probability)}
 
-    report += "\nCOUNTERFACTUAL SCENARIOS\n";
-    report += "------------------------\n";
+SHAP EXPLANATION
+----------------
+${shapValues.length
+  ? shapValues
+      .slice(0, 15)
+      .map(
+        (item, index) =>
+          `${index + 1}. ${item.feature}: ${formatNumber(
+            item.value,
+            4
+          )}`
+      )
+      .join("\n")
+  : "SHAP values unavailable."}
 
-    if (
-      !result.counterfactuals.available ||
-      result.counterfactuals.scenarios.length === 0
-    ) {
-      report += "No counterfactual scenarios available.\n";
-    } else {
-      result.counterfactuals.scenarios.forEach(
-        (scenario) => {
-          report += `Scenario ${scenario.scenario}\n`;
+COUNTERFACTUAL ANALYSIS
+-----------------------
+${
+  counterfactuals.available
+    ? counterfactuals.scenarios
+        .map((scenario) => {
+          const changes = Array.isArray(scenario.changes)
+            ? scenario.changes
+                .map(
+                  (change) =>
+                    `${change.feature}: ${change.original_value} -> ${change.counterfactual_value}`
+                )
+                .join(", ")
+            : "No changes listed";
 
-          scenario.changes?.forEach((change) => {
-            report += `  ${change.feature}: ${change.original_value} -> ${change.counterfactual_value}\n`;
-          });
+          return `Scenario ${scenario.scenario}: ${changes}
+Prediction: ${scenario.prediction_label ?? scenario.prediction}
+Class 0: ${formatPercent(scenario.class_0_probability)}
+Class 1: ${formatPercent(scenario.class_1_probability)}
+`;
+        })
+        .join("\n")
+    : "Counterfactual analysis unavailable."
+}
 
-          report += `  Prediction: ${
-            scenario.prediction === 1
-              ? "Thyroid Disease Predicted"
-              : "Thyroid Disease Not Predicted"
-          }\n`;
+DISCLAIMER
+----------
+This system is an academic machine-learning project.
+It is not a medical diagnosis and should not replace
+professional medical advice.
 
-          report += `  Class 0: ${percentage(
-            scenario.class_0_probability
-          )}\n`;
-
-          report += `  Class 1: ${percentage(
-            scenario.class_1_probability
-          )}\n\n`;
-        }
-      );
-    }
-
-    report += "DISCLAIMER\n";
-    report +=
-      "This result is for educational and research purposes only and is not a medical diagnosis.\n";
+Generated by ThyroCare.
+`;
 
     const blob = new Blob([report], {
       type: "text/plain;charset=utf-8",
     });
 
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
 
+    const link = document.createElement("a");
     link.href = url;
-    link.download = "thyrocare-report.txt";
+    link.download = "thyrocare-analysis-report.txt";
 
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
 
     URL.revokeObjectURL(url);
   };
 
-  const predictionText =
-    result?.prediction === 1
-      ? "Thyroid Disease Predicted"
-      : "Thyroid Disease Not Predicted";
+  const renderBinaryField = (name, label) => {
+    return (
+      <div className="field" key={name}>
+        <label>{label}</label>
 
-  return (
-    <div className="app">
-
-      {/* NAVBAR */}
-      <header className="topbar">
-        <div
-          className="brand"
-          onClick={() => setPage("home")}
+        <select
+          name={name}
+          value={form[name]}
+          onChange={handleBinaryChange}
         >
-          <div className="brand-icon">
-            <Brain size={25} />
+          <option value={0}>No / 0</option>
+          <option value={1}>Yes / 1</option>
+        </select>
+      </div>
+    );
+  };
+
+  const renderPredictionPage = () => {
+    return (
+      <main className="page prediction-page">
+        <div className="page-header">
+          <div>
+            <span className="eyebrow">AI PREDICTION</span>
+
+            <h1>Analyze Thyroid</h1>
+
+            <p>
+              Enter the patient measurements and clinical
+              indicators below.
+            </p>
           </div>
 
-          <div>
-            <div className="brand-name">
-              ThyroCare
-            </div>
-
-            <div className="brand-subtitle">
-              AI Thyroid Analysis
-            </div>
+          <div className="model-badge">
+            <span className="status-dot"></span>
+            XGBoost Model
           </div>
         </div>
 
-        <nav className="navigation">
+        {error && (
+          <div className="error-box">
+            <div className="error-title">
+              Prediction Error
+            </div>
+
+            <div className="error-message">
+              {error}
+            </div>
+          </div>
+        )}
+
+        <section className="form-card">
+          <div className="section-heading">
+            <div>
+              <span className="section-number">01</span>
+              <h2>Patient Information</h2>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="field">
+              <label>Age</label>
+
+              <input
+                type="number"
+                name="age"
+                value={form.age}
+                min="1"
+                max="120"
+                onChange={handleChange}
+              />
+            </div>
+
+            {renderBinaryField("sex", "Sex")}
+          </div>
+        </section>
+
+        <section className="form-card">
+          <div className="section-heading">
+            <div>
+              <span className="section-number">02</span>
+              <h2>Clinical Indicators</h2>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            {binaryFields
+              .slice(1, 15)
+              .map(([name, label]) =>
+                renderBinaryField(name, label)
+              )}
+          </div>
+        </section>
+
+        <section className="form-card">
+          <div className="section-heading">
+            <div>
+              <span className="section-number">03</span>
+              <h2>Thyroid Measurements</h2>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="field">
+              <label>TSH</label>
+
+              <input
+                type="number"
+                name="TSH"
+                value={form.TSH}
+                step="0.01"
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="field">
+              <label>TT4</label>
+
+              <input
+                type="number"
+                name="TT4"
+                value={form.TT4}
+                step="0.01"
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="field">
+              <label>T4U</label>
+
+              <input
+                type="number"
+                name="T4U"
+                value={form.T4U}
+                step="0.01"
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="field">
+              <label>FTI</label>
+
+              <input
+                type="number"
+                name="FTI"
+                value={form.FTI}
+                step="0.01"
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="form-card">
+          <div className="section-heading">
+            <div>
+              <span className="section-number">04</span>
+              <h2>Measurement Availability</h2>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            {[
+              ["TSH measured", "TSH measured"],
+              ["T3 measured", "T3 measured"],
+              ["TT4 measured", "TT4 measured"],
+              ["T4U measured", "T4U measured"],
+              ["FTI measured", "FTI measured"],
+            ].map(([name, label]) =>
+              renderBinaryField(name, label)
+            )}
+          </div>
+        </section>
+
+        <div className="action-area">
           <button
-            className={page === "home" ? "nav-active" : ""}
-            onClick={() => setPage("home")}
+            className="primary-button"
+            onClick={handleAnalyze}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                Analyze Thyroid
+                <span>→</span>
+              </>
+            )}
+          </button>
+
+          <button
+            className="secondary-button"
+            onClick={resetForm}
+            disabled={loading}
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="process-strip">
+          <div>
+            <strong>01</strong>
+            <span>Input</span>
+          </div>
+
+          <div className="process-line"></div>
+
+          <div>
+            <strong>02</strong>
+            <span>XGBoost Prediction</span>
+          </div>
+
+          <div className="process-line"></div>
+
+          <div>
+            <strong>03</strong>
+            <span>SHAP + Counterfactuals</span>
+          </div>
+        </div>
+      </main>
+    );
+  };
+
+  const renderResultsPage = () => {
+    if (!result) {
+      return (
+        <main className="page empty-page">
+          <div className="empty-card">
+            <div className="empty-icon">⌁</div>
+
+            <h1>No Analysis Yet</h1>
+
+            <p>
+              Enter patient information to generate an
+              AI-powered thyroid analysis.
+            </p>
+
+            <button
+              className="primary-button"
+              onClick={() => goTo("prediction")}
+            >
+              Start Analysis →
+            </button>
+          </div>
+        </main>
+      );
+    }
+
+    return (
+      <main className="page results-page">
+        <div className="page-header">
+          <div>
+            <span className="eyebrow">ANALYSIS COMPLETE</span>
+
+            <h1>Prediction Results</h1>
+
+            <p>
+              XGBoost prediction with explainable AI analysis.
+            </p>
+          </div>
+
+          <div className="result-actions">
+            <button
+              className="secondary-button"
+              onClick={downloadReport}
+            >
+              Download Report
+            </button>
+
+            <button
+              className="secondary-button"
+              onClick={resetForm}
+            >
+              New Analysis
+            </button>
+          </div>
+        </div>
+
+        <section
+          className={`prediction-result ${
+            isDisease ? "positive" : "negative"
+          }`}
+        >
+          <div className="result-icon">
+            {isDisease ? "!" : "✓"}
+          </div>
+
+          <div className="result-main">
+            <span>MODEL PREDICTION</span>
+
+            <h2>{predictionLabel}</h2>
+
+            <p>
+              XGBoost classification result based on the
+              entered clinical features.
+            </p>
+          </div>
+
+          <div className="result-class">
+            <small>CLASS</small>
+            <strong>{isDisease ? "1" : "0"}</strong>
+          </div>
+        </section>
+
+        <section className="probability-grid">
+          <div className="metric-card">
+            <span>Class 0</span>
+
+            <strong>
+              {formatPercent(result.class_0_probability)}
+            </strong>
+
+            <small>Not Predicted</small>
+
+            <div className="progress">
+              <div
+                style={{
+                  width: `${Math.min(
+                    Number(result.class_0_probability) * 100,
+                    100
+                  )}%`,
+                }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <span>Class 1</span>
+
+            <strong>
+              {formatPercent(result.class_1_probability)}
+            </strong>
+
+            <small>Thyroid Disease Predicted</small>
+
+            <div className="progress">
+              <div
+                style={{
+                  width: `${Math.min(
+                    Number(result.class_1_probability) * 100,
+                    100
+                  )}%`,
+                }}
+              ></div>
+            </div>
+          </div>
+        </section>
+
+        <section className="analysis-card">
+          <div className="card-title">
+            <div>
+              <span className="eyebrow">EXPLAINABLE AI</span>
+              <h2>SHAP Feature Impact</h2>
+            </div>
+
+            <span className="info-pill">
+              SHAP
+            </span>
+          </div>
+
+          {shapValues.length === 0 ? (
+            <div className="no-data">
+              SHAP explanation is not available for this
+              prediction.
+            </div>
+          ) : (
+            <div className="shap-list">
+              {shapValues.slice(0, 12).map((item, index) => {
+                const magnitude = Math.min(
+                  Math.abs(item.value) * 20,
+                  100
+                );
+
+                const positive = item.value >= 0;
+
+                return (
+                  <div
+                    className="shap-row"
+                    key={`${item.feature}-${index}`}
+                  >
+                    <div className="shap-name">
+                      <span>{index + 1}</span>
+                      <strong>{item.feature}</strong>
+                    </div>
+
+                    <div className="shap-bar">
+                      <div
+                        className={
+                          positive
+                            ? "shap-positive"
+                            : "shap-negative"
+                        }
+                        style={{
+                          width: `${Math.max(
+                            magnitude,
+                            2
+                          )}%`,
+                        }}
+                      ></div>
+                    </div>
+
+                    <div
+                      className={`shap-value ${
+                        positive
+                          ? "value-positive"
+                          : "value-negative"
+                      }`}
+                    >
+                      {item.value > 0 ? "+" : ""}
+                      {formatNumber(item.value, 4)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="shap-legend">
+            <span>
+              <i className="legend-positive"></i>
+              Positive contribution
+            </span>
+
+            <span>
+              <i className="legend-negative"></i>
+              Negative contribution
+            </span>
+          </div>
+        </section>
+
+        <section className="analysis-card">
+          <div className="card-title">
+            <div>
+              <span className="eyebrow">
+                WHAT-IF ANALYSIS
+              </span>
+
+              <h2>Counterfactual Explanations</h2>
+            </div>
+
+            <span className="info-pill">
+              DiCE / CF
+            </span>
+          </div>
+
+          <p className="card-description">
+            Counterfactual analysis shows how changing
+            selected input values can alter the model's
+            prediction.
+          </p>
+
+          {!counterfactuals.available ? (
+            <div className="no-data">
+              Counterfactual analysis is currently
+              unavailable.
+            </div>
+          ) : (
+            <>
+              {counterfactuals.features.length > 0 && (
+                <div className="cf-summary">
+                  <h3>Suggested Changes</h3>
+
+                  {counterfactuals.features.map(
+                    (feature, index) => (
+                      <div
+                        className="cf-change"
+                        key={`${feature.feature}-${index}`}
+                      >
+                        <div>
+                          <strong>
+                            {feature.feature}
+                          </strong>
+
+                          <span>
+                            Original:{" "}
+                            {feature.original_value}
+                          </span>
+                        </div>
+
+                        <div className="cf-arrow">
+                          →
+                        </div>
+
+                        <div>
+                          <strong>
+                            {feature.counterfactual_value}
+                          </strong>
+
+                          <span>
+                            Suggested value
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              <div className="scenario-grid">
+                {counterfactuals.scenarios.map(
+                  (scenario, index) => (
+                    <div
+                      className="scenario-card"
+                      key={
+                        scenario.scenario ??
+                        index
+                      }
+                    >
+                      <div className="scenario-top">
+                        <span>
+                          Scenario{" "}
+                          {scenario.scenario ??
+                            index + 1}
+                        </span>
+
+                        <strong>
+                          Class {scenario.prediction}
+                        </strong>
+                      </div>
+
+                      {Array.isArray(
+                        scenario.changes
+                      ) &&
+                        scenario.changes.length > 0 && (
+                          <div className="scenario-changes">
+                            {scenario.changes.map(
+                              (
+                                change,
+                                changeIndex
+                              ) => (
+                                <div
+                                  key={
+                                    changeIndex
+                                  }
+                                >
+                                  <span>
+                                    {
+                                      change.feature
+                                    }
+                                  </span>
+
+                                  <strong>
+                                    {
+                                      change.original_value
+                                    }{" "}
+                                    →{" "}
+                                    {
+                                      change.counterfactual_value
+                                    }
+                                  </strong>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+
+                      <div className="scenario-probabilities">
+                        <div>
+                          <span>Class 0</span>
+                          <strong>
+                            {formatPercent(
+                              scenario.class_0_probability
+                            )}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Class 1</span>
+                          <strong>
+                            {formatPercent(
+                              scenario.class_1_probability
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="disclaimer">
+          <strong>Important</strong>
+
+          <p>
+            ThyroCare is an academic machine-learning
+            project. This prediction is not a medical
+            diagnosis and should not replace evaluation
+            by a qualified healthcare professional.
+          </p>
+        </section>
+      </main>
+    );
+  };
+
+  const renderHomePage = () => {
+    return (
+      <main className="home-page">
+        <section className="hero">
+          <div className="hero-content">
+            <span className="eyebrow">
+              EXPLAINABLE AI • THYROID ANALYSIS
+            </span>
+
+            <h1>
+              Smarter
+              <br />
+              <span>Thyroid Analysis.</span>
+            </h1>
+
+            <p>
+              An AI-powered thyroid disease prediction
+              system using XGBoost, SHAP explanations,
+              and counterfactual analysis.
+            </p>
+
+            <div className="hero-actions">
+              <button
+                className="primary-button"
+                onClick={() => goTo("prediction")}
+              >
+                Start Analysis
+                <span>→</span>
+              </button>
+
+              <button
+                className="secondary-button"
+                onClick={() => goTo("about")}
+              >
+                Learn More
+              </button>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="orb">
+              <div className="orb-inner">
+                <span>AI</span>
+                <small>XGBoost</small>
+              </div>
+            </div>
+
+            <div className="floating-card card-one">
+              <span>Accuracy</span>
+              <strong>99.87%</strong>
+            </div>
+
+            <div className="floating-card card-two">
+              <span>Explainable</span>
+              <strong>SHAP + CF</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="feature-section">
+          <div className="section-intro">
+            <span className="eyebrow">
+              HOW IT WORKS
+            </span>
+
+            <h2>
+              From patient data
+              <br />
+              to explainable prediction.
+            </h2>
+          </div>
+
+          <div className="feature-grid">
+            <div className="feature-card">
+              <span>01</span>
+
+              <h3>Input</h3>
+
+              <p>
+                Enter patient and thyroid measurement
+                values through a structured interface.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <span>02</span>
+
+              <h3>Prediction</h3>
+
+              <p>
+                The trained XGBoost model analyzes the
+                25 clinical features.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <span>03</span>
+
+              <h3>Explanation</h3>
+
+              <p>
+                SHAP identifies feature contributions
+                and counterfactual analysis provides
+                what-if scenarios.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  };
+
+  const renderAboutPage = () => {
+    return (
+      <main className="page about-page">
+        <div className="page-header">
+          <div>
+            <span className="eyebrow">
+              ABOUT THE PROJECT
+            </span>
+
+            <h1>ThyroCare</h1>
+
+            <p>
+              Enhancing Thyroid Disease Diagnosis With
+              Machine Learning and Counterfactual
+              Explainable AI.
+            </p>
+          </div>
+        </div>
+
+        <section className="about-grid">
+          <div className="about-card large">
+            <span className="eyebrow">
+              PROJECT OVERVIEW
+            </span>
+
+            <h2>
+              Machine learning with transparent
+              explanations.
+            </h2>
+
+            <p>
+              ThyroCare is a final-year B.Tech project
+              designed to demonstrate how machine
+              learning can be combined with Explainable
+              AI techniques for thyroid disease
+              prediction.
+            </p>
+
+            <p>
+              The system uses an XGBoost classification
+              model and provides SHAP-based feature
+              explanations together with counterfactual
+              scenarios.
+            </p>
+          </div>
+
+          <div className="about-card">
+            <span className="eyebrow">MODEL</span>
+
+            <h2>XGBoost</h2>
+
+            <p>
+              Gradient-boosted decision trees trained on
+              thyroid clinical features.
+            </p>
+          </div>
+
+          <div className="about-card">
+            <span className="eyebrow">EXPLANATION</span>
+
+            <h2>SHAP</h2>
+
+            <p>
+              Shows how individual features contribute
+              to the prediction.
+            </p>
+          </div>
+
+          <div className="about-card">
+            <span className="eyebrow">
+              WHAT-IF ANALYSIS
+            </span>
+
+            <h2>Counterfactuals</h2>
+
+            <p>
+              Demonstrates how changing input features
+              can affect model predictions.
+            </p>
+          </div>
+        </section>
+
+        <section className="disclaimer">
+          <strong>Academic Project</strong>
+
+          <p>
+            This application is intended for educational
+            and research demonstration purposes. It is
+            not a medical diagnostic device.
+          </p>
+        </section>
+      </main>
+    );
+  };
+
+  return (
+    <div className="app">
+      <header className="navbar">
+        <button
+          className="brand"
+          onClick={() => goTo("home")}
+        >
+          <span className="brand-mark">
+            T
+          </span>
+
+          <span>
+            <strong>ThyroCare</strong>
+            <small>AI THYROID ANALYSIS</small>
+          </span>
+        </button>
+
+        <nav
+          className={`nav-links ${
+            menuOpen ? "open" : ""
+          }`}
+        >
+          <button
+            className={page === "home" ? "active" : ""}
+            onClick={() => goTo("home")}
           >
             Home
           </button>
@@ -615,793 +1322,67 @@ export default function App() {
           <button
             className={
               page === "prediction"
-                ? "nav-active"
+                ? "active"
                 : ""
             }
-            onClick={() => setPage("prediction")}
+            onClick={() => goTo("prediction")}
           >
-            Prediction
+            Analyze
           </button>
 
           <button
             className={
-              page === "about" ? "nav-active" : ""
+              page === "results" ? "active" : ""
             }
-            onClick={() => setPage("about")}
+            onClick={() => goTo("results")}
+          >
+            Results
+          </button>
+
+          <button
+            className={
+              page === "about" ? "active" : ""
+            }
+            onClick={() => goTo("about")}
           >
             About
           </button>
         </nav>
+
+        <button
+          className="menu-button"
+          onClick={() =>
+            setMenuOpen((previous) => !previous)
+          }
+        >
+          ☰
+        </button>
       </header>
 
-      <main>
+      {page === "home" && renderHomePage()}
 
-        {/* HOME */}
-        {page === "home" && (
-          <section className="hero-section">
-            <div className="hero-content">
+      {page === "prediction" &&
+        renderPredictionPage()}
 
-              <div className="hero-badge">
-                <Sparkles size={16} />
-                AI-Powered Thyroid Analysis
-              </div>
+      {page === "results" &&
+        renderResultsPage()}
 
-              <h1>
-                Smarter Thyroid
-                <span> Analysis with AI</span>
-              </h1>
-
-              <p>
-                Explore thyroid disease prediction using
-                machine learning, SHAP explainability,
-                and counterfactual analysis.
-              </p>
-
-              <div className="hero-actions">
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    setPage("prediction")
-                  }
-                >
-                  Start Prediction
-                  <TrendingUp size={19} />
-                </button>
-
-                <button
-                  className="secondary-button"
-                  onClick={() => setPage("about")}
-                >
-                  Learn More
-                </button>
-              </div>
-
-              <div className="hero-features">
-                <div>
-                  <ShieldCheck size={20} />
-                  <span>Explainable AI</span>
-                </div>
-
-                <div>
-                  <Brain size={20} />
-                  <span>XGBoost</span>
-                </div>
-
-                <div>
-                  <Activity size={20} />
-                  <span>25 Features</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="hero-visual">
-              <div className="orb">
-                <Brain size={95} />
-              </div>
-
-              <div className="floating-card card-one">
-                <Activity size={20} />
-
-                <div>
-                  <strong>25</strong>
-                  <span>Features</span>
-                </div>
-              </div>
-
-              <div className="floating-card card-two">
-                <ShieldCheck size={20} />
-
-                <div>
-                  <strong>AI</strong>
-                  <span>Explainable</span>
-                </div>
-              </div>
-
-              <div className="floating-card card-three">
-                <Sparkles size={20} />
-
-                <div>
-                  <strong>XAI</strong>
-                  <span>Insights</span>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* PREDICTION */}
-        {page === "prediction" && (
-          <section className="page-section">
-
-            <div className="page-heading">
-              <div className="section-badge">
-                <Stethoscope size={18} />
-                Prediction
-              </div>
-
-              <h2>
-                Enter Patient Information
-              </h2>
-
-              <p>
-                Enter the available patient and thyroid
-                measurements.
-              </p>
-            </div>
-
-            <div className="prediction-layout">
-
-              <div className="form-container">
-
-                {groups.map((group) => {
-                  const isOpen =
-                    openGroups[group.title];
-
-                  return (
-                    <div
-                      className="form-group"
-                      key={group.title}
-                    >
-                      <button
-                        className="group-header"
-                        onClick={() =>
-                          toggleGroup(group.title)
-                        }
-                      >
-                        <div className="group-title">
-                          {group.icon}
-                          <span>
-                            {group.title}
-                          </span>
-                        </div>
-
-                        {isOpen ? (
-                          <ChevronUp size={20} />
-                        ) : (
-                          <ChevronDown size={20} />
-                        )}
-                      </button>
-
-                      {isOpen && (
-                        <div className="form-grid">
-                          {group.fields.map(
-                            (field) => {
-                              const numeric =
-                                numericFields.includes(
-                                  field
-                                );
-
-                              return (
-                                <div
-                                  className="input-group"
-                                  key={field}
-                                >
-                                  <label>
-                                    {labels[field]}
-                                  </label>
-
-                                  {numeric ? (
-                                    <input
-                                      type="number"
-                                      step={
-                                        field === "age"
-                                          ? "1"
-                                          : "any"
-                                      }
-                                      value={
-                                        form[field]
-                                      }
-                                      onChange={(e) =>
-                                        updateField(
-                                          field,
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  ) : (
-                                    <select
-                                      value={
-                                        form[field]
-                                      }
-                                      onChange={(e) =>
-                                        updateField(
-                                          field,
-                                          e.target.value
-                                        )
-                                      }
-                                    >
-                                      <option value={0}>
-                                        No
-                                      </option>
-
-                                      <option value={1}>
-                                        Yes
-                                      </option>
-                                    </select>
-                                  )}
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* ERROR */}
-                {error && (
-                  <div className="error-message">
-                    <div className="error-title">
-                      Prediction Error
-                    </div>
-
-                    <pre>{error}</pre>
-                  </div>
-                )}
-
-                <div className="form-actions">
-
-                  <button
-                    className="secondary-button"
-                    onClick={resetForm}
-                    disabled={loading}
-                  >
-                    <RotateCcw size={18} />
-                    Reset
-                  </button>
-
-                  <button
-                    className="primary-button prediction-button"
-                    onClick={predict}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2
-                          size={19}
-                          className="spin"
-                        />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={19} />
-                        Analyze Thyroid
-                      </>
-                    )}
-                  </button>
-
-                </div>
-              </div>
-
-              <aside className="info-panel">
-
-                <div className="info-icon">
-                  <Info size={24} />
-                </div>
-
-                <h3>How it works</h3>
-
-                <p>
-                  The entered values are sent to the
-                  machine-learning prediction API.
-                </p>
-
-                <div className="info-step">
-                  <span>01</span>
-
-                  <div>
-                    <strong>Input</strong>
-                    <p>
-                      Patient and thyroid measurements
-                    </p>
-                  </div>
-                </div>
-
-                <div className="info-step">
-                  <span>02</span>
-
-                  <div>
-                    <strong>Prediction</strong>
-                    <p>
-                      XGBoost analyzes the features
-                    </p>
-                  </div>
-                </div>
-
-                <div className="info-step">
-                  <span>03</span>
-
-                  <div>
-                    <strong>Explanation</strong>
-                    <p>
-                      SHAP and counterfactual analysis
-                    </p>
-                  </div>
-                </div>
-
-              </aside>
-            </div>
-          </section>
-        )}
-
-        {/* RESULTS */}
-        {page === "results" && result && (
-          <section className="page-section results-section">
-
-            <div className="page-heading">
-              <div className="section-badge">
-                <Sparkles size={18} />
-                Analysis Complete
-              </div>
-
-              <h2>Prediction Results</h2>
-
-              <p>
-                Your machine-learning analysis has
-                been completed.
-              </p>
-            </div>
-
-            {/* MAIN RESULT */}
-            <div
-              className={`prediction-banner ${
-                result.prediction === 1
-                  ? "prediction-positive"
-                  : "prediction-negative"
-              }`}
-            >
-              <div className="prediction-banner-icon">
-                {result.prediction === 1 ? (
-                  <Activity size={34} />
-                ) : (
-                  <ShieldCheck size={34} />
-                )}
-              </div>
-
-              <div>
-                <span>Model Prediction</span>
-
-                <h2>{predictionText}</h2>
-
-                <p>
-                  Model:{" "}
-                  <strong>
-                    {result.model}
-                  </strong>
-                </p>
-              </div>
-            </div>
-
-            {/* PROBABILITIES */}
-            <div className="result-grid">
-
-              <div className="result-card">
-                <span>
-                  Class 0 Probability
-                </span>
-
-                <strong>
-                  {percentage(result.class0)}
-                </strong>
-
-                <div className="progress">
-                  <div
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.max(
-                          0,
-                          result.class0 <= 1
-                            ? result.class0 * 100
-                            : result.class0
-                        )
-                      )}%`,
-                    }}
-                  />
-                </div>
-
-                <small>
-                  Thyroid Disease Not Predicted
-                </small>
-              </div>
-
-              <div className="result-card">
-                <span>
-                  Class 1 Probability
-                </span>
-
-                <strong>
-                  {percentage(result.class1)}
-                </strong>
-
-                <div className="progress">
-                  <div
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.max(
-                          0,
-                          result.class1 <= 1
-                            ? result.class1 * 100
-                            : result.class1
-                        )
-                      )}%`,
-                    }}
-                  />
-                </div>
-
-                <small>
-                  Thyroid Disease Predicted
-                </small>
-              </div>
-
-            </div>
-
-            {/* SHAP */}
-            <div className="analysis-card">
-
-              <div className="analysis-card-header">
-                <div>
-                  <div className="section-badge">
-                    <Brain size={17} />
-                    Explainable AI
-                  </div>
-
-                  <h3>
-                    SHAP Feature Impact
-                  </h3>
-                </div>
-              </div>
-
-              {result.shap.length === 0 ? (
-                <div className="empty-state">
-                  SHAP explanation is not
-                  available.
-                </div>
-              ) : (
-                <div className="shap-list">
-
-                  {result.shap.map(
-                    (item, index) => (
-                      <div
-                        className="shap-item"
-                        key={`${item.feature}-${index}`}
-                      >
-                        <div className="shap-number">
-                          {index + 1}
-                        </div>
-
-                        <div className="shap-feature">
-                          <span>
-                            {item.feature}
-                          </span>
-
-                          <div className="shap-bar">
-                            <div
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  Math.abs(
-                                    item.value
-                                  ) * 100
-                                )}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        <strong
-                          className={
-                            item.value >= 0
-                              ? "impact-positive"
-                              : "impact-negative"
-                          }
-                        >
-                          {item.value >= 0
-                            ? "+"
-                            : ""}
-                          {displayNumber(
-                            item.value
-                          )}
-                        </strong>
-                      </div>
-                    )
-                  )}
-
-                </div>
-              )}
-            </div>
-
-            {/* COUNTERFACTUAL */}
-            <div className="analysis-card">
-
-              <div className="analysis-card-header">
-                <div>
-                  <div className="section-badge">
-                    <TrendingUp size={17} />
-                    Counterfactual XAI
-                  </div>
-
-                  <h3>
-                    What-if Scenarios
-                  </h3>
-                </div>
-              </div>
-
-              {!result.counterfactuals
-                .available ||
-              result.counterfactuals.scenarios
-                .length === 0 ? (
-                <div className="empty-state">
-                  Counterfactual scenarios are
-                  not available.
-                </div>
-              ) : (
-                <div className="counterfactual-list">
-
-                  {result.counterfactuals.scenarios.map(
-                    (scenario) => (
-                      <div
-                        className="counterfactual-card"
-                        key={
-                          scenario.scenario
-                        }
-                      >
-                        <div className="scenario-header">
-                          <span>
-                            Scenario{" "}
-                            {scenario.scenario}
-                          </span>
-
-                          <strong>
-                            {scenario.prediction ===
-                            1
-                              ? "Disease Predicted"
-                              : "Not Predicted"}
-                          </strong>
-                        </div>
-
-                        <div className="scenario-changes">
-
-                          {scenario.changes?.map(
-                            (
-                              change,
-                              index
-                            ) => (
-                              <div
-                                className="change-row"
-                                key={index}
-                              >
-                                <span>
-                                  {
-                                    change.feature
-                                  }
-                                </span>
-
-                                <div>
-                                  <b>
-                                    {displayNumber(
-                                      change.original_value
-                                    )}
-                                  </b>
-
-                                  <span className="arrow">
-                                    →
-                                  </span>
-
-                                  <b>
-                                    {displayNumber(
-                                      change.counterfactual_value
-                                    )}
-                                  </b>
-                                </div>
-                              </div>
-                            )
-                          )}
-
-                        </div>
-
-                        <div className="scenario-probabilities">
-
-                          <div>
-                            <span>
-                              Class 0
-                            </span>
-
-                            <strong>
-                              {percentage(
-                                scenario.class_0_probability
-                              )}
-                            </strong>
-                          </div>
-
-                          <div>
-                            <span>
-                              Class 1
-                            </span>
-
-                            <strong>
-                              {percentage(
-                                scenario.class_1_probability
-                              )}
-                            </strong>
-                          </div>
-
-                        </div>
-                      </div>
-                    )
-                  )}
-
-                </div>
-              )}
-
-              <div className="counterfactual-note">
-                <Info size={17} />
-
-                <span>
-                  Counterfactual scenarios are
-                  hypothetical machine-learning
-                  sensitivity scenarios. They are not
-                  medical recommendations.
-                </span>
-              </div>
-
-            </div>
-
-            {/* ACTIONS */}
-            <div className="result-actions">
-
-              <button
-                className="secondary-button"
-                onClick={() =>
-                  setPage("prediction")
-                }
-              >
-                <RotateCcw size={18} />
-                New Prediction
-              </button>
-
-              <button
-                className="primary-button"
-                onClick={downloadReport}
-              >
-                <Download size={18} />
-                Download Report
-              </button>
-
-            </div>
-
-            <div className="medical-disclaimer">
-              <ShieldCheck size={20} />
-
-              <p>
-                <strong>Important:</strong>{" "}
-                This application is intended for
-                educational and research purposes.
-                The prediction is not a medical
-                diagnosis and should not replace
-                advice from a qualified healthcare
-                professional.
-              </p>
-            </div>
-
-          </section>
-        )}
-
-        {/* ABOUT */}
-        {page === "about" && (
-          <section className="page-section">
-
-            <div className="page-heading">
-              <div className="section-badge">
-                <Brain size={18} />
-                About ThyroCare
-              </div>
-
-              <h2>
-                Machine Learning + Explainable AI
-              </h2>
-
-              <p>
-                ThyroCare demonstrates the use of
-                machine learning and explainable AI
-                techniques for thyroid disease
-                analysis.
-              </p>
-            </div>
-
-            <div className="about-grid">
-
-              <div className="about-card">
-                <Brain size={30} />
-
-                <h3>XGBoost</h3>
-
-                <p>
-                  The application uses an XGBoost
-                  classifier trained using thyroid
-                  related clinical features.
-                </p>
-              </div>
-
-              <div className="about-card">
-                <Sparkles size={30} />
-
-                <h3>SHAP</h3>
-
-                <p>
-                  SHAP provides feature-level
-                  explanations showing how input
-                  features influence model output.
-                </p>
-              </div>
-
-              <div className="about-card">
-                <TrendingUp size={30} />
-
-                <h3>Counterfactual XAI</h3>
-
-                <p>
-                  Counterfactual scenarios show
-                  hypothetical changes that can
-                  influence the model prediction.
-                </p>
-              </div>
-
-              <div className="about-card">
-                <ShieldCheck size={30} />
-
-                <h3>Academic Project</h3>
-
-                <p>
-                  This system is designed for
-                  academic, demonstration, and
-                  research purposes.
-                </p>
-              </div>
-
-            </div>
-          </section>
-        )}
-
-      </main>
+      {page === "about" && renderAboutPage()}
 
       <footer className="footer">
         <div>
           <strong>ThyroCare</strong>
+
           <span>
-            {" "}
-            • AI Thyroid Analysis
+            AI Thyroid Analysis
           </span>
         </div>
 
-        <div>
-          Final Year B.Tech Project
-        </div>
+        <p>
+          Final Year B.Tech Project • Machine Learning
+          & Explainable AI
+        </p>
       </footer>
-
     </div>
   );
-    }
+        }
