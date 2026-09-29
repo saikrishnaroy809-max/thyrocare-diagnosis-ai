@@ -9,41 +9,88 @@ export default function AdminLogin({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  /* =========================================================
+     SUBMIT LOGIN
+     ========================================================= */
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
 
     setError("");
 
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password.");
+    const cleanUsername = username.trim();
+
+    if (!cleanUsername || !password) {
+      setError(
+        "Please enter both username and password."
+      );
       return;
     }
 
     /*
-      App.jsx handles the actual demo credential
-      verification through the onLogin callback.
+      Authentication is handled by App.jsx.
+
+      This component only collects the credentials
+      and sends them to the parent component.
     */
-    const success = onLogin?.(username.trim(), password);
+
+    const success = onLogin?.(
+      cleanUsername,
+      password
+    );
 
     if (success === false) {
-      setError("Invalid admin username or password.");
+      setError(
+        "Invalid admin username or password."
+      );
     }
   };
+
+  /* =========================================================
+     CLEAR ERROR WHEN USER TYPES
+     ========================================================= */
+
+  const handleUsernameChange = (event) => {
+    setUsername(event.target.value);
+
+    if (error) {
+      setError("");
+    }
+  };
+
+  const handlePasswordChange = (event) => {
+    setPassword(event.target.value);
+
+    if (error) {
+      setError("");
+    }
+  };
+
+  /* =========================================================
+     UI
+     ========================================================= */
 
   return (
     <main className="admin-login-page">
 
       <div className="admin-login-card">
 
-        {/* =====================================================
+        {/* ===================================================
             HEADER
-            ===================================================== */}
+            =================================================== */}
 
         <div className="admin-login-header">
 
-          <div className="admin-login-icon">
+          <div
+            className="admin-login-icon"
+            aria-hidden="true"
+          >
             🔐
           </div>
+
+          <span className="admin-panel-badge">
+            THYROCARE AI
+          </span>
 
           <h1>
             Admin Login
@@ -56,9 +103,10 @@ export default function AdminLogin({
 
         </div>
 
-        {/* =====================================================
+
+        {/* ===================================================
             LOGIN FORM
-            ===================================================== */}
+            =================================================== */}
 
         <form
           className="admin-login-form"
@@ -76,16 +124,17 @@ export default function AdminLogin({
             <input
               id="admin-username"
               type="text"
+              name="username"
               placeholder="Enter admin username"
               value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setError("");
-              }}
+              onChange={handleUsernameChange}
               autoComplete="username"
+              autoCapitalize="none"
+              spellCheck="false"
             />
 
           </div>
+
 
           {/* PASSWORD */}
 
@@ -95,11 +144,7 @@ export default function AdminLogin({
               Password
             </label>
 
-            <div
-              style={{
-                position: "relative",
-              }}
-            >
+            <div className="admin-password-wrapper">
 
               <input
                 id="admin-password"
@@ -108,38 +153,26 @@ export default function AdminLogin({
                     ? "text"
                     : "password"
                 }
+                name="password"
                 placeholder="Enter admin password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError("");
-                }}
+                onChange={handlePasswordChange}
                 autoComplete="current-password"
-                style={{
-                  paddingRight: "75px",
-                }}
               />
 
               <button
                 type="button"
+                className="admin-password-toggle"
                 onClick={() =>
                   setShowPassword(
                     (previous) => !previous
                   )
                 }
-                style={{
-                  position: "absolute",
-                  right: "8px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  border: "0",
-                  background: "transparent",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                  fontSize: "0.75rem",
-                  fontWeight: "700",
-                  padding: "7px",
-                }}
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
               >
                 {showPassword
                   ? "HIDE"
@@ -150,15 +183,20 @@ export default function AdminLogin({
 
           </div>
 
+
           {/* ERROR */}
 
           {error && (
-            <div className="error-message">
+            <div
+              className="error-message"
+              role="alert"
+            >
               {error}
             </div>
           )}
 
-          {/* LOGIN BUTTON */}
+
+          {/* LOGIN */}
 
           <button
             type="submit"
@@ -169,9 +207,10 @@ export default function AdminLogin({
 
         </form>
 
-        {/* =====================================================
+
+        {/* ===================================================
             DEMO INFORMATION
-            ===================================================== */}
+            =================================================== */}
 
         <div className="admin-demo-note">
 
@@ -179,37 +218,34 @@ export default function AdminLogin({
             Development Demo
           </strong>
 
-          <br />
+          <div className="admin-demo-row">
+            <span>Username</span>
+            <strong>admin</strong>
+          </div>
 
-          Username:
-          <strong> admin</strong>
+          <div className="admin-demo-row">
+            <span>Password</span>
+            <strong>thyrocare123</strong>
+          </div>
 
-          <br />
-
-          Password:
-          <strong> thyrocare123</strong>
-
-          <br />
-          <br />
-
-          This is frontend/demo authentication.
-          Do not use hardcoded credentials for
-          production security.
+          <p>
+            This login is frontend/demo
+            authentication. Hardcoded credentials
+            should not be used for production
+            security.
+          </p>
 
         </div>
 
-        {/* =====================================================
-            BACK BUTTON
-            ===================================================== */}
+
+        {/* ===================================================
+            BACK
+            =================================================== */}
 
         <button
           type="button"
-          className="secondary-button"
+          className="secondary-button admin-back-button"
           onClick={onBack}
-          style={{
-            width: "100%",
-            marginTop: "14px",
-          }}
         >
           ← Back to Website
         </button>
@@ -218,4 +254,4 @@ export default function AdminLogin({
 
     </main>
   );
-}
+        }
