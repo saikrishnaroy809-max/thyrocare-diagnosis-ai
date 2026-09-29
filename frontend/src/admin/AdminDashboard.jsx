@@ -1,4 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
+
+/* =========================================================
+   THYROCARE AI
+   ADMIN DASHBOARD
+   ========================================================= */
 
 export default function AdminDashboard({
   result,
@@ -8,7 +13,7 @@ export default function AdminDashboard({
   onLogout,
 }) {
   /* =========================================================
-     HELPERS
+     BASIC RESULT DATA
      ========================================================= */
 
   const prediction =
@@ -28,6 +33,10 @@ export default function AdminDashboard({
     result?.class_probabilities ??
     {};
 
+  /* =========================================================
+     PROBABILITIES
+     ========================================================= */
+
   const class0Probability =
     probabilities?.["0"] ??
     probabilities?.class_0 ??
@@ -42,10 +51,14 @@ export default function AdminDashboard({
     result?.class_1_probability ??
     0;
 
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+
   const formatPercent = (value) => {
     const number = Number(value);
 
-    if (Number.isNaN(number)) {
+    if (!Number.isFinite(number)) {
       return "0.00%";
     }
 
@@ -56,12 +69,14 @@ export default function AdminDashboard({
   };
 
   const formatDate = (value) => {
-    if (!value) return "—";
+    if (!value) {
+      return "—";
+    }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-      return value;
+      return String(value);
     }
 
     return date.toLocaleString();
@@ -74,6 +89,13 @@ export default function AdminDashboard({
       ? "Thyroid Disease Not Predicted"
       : "No prediction yet";
 
+  const predictionClass =
+    Number(prediction) === 1
+      ? "positive"
+      : Number(prediction) === 0
+      ? "negative"
+      : "neutral";
+
   /* =========================================================
      SHAP DATA
      ========================================================= */
@@ -84,7 +106,7 @@ export default function AdminDashboard({
     result?.feature_importance ??
     [];
 
-  const normalizeShap = () => {
+  const topShap = useMemo(() => {
     if (!Array.isArray(shapValues)) {
       return [];
     }
@@ -94,9 +116,16 @@ export default function AdminDashboard({
         if (typeof item === "number") {
           return {
             feature: `Feature ${index + 1}`,
-            value: item,
+            value: Number(item),
           };
         }
+
+        const value = Number(
+          item?.shap_value ??
+            item?.value ??
+            item?.impact ??
+            0
+        );
 
         return {
           feature:
@@ -104,13 +133,7 @@ export default function AdminDashboard({
             item?.name ??
             item?.feature_name ??
             `Feature ${index + 1}`,
-          value:
-            Number(
-              item?.shap_value ??
-                item?.value ??
-                item?.impact ??
-                0
-            ),
+          value: Number.isFinite(value) ? value : 0,
         };
       })
       .sort(
@@ -118,12 +141,16 @@ export default function AdminDashboard({
           Math.abs(b.value) - Math.abs(a.value)
       )
       .slice(0, 5);
-  };
-
-  const topShap = normalizeShap();
+  }, [shapValues]);
 
   /* =========================================================
-     DASHBOARD
+     HISTORY
+     ========================================================= */
+
+  const historyCount = analysisHistory.length;
+
+  /* =========================================================
+     RENDER
      ========================================================= */
 
   return (
@@ -136,13 +163,27 @@ export default function AdminDashboard({
 
         <section className="admin-topbar">
 
-          <div>
-            <h1>Admin Dashboard</h1>
+          <div className="admin-topbar-brand">
 
-            <p>
-              Monitor ThyroCare AI prediction activity
-              and model responses.
-            </p>
+            <div className="admin-brand-mark">
+              TC
+            </div>
+
+            <div>
+              <span className="admin-eyebrow">
+                THYROCARE AI
+              </span>
+
+              <h1>
+                Admin Dashboard
+              </h1>
+
+              <p>
+                Monitor prediction activity,
+                model responses and explainability.
+              </p>
+            </div>
+
           </div>
 
           <div className="admin-topbar-actions">
@@ -152,7 +193,8 @@ export default function AdminDashboard({
               className="admin-secondary-button"
               onClick={onNewAnalysis}
             >
-              + New Analysis
+              <span>＋</span>
+              New Analysis
             </button>
 
             <button
@@ -182,82 +224,122 @@ export default function AdminDashboard({
 
         <section className="admin-stats-grid">
 
+          {/* ANALYSES */}
+
           <div className="admin-stat-card">
 
-            <span className="admin-stat-label">
-              Analyses This Session
-            </span>
+            <div className="admin-stat-icon">
+              📊
+            </div>
 
-            <strong className="admin-stat-value">
-              {analysisHistory.length}
-            </strong>
+            <div className="admin-stat-content">
 
-            <span className="admin-stat-subtext">
-              Prediction requests
-            </span>
+              <span className="admin-stat-label">
+                Analyses This Session
+              </span>
+
+              <strong className="admin-stat-value">
+                {historyCount}
+              </strong>
+
+              <span className="admin-stat-subtext">
+                Prediction requests
+              </span>
+
+            </div>
 
           </div>
 
+          {/* MODEL */}
+
           <div className="admin-stat-card">
 
-            <span className="admin-stat-label">
-              Current Model
-            </span>
+            <div className="admin-stat-icon">
+              🤖
+            </div>
 
-            <strong className="admin-stat-value">
-              {modelName}
-            </strong>
+            <div className="admin-stat-content">
 
-            <span className="admin-stat-subtext">
-              Machine learning model
-            </span>
+              <span className="admin-stat-label">
+                Current Model
+              </span>
+
+              <strong className="admin-stat-value admin-model-value">
+                {modelName}
+              </strong>
+
+              <span className="admin-stat-subtext">
+                Machine learning model
+              </span>
+
+            </div>
 
           </div>
 
+          {/* LATEST CLASS */}
+
           <div className="admin-stat-card">
 
-            <span className="admin-stat-label">
-              Latest Class
-            </span>
+            <div className="admin-stat-icon">
+              🧠
+            </div>
 
-            <strong className="admin-stat-value">
-              {prediction === null
-                ? "—"
-                : `Class ${prediction}`}
-            </strong>
+            <div className="admin-stat-content">
 
-            <span className="admin-stat-subtext">
-              Latest prediction
-            </span>
+              <span className="admin-stat-label">
+                Latest Class
+              </span>
+
+              <strong className="admin-stat-value">
+                {prediction === null
+                  ? "—"
+                  : `Class ${prediction}`}
+              </strong>
+
+              <span className="admin-stat-subtext">
+                Latest prediction
+              </span>
+
+            </div>
 
           </div>
 
+          {/* SYSTEM */}
+
           <div className="admin-stat-card">
 
-            <span className="admin-stat-label">
-              API Status
-            </span>
+            <div className="admin-stat-icon">
+              ⚡
+            </div>
 
-            <strong className="admin-stat-value">
-              Online
-            </strong>
+            <div className="admin-stat-content">
 
-            <span className="admin-stat-subtext">
-              Prediction service configured
-            </span>
+              <span className="admin-stat-label">
+                System
+              </span>
+
+              <strong className="admin-stat-value">
+                Ready
+              </strong>
+
+              <span className="admin-stat-subtext">
+                Prediction interface available
+              </span>
+
+            </div>
 
           </div>
 
         </section>
 
         {/* =====================================================
-            MAIN CONTENT
+            MAIN GRID
             ===================================================== */}
 
         <section className="admin-content-grid">
 
           {/* ===================================================
-              LATEST PREDICTION
+              LATEST ANALYSIS
               =================================================== */}
 
           <div className="admin-panel">
@@ -265,10 +347,17 @@ export default function AdminDashboard({
             <div className="admin-panel-header">
 
               <div>
-                <h2>Latest Analysis</h2>
+                <span className="admin-panel-badge">
+                  LATEST
+                </span>
+
+                <h2>
+                  Latest Analysis
+                </h2>
 
                 <p>
                   Most recent model prediction
+                  generated by ThyroCare AI.
                 </p>
               </div>
 
@@ -280,13 +369,21 @@ export default function AdminDashboard({
             </div>
 
             {!result ? (
+
               <div className="admin-empty">
 
-                <p>
-                  No prediction has been performed yet.
-                </p>
+                <div className="admin-empty-icon">
+                  🔍
+                </div>
 
-                <br />
+                <h3>
+                  No Analysis Yet
+                </h3>
+
+                <p>
+                  Run a prediction to display
+                  the latest model response here.
+                </p>
 
                 <button
                   type="button"
@@ -297,50 +394,116 @@ export default function AdminDashboard({
                 </button>
 
               </div>
+
             ) : (
-              <div className="admin-prediction-box">
 
-                <span className="prediction-label">
-                  Prediction
-                </span>
+              <div className="admin-prediction-content">
 
-                <h3>
-                  {predictionLabel}
-                </h3>
+                <div
+                  className={`admin-prediction-box ${predictionClass}`}
+                >
+
+                  <span className="prediction-label">
+                    MODEL PREDICTION
+                  </span>
+
+                  <h3>
+                    {predictionLabel}
+                  </h3>
+
+                  <div className="admin-prediction-class">
+                    Class{" "}
+                    {prediction === null
+                      ? "—"
+                      : prediction}
+                  </div>
+
+                </div>
+
+                {/* PROBABILITIES */}
 
                 <div className="admin-probabilities">
 
                   <div className="admin-probability">
 
-                    <span>
-                      Class 0
-                    </span>
+                    <div className="admin-probability-header">
+                      <span>
+                        Class 0
+                      </span>
 
-                    <strong>
-                      {formatPercent(
-                        class0Probability
-                      )}
-                    </strong>
+                      <strong>
+                        {formatPercent(
+                          class0Probability
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="admin-progress">
+
+                      <div
+                        className="admin-progress-bar"
+                        style={{
+                          width: `${Math.min(
+                            Number(
+                              class0Probability <= 1
+                                ? class0Probability * 100
+                                : class0Probability
+                            ) || 0,
+                            100
+                          )}%`,
+                        }}
+                      />
+
+                    </div>
+
+                    <small>
+                      Thyroid disease not predicted
+                    </small>
 
                   </div>
 
                   <div className="admin-probability">
 
-                    <span>
-                      Class 1
-                    </span>
+                    <div className="admin-probability-header">
+                      <span>
+                        Class 1
+                      </span>
 
-                    <strong>
-                      {formatPercent(
-                        class1Probability
-                      )}
-                    </strong>
+                      <strong>
+                        {formatPercent(
+                          class1Probability
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="admin-progress">
+
+                      <div
+                        className="admin-progress-bar"
+                        style={{
+                          width: `${Math.min(
+                            Number(
+                              class1Probability <= 1
+                                ? class1Probability * 100
+                                : class1Probability
+                            ) || 0,
+                            100
+                          )}%`,
+                        }}
+                      />
+
+                    </div>
+
+                    <small>
+                      Thyroid disease predicted
+                    </small>
 
                   </div>
 
                 </div>
 
               </div>
+
             )}
 
           </div>
@@ -354,11 +517,19 @@ export default function AdminDashboard({
             <div className="admin-panel-header">
 
               <div>
-                <h2>System Information</h2>
+
+                <span className="admin-panel-badge">
+                  SYSTEM
+                </span>
+
+                <h2>
+                  System Information
+                </h2>
 
                 <p>
-                  Current application status
+                  Current application configuration.
                 </p>
+
               </div>
 
             </div>
@@ -367,32 +538,57 @@ export default function AdminDashboard({
 
               <div className="admin-info-row">
                 <span>Application</span>
-                <span>ThyroCare AI</span>
+                <strong>
+                  ThyroCare AI
+                </strong>
               </div>
 
               <div className="admin-info-row">
                 <span>Model</span>
-                <span>{modelName}</span>
+                <strong>
+                  {modelName}
+                </strong>
               </div>
 
               <div className="admin-info-row">
                 <span>Explainability</span>
-                <span>SHAP</span>
+                <strong>
+                  SHAP
+                </strong>
               </div>
 
               <div className="admin-info-row">
                 <span>Counterfactuals</span>
-                <span>
+                <strong>
                   {result
                     ? "Available"
                     : "Waiting"}
-                </span>
+                </strong>
               </div>
 
               <div className="admin-info-row">
-                <span>Prediction API</span>
-                <span>Connected</span>
+                <span>Prediction Service</span>
+                <strong>
+                  Configured
+                </strong>
               </div>
+
+              <div className="admin-info-row">
+                <span>Session History</span>
+                <strong>
+                  {historyCount} records
+                </strong>
+              </div>
+
+            </div>
+
+            <div className="admin-system-status">
+
+              <span className="admin-status-dot"></span>
+
+              <span>
+                ThyroCare AI interface ready
+              </span>
 
             </div>
 
@@ -404,37 +600,72 @@ export default function AdminDashboard({
             RECENT ANALYSIS
             ===================================================== */}
 
-        <section className="admin-panel">
+        <section className="admin-panel admin-history-panel">
 
           <div className="admin-panel-header">
 
             <div>
-              <h2>Recent Analysis</h2>
+
+              <span className="admin-panel-badge">
+                ACTIVITY
+              </span>
+
+              <h2>
+                Recent Analysis
+              </h2>
 
               <p>
-                Prediction activity during this session
+                Prediction activity recorded
+                during this browser session.
               </p>
+
             </div>
+
+            <span className="admin-history-count">
+              {historyCount}{" "}
+              {historyCount === 1
+                ? "analysis"
+                : "analyses"}
+            </span>
 
           </div>
 
           {analysisHistory.length === 0 ? (
+
             <div className="admin-empty">
-              No analysis history available yet.
+
+              <div className="admin-empty-icon">
+                📋
+              </div>
+
+              <h3>
+                No Analysis History
+              </h3>
+
+              <p>
+                Your completed predictions will
+                appear here.
+              </p>
+
             </div>
+
           ) : (
+
             <div className="admin-table-wrapper">
 
               <table className="admin-table">
 
                 <thead>
+
                   <tr>
+                    <th>#</th>
                     <th>Time</th>
                     <th>Prediction</th>
                     <th>Class 0</th>
                     <th>Class 1</th>
                     <th>Model</th>
                   </tr>
+
                 </thead>
 
                 <tbody>
@@ -450,6 +681,7 @@ export default function AdminDashboard({
 
                       const itemProbabilities =
                         item?.probabilities ??
+                        item?.class_probabilities ??
                         {};
 
                       const itemClass0 =
@@ -466,31 +698,50 @@ export default function AdminDashboard({
                         item?.class_1_probability ??
                         0;
 
+                      const itemModel =
+                        item?.model ??
+                        item?.model_name ??
+                        item?.algorithm ??
+                        "XGBoost";
+
+                      const isPositive =
+                        Number(itemPrediction) === 1;
+
                       return (
-                        <tr key={item?.id ?? index}>
+
+                        <tr
+                          key={
+                            item?.id ??
+                            `${item?.time ?? "analysis"}-${index}`
+                          }
+                        >
 
                           <td>
-                            {formatDate(
-                              item?.time ??
-                                item?.created_at ??
-                                item?.timestamp
-                            )}
+                            <span className="admin-row-number">
+                              {index + 1}
+                            </span>
+                          </td>
+
+                          <td>
+                            <span className="admin-date">
+                              {formatDate(
+                                item?.time ??
+                                  item?.created_at ??
+                                  item?.timestamp
+                              )}
+                            </span>
                           </td>
 
                           <td>
 
                             <span
                               className={
-                                Number(
-                                  itemPrediction
-                                ) === 1
+                                isPositive
                                   ? "admin-badge admin-badge-positive"
                                   : "admin-badge admin-badge-negative"
                               }
                             >
-                              {Number(
-                                itemPrediction
-                              ) === 1
+                              {isPositive
                                 ? "Class 1"
                                 : "Class 0"}
                             </span>
@@ -510,12 +761,13 @@ export default function AdminDashboard({
                           </td>
 
                           <td>
-                            {item?.model ??
-                              item?.model_name ??
-                              "XGBoost"}
+                            <span className="admin-model-tag">
+                              {itemModel}
+                            </span>
                           </td>
 
                         </tr>
+
                       );
                     }
                   )}
@@ -525,103 +777,171 @@ export default function AdminDashboard({
               </table>
 
             </div>
+
           )}
 
         </section>
 
         {/* =====================================================
-            SHAP FEATURES
+            SHAP EXPLANATION
             ===================================================== */}
 
         <section
           className="admin-panel"
-          style={{ marginTop: "20px" }}
+          style={{
+            marginTop: "20px",
+          }}
         >
 
           <div className="admin-panel-header">
 
             <div>
+
+              <span className="admin-panel-badge">
+                XAI
+              </span>
+
               <h2>
                 Top SHAP Features
               </h2>
 
               <p>
                 Features contributing most to
-                the latest model prediction
+                the latest model prediction.
               </p>
+
             </div>
 
           </div>
 
           {!result || topShap.length === 0 ? (
+
             <div className="admin-empty">
-              SHAP explanation will appear after
-              running an analysis.
+
+              <div className="admin-empty-icon">
+                🧠
+              </div>
+
+              <h3>
+                SHAP Explanation Waiting
+              </h3>
+
+              <p>
+                Run an analysis to generate
+                model explainability information.
+              </p>
+
             </div>
+
           ) : (
+
             <div className="admin-shap-list">
 
-              {topShap.map((item, index) => (
+              {topShap.map(
+                (item, index) => {
 
-                <div
-                  className="admin-shap-item"
-                  key={`${item.feature}-${index}`}
-                >
+                  const numericValue =
+                    Number(item.value) || 0;
 
-                  <span>
-                    {item.feature}
-                  </span>
+                  const magnitude = Math.min(
+                    Math.abs(numericValue) * 100,
+                    100
+                  );
 
-                  <strong>
-                    {Number(item.value) >= 0
-                      ? "+"
-                      : ""}
-                    {Number(item.value).toFixed(4)}
-                  </strong>
+                  return (
 
-                </div>
+                    <div
+                      className="admin-shap-item"
+                      key={`${item.feature}-${index}`}
+                    >
 
-              ))}
+                      <div className="admin-shap-main">
+
+                        <div className="admin-shap-rank">
+                          {index + 1}
+                        </div>
+
+                        <div className="admin-shap-feature">
+
+                          <span>
+                            {item.feature}
+                          </span>
+
+                          <div className="admin-shap-bar">
+
+                            <div
+                              className="admin-shap-bar-fill"
+                              style={{
+                                width: `${magnitude}%`,
+                              }}
+                            />
+
+                          </div>
+
+                        </div>
+
+                        <strong
+                          className={
+                            numericValue >= 0
+                              ? "shap-positive"
+                              : "shap-negative"
+                          }
+                        >
+                          {numericValue >= 0
+                            ? "+"
+                            : ""}
+                          {numericValue.toFixed(4)}
+                        </strong>
+
+                      </div>
+
+                    </div>
+
+                  );
+                }
+              )}
 
             </div>
+
           )}
 
         </section>
 
         {/* =====================================================
-            MEDICAL DISCLAIMER
+            MEDICAL / ACADEMIC NOTICE
             ===================================================== */}
 
         <section
-          className="admin-panel"
-          style={{ marginTop: "20px" }}
+          className="admin-panel admin-disclaimer"
+          style={{
+            marginTop: "20px",
+          }}
         >
 
-          <div className="admin-panel-header">
-            <div>
-              <h2>
-                Important Notice
-              </h2>
-            </div>
+          <div className="admin-disclaimer-icon">
+            ⚕
           </div>
 
-          <p
-            style={{
-              color: "#94a3b8",
-              lineHeight: "1.8",
-              fontSize: "0.85rem",
-            }}
-          >
-            ThyroCare AI provides machine-learning
-            predictions for academic and decision-support
-            purposes. The prediction is not a medical
-            diagnosis and should not replace evaluation
-            by a qualified healthcare professional.
-          </p>
+          <div>
+
+            <h2>
+              Important Notice
+            </h2>
+
+            <p>
+              ThyroCare AI provides machine-learning
+              predictions and explainability information
+              for academic and decision-support purposes.
+              The model output is not a medical diagnosis
+              and should not replace evaluation by a
+              qualified healthcare professional.
+            </p>
+
+          </div>
 
         </section>
 
       </div>
     </main>
   );
-        }
+                              }
