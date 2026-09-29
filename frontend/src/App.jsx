@@ -1,12 +1,16 @@
 import React, { useMemo, useState } from "react";
 import "./index.css";
-import AdminLogin from "./admin/AdminLogin";
 
 const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
+
+/* =========================================================
+   INITIAL FORM
+========================================================= */
 
 const initialForm = {
   age: 45,
   sex: 1,
+
   "on thyroxine": 0,
   "query on thyroxine": 0,
   "on antithyroid medication": 0,
@@ -21,6 +25,7 @@ const initialForm = {
   tumor: 0,
   hypopituitary: 0,
   psych: 0,
+
   "TSH measured": 1,
   TSH: 2.5,
   "T3 measured": 1,
@@ -32,8 +37,11 @@ const initialForm = {
   FTI: 110,
 };
 
-const binaryFields = [
-  "sex",
+/* =========================================================
+   FORM FIELD GROUPS
+========================================================= */
+
+const clinicalFields = [
   "on thyroxine",
   "query on thyroxine",
   "on antithyroid medication",
@@ -48,6 +56,9 @@ const binaryFields = [
   "tumor",
   "hypopituitary",
   "psych",
+];
+
+const measurementAvailability = [
   "TSH measured",
   "T3 measured",
   "TT4 measured",
@@ -55,19 +66,38 @@ const binaryFields = [
   "FTI measured",
 ];
 
-const numericFields = [
-  "age",
-  "TSH",
-  "TT4",
-  "T4U",
-  "FTI",
+const thyroidMeasurements = [
+  {
+    key: "TSH",
+    label: "TSH",
+    description: "Thyroid-stimulating hormone",
+  },
+  {
+    key: "TT4",
+    label: "TT4",
+    description: "Total thyroxine",
+  },
+  {
+    key: "T4U",
+    label: "T4U",
+    description: "T4 uptake",
+  },
+  {
+    key: "FTI",
+    label: "FTI",
+    description: "Free thyroxine index",
+  },
 ];
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 function formatNumber(value) {
   const n = Number(value);
 
   if (!Number.isFinite(n)) {
-    return "0";
+    return "0.00";
   }
 
   return n.toFixed(2);
@@ -83,20 +113,10 @@ function formatPercent(value) {
   return `${(n * 100).toFixed(2)}%`;
 }
 
-function getErrorMessage(error) {
-  if (error?.response?.data?.detail) {
-    return error.response.data.detail;
-  }
-
-  if (error?.message) {
-    return error.message;
-  }
-
-  return "Unable to connect to prediction server.";
-}
-
 function normalizeShap(shap) {
-  if (!shap) return [];
+  if (!shap) {
+    return [];
+  }
 
   if (Array.isArray(shap)) {
     return shap.map((item) => {
@@ -107,13 +127,13 @@ function normalizeShap(shap) {
             item.name ||
             item.column ||
             "Feature",
-          value:
-            Number(
-              item.value ??
+
+          value: Number(
+            item.value ??
               item.shap_value ??
               item.impact ??
               0
-            ),
+          ),
         };
       }
 
@@ -125,10 +145,12 @@ function normalizeShap(shap) {
   }
 
   if (typeof shap === "object") {
-    return Object.entries(shap).map(([feature, value]) => ({
-      feature,
-      value: Number(value) || 0,
-    }));
+    return Object.entries(shap).map(
+      ([feature, value]) => ({
+        feature,
+        value: Number(value) || 0,
+      })
+    );
   }
 
   return [];
@@ -144,21 +166,25 @@ function normalizeCounterfactuals(counterfactuals) {
       item.feature ||
       item.changed_feature ||
       "Feature",
+
     from:
       item.from ??
       item.original ??
       item.old_value ??
       "-",
+
     to:
       item.to ??
       item.new_value ??
       item.changed_to ??
       "-",
+
     prediction:
       item.prediction ??
       item.class ??
       item.target ??
       "-",
+
     probability:
       item.probability ??
       item.class_probability ??
@@ -167,27 +193,46 @@ function normalizeCounterfactuals(counterfactuals) {
   }));
 }
 
+/* =========================================================
+   MAIN APP
+========================================================= */
+
 export default function App() {
   const [page, setPage] = useState("home");
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] =
+    useState(initialForm);
 
-  const [result, setResult] = useState(null);
+  const [result, setResult] =
+    useState(null);
 
-  const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState("");
-
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const [adminAuthenticated, setAdminAuthenticated] =
+  const [loading, setLoading] =
     useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
 
   const goTo = (nextPage) => {
     setPage(nextPage);
     setMenuOpen(false);
     setError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
+
+  /* =======================================================
+     UPDATE FORM
+  ======================================================= */
 
   const updateField = (field, value) => {
     setForm((previous) => ({
@@ -196,15 +241,23 @@ export default function App() {
     }));
   };
 
+  /* =======================================================
+     BUILD API PAYLOAD
+  ======================================================= */
+
   const buildPayload = () => {
     return {
       age: Number(form.age),
       sex: Number(form.sex),
 
-      on_thyroxine: Number(form["on thyroxine"]),
+      on_thyroxine: Number(
+        form["on thyroxine"]
+      ),
+
       query_on_thyroxine: Number(
         form["query on thyroxine"]
       ),
+
       on_antithyroid_medication: Number(
         form["on antithyroid medication"]
       ),
@@ -231,7 +284,9 @@ export default function App() {
       lithium: Number(form.lithium),
       goitre: Number(form.goitre),
       tumor: Number(form.tumor),
-      hypopituitary: Number(form.hypopituitary),
+      hypopituitary: Number(
+        form.hypopituitary
+      ),
       psych: Number(form.psych),
 
       TSH_measured: Number(
@@ -264,12 +319,17 @@ export default function App() {
     };
   };
 
+  /* =======================================================
+     ANALYZE
+  ======================================================= */
+
   const handleAnalyze = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const controller = new AbortController();
+      const controller =
+        new AbortController();
 
       const timeout = setTimeout(() => {
         controller.abort();
@@ -279,61 +339,98 @@ export default function App() {
         `${API_URL}/predict`,
         {
           method: "POST",
+
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
-          body: JSON.stringify(buildPayload()),
+
+          body: JSON.stringify(
+            buildPayload()
+          ),
+
           signal: controller.signal,
         }
       );
 
       clearTimeout(timeout);
 
-      const data = await response.json();
+      let data;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          "The prediction server returned an invalid response."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
           data?.detail ||
-          "Prediction request failed."
+            data?.message ||
+            "Prediction request failed."
         );
       }
 
       setResult(data);
       setPage("results");
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (err) {
       if (err.name === "AbortError") {
         setError(
           "Prediction request timed out. Please try again."
         );
       } else {
-        setError(getErrorMessage(err));
+        setError(
+          err?.message ||
+            "Unable to connect to prediction server."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
+  /* =======================================================
+     RESET
+  ======================================================= */
+
   const resetForm = () => {
     setForm(initialForm);
     setResult(null);
     setError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
+
+  /* =======================================================
+     RESULT DATA
+  ======================================================= */
 
   const shapData = useMemo(() => {
     return normalizeShap(
       result?.shap_values ||
-      result?.shap ||
-      result?.explanation
+        result?.shap ||
+        result?.explanation
     );
   }, [result]);
 
-  const counterfactualData = useMemo(() => {
-    return normalizeCounterfactuals(
-      result?.counterfactuals ||
-      result?.counterfactual_explanations ||
-      []
-    );
-  }, [result]);
+  const counterfactualData =
+    useMemo(() => {
+      return normalizeCounterfactuals(
+        result?.counterfactuals ||
+          result?.counterfactual_explanations ||
+          []
+      );
+    }, [result]);
 
   const predictionClass =
     result?.prediction ??
@@ -367,642 +464,1056 @@ export default function App() {
       ? "Thyroid Disease Not Predicted"
       : "Prediction Result";
 
+  /* =======================================================
+     NAVBAR
+  ======================================================= */
+
   const renderNavbar = () => {
     return (
-      <nav className="navbar">
-        <div
-          className="brand"
-          onClick={() => goTo("home")}
-        >
-          <div className="brand-icon">
-            🩺
-          </div>
-
-          <div>
-            <strong>THYROCARE AI</strong>
-            <span>THYROID ANALYSIS</span>
-          </div>
-        </div>
-
-        <button
-          className="mobile-menu-button"
-          onClick={() =>
-            setMenuOpen((previous) => !previous)
-          }
-        >
-          ☰
-        </button>
-
-        <div
-          className={`nav-links ${
-            menuOpen ? "open" : ""
-          }`}
-        >
+      <header className="site-header">
+        <nav className="navbar">
           <button
-            className={page === "home" ? "active" : ""}
+            className="brand"
             onClick={() => goTo("home")}
           >
-            Home
+            <span className="brand-mark">
+              TC
+            </span>
+
+            <span className="brand-text">
+              <strong>
+                ThyroCare<span>AI</span>
+              </strong>
+
+              <small>
+                THYROID ANALYSIS
+              </small>
+            </span>
           </button>
 
-          <button
-            className={
-              page === "prediction" ? "active" : ""
-            }
-            onClick={() => goTo("prediction")}
+          <div
+            className={`nav-links ${
+              menuOpen ? "open" : ""
+            }`}
           >
-            Analyze
-          </button>
+            <button
+              className={
+                page === "home"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                goTo("home")
+              }
+            >
+              Home
+            </button>
+
+            <button
+              className={
+                page === "prediction"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                goTo("prediction")
+              }
+            >
+              Analyze
+            </button>
+
+            <button
+              className={
+                page === "results"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                goTo("results")
+              }
+            >
+              Results
+            </button>
+
+            <button
+              className={
+                page === "about"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                goTo("about")
+              }
+            >
+              About
+            </button>
+          </div>
 
           <button
-            className={
-              page === "results" ? "active" : ""
+            className={`mobile-menu-button ${
+              menuOpen ? "active" : ""
+            }`}
+            onClick={() =>
+              setMenuOpen(
+                (previous) =>
+                  !previous
+              )
             }
-            onClick={() => goTo("results")}
+            aria-label="Toggle navigation"
           >
-            Results
+            <span />
+            <span />
+            <span />
           </button>
-
-          <button
-            className={
-              page === "about" ? "active" : ""
-            }
-            onClick={() => goTo("about")}
-          >
-            About
-          </button>
-
-          <button
-            className={
-              page === "admin" ||
-              page === "admin-dashboard"
-                ? "active admin-nav-button"
-                : "admin-nav-button"
-            }
-            onClick={() => goTo("admin")}
-          >
-            🔐 Admin
-          </button>
-        </div>
-      </nav>
+        </nav>
+      </header>
     );
   };
+
+  /* =======================================================
+     HOME
+  ======================================================= */
 
   const renderHomePage = () => {
     return (
       <>
-        <section className="hero">
-          <div className="hero-content">
-            <div className="hero-badge">
-              ✨ AI POWERED THYROID ANALYSIS
-            </div>
-
-            <h1>
-              Intelligent Thyroid
-              <br />
-              <span>Diagnosis & Explainability</span>
-            </h1>
-
-            <p>
-              Analyze thyroid-related clinical
-              measurements using Machine Learning,
-              SHAP Explainable AI and Counterfactual
-              explanations.
-            </p>
-
-            <div className="hero-actions">
-              <button
-                className="primary-button"
-                onClick={() =>
-                  goTo("prediction")
-                }
-              >
-                Start Analysis →
-              </button>
-
-              <button
-                className="secondary-button"
-                onClick={() => goTo("about")}
-              >
-                Explore Project
-              </button>
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="ai-orbit">
-              <div className="orbit orbit-one" />
-              <div className="orbit orbit-two" />
-              <div className="orbit orbit-three" />
-
-              <div className="ai-core">
-                <span>AI</span>
-                <small>THYROID</small>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="feature-section">
-          <div className="section-heading">
-            <span>POWERFUL FEATURES</span>
-
-            <h2>
-              From Prediction to Explanation
-            </h2>
-
-            <p>
-              A complete machine learning workflow
-              designed for transparent thyroid
-              disease analysis.
-            </p>
-          </div>
-
-          <div className="feature-grid">
-            <div className="feature-card">
-              <div className="feature-icon">
-                🧠
+        <main className="home-page">
+          <section className="hero">
+            <div className="hero-content">
+              <div className="hero-badge">
+                <span className="status-dot" />
+                AI-POWERED THYROID ANALYSIS
               </div>
 
-              <h3>Machine Learning</h3>
+              <h1>
+                Smarter
+                <br />
+
+                <span>
+                  Thyroid Analysis.
+                </span>
+              </h1>
+
+              <p className="hero-description">
+                An AI-powered thyroid disease
+                prediction system using
+                XGBoost, SHAP explainability
+                and counterfactual analysis.
+              </p>
+
+              <div className="hero-actions">
+                <button
+                  className="primary-button"
+                  onClick={() =>
+                    goTo("prediction")
+                  }
+                >
+                  Start Analysis
+                  <span>→</span>
+                </button>
+
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    goTo("about")
+                  }
+                >
+                  Learn More
+                </button>
+              </div>
+
+              <div className="hero-note">
+                <span>●</span>
+                25 clinical features ·
+                XGBoost · Explainable AI
+              </div>
+            </div>
+
+            <div className="hero-visual">
+              <div className="medical-orb">
+                <div className="orb-ring ring-one" />
+                <div className="orb-ring ring-two" />
+                <div className="orb-ring ring-three" />
+
+                <div className="orb-core">
+                  <span>AI</span>
+                  <small>
+                    THYROID
+                  </small>
+                </div>
+
+                <div className="floating-card card-one">
+                  <span>
+                    MODEL
+                  </span>
+                  <strong>
+                    XGBoost
+                  </strong>
+                </div>
+
+                <div className="floating-card card-two">
+                  <span>
+                    ACCURACY
+                  </span>
+                  <strong>
+                    99.87%
+                  </strong>
+                </div>
+
+                <div className="floating-card card-three">
+                  <span>
+                    XAI
+                  </span>
+                  <strong>
+                    SHAP + CF
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="stats-section">
+            <div className="stat-card">
+              <span className="stat-number">
+                99.87%
+              </span>
+
+              <span className="stat-label">
+                Test Accuracy
+              </span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-number">
+                25
+              </span>
+
+              <span className="stat-label">
+                Clinical Features
+              </span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-number">
+                XGB
+              </span>
+
+              <span className="stat-label">
+                Prediction Model
+              </span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-number">
+                XAI
+              </span>
+
+              <span className="stat-label">
+                Explainable AI
+              </span>
+            </div>
+          </section>
+
+          <section className="workflow-section">
+            <div className="section-heading">
+              <span>
+                HOW IT WORKS
+              </span>
+
+              <h2>
+                From patient data
+                <br />
+                to explainable prediction.
+              </h2>
 
               <p>
-                XGBoost analyzes clinical features
-                and generates a thyroid disease
-                prediction.
+                The system combines machine
+                learning with explainable AI
+                to make the prediction process
+                easier to understand.
               </p>
             </div>
 
-            <div className="feature-card">
-              <div className="feature-icon">
-                🔍
+            <div className="workflow-grid">
+              <div className="workflow-card">
+                <span className="step-number">
+                  01
+                </span>
+
+                <div className="workflow-icon">
+                  ↓
+                </div>
+
+                <h3>
+                  Input
+                </h3>
+
+                <p>
+                  Enter patient and thyroid
+                  measurement values through
+                  a structured interface.
+                </p>
               </div>
 
-              <h3>SHAP Explainability</h3>
+              <div className="workflow-card">
+                <span className="step-number">
+                  02
+                </span>
 
-              <p>
-                Understand which clinical features
-                contributed to the prediction.
-              </p>
-            </div>
+                <div className="workflow-icon">
+                  ◈
+                </div>
 
-            <div className="feature-card">
-              <div className="feature-icon">
-                🔄
+                <h3>
+                  Prediction
+                </h3>
+
+                <p>
+                  The trained XGBoost model
+                  analyzes the 25 clinical
+                  features.
+                </p>
               </div>
 
-              <h3>Counterfactual AI</h3>
+              <div className="workflow-card">
+                <span className="step-number">
+                  03
+                </span>
 
-              <p>
-                Explore how changes in important
-                measurements can influence the
-                prediction.
-              </p>
-            </div>
+                <div className="workflow-icon">
+                  ✦
+                </div>
 
-            <div className="feature-card">
-              <div className="feature-icon">
-                📊
+                <h3>
+                  Explanation
+                </h3>
+
+                <p>
+                  SHAP identifies feature
+                  contributions while
+                  counterfactual analysis
+                  provides what-if scenarios.
+                </p>
               </div>
-
-              <h3>Prediction Report</h3>
-
-              <p>
-                View probabilities, explanations
-                and generate a downloadable report.
-              </p>
             </div>
-          </div>
-        </section>
+          </section>
+
+          <section className="cta-section">
+            <div>
+              <span>
+                READY TO ANALYZE?
+              </span>
+
+              <h2>
+                Explore your thyroid
+                analysis.
+              </h2>
+            </div>
+
+            <button
+              className="primary-button"
+              onClick={() =>
+                goTo("prediction")
+              }
+            >
+              Start Analysis →
+            </button>
+          </section>
+        </main>
       </>
     );
   };
 
-  const renderPredictionPage = () => {
-    return (
-      <section className="prediction-page">
-        <div className="page-heading">
-          <span>AI THYROID ANALYSIS</span>
+  /* =======================================================
+     PREDICTION
+  ======================================================= */
 
-          <h1>Enter Clinical Parameters</h1>
+  const renderPredictionPage =
+    () => {
+      return (
+        <main className="prediction-page">
+          <section className="page-hero">
+            <div>
+              <span>
+                AI THYROID ANALYSIS
+              </span>
 
-          <p>
-            Provide the patient's clinical values
-            below to generate an AI prediction.
-          </p>
-        </div>
+              <h1>
+                Analyze Thyroid
+              </h1>
 
-        {error && (
-          <div className="error-box">
-            ⚠️ {error}
-          </div>
-        )}
-
-        <div className="form-card">
-          <div className="form-section">
-            <h2>Patient Information</h2>
-
-            <div className="form-grid">
-              <div className="input-group">
-                <label>Age</label>
-
-                <input
-                  type="number"
-                  value={form.age}
-                  onChange={(e) =>
-                    updateField(
-                      "age",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div className="input-group">
-                <label>Sex</label>
-
-                <select
-                  value={form.sex}
-                  onChange={(e) =>
-                    updateField(
-                      "sex",
-                      Number(e.target.value)
-                    )
-                  }
-                >
-                  <option value={0}>
-                    Female
-                  </option>
-
-                  <option value={1}>
-                    Male
-                  </option>
-                </select>
-              </div>
+              <p>
+                Enter patient measurements
+                and clinical indicators
+                to generate an AI-powered
+                prediction.
+              </p>
             </div>
-          </div>
 
-          <div className="form-section">
-            <h2>Thyroid Measurements</h2>
+            <div className="model-badge">
+              <small>
+                MODEL
+              </small>
 
-            <div className="form-grid">
-              {[
-                ["TSH", "TSH"],
-                ["TT4", "TT4"],
-                ["T4U", "T4U"],
-                ["FTI", "FTI"],
-              ].map(([label, key]) => (
-                <div
-                  className="input-group"
-                  key={key}
-                >
-                  <label>{label}</label>
+              <strong>
+                XGBoost
+              </strong>
+
+              <span>
+                99.87% accuracy
+              </span>
+            </div>
+          </section>
+
+          {error && (
+            <div className="error-box">
+              <strong>
+                Analysis Error
+              </strong>
+
+              <span>
+                {error}
+              </span>
+            </div>
+          )}
+
+          <section className="form-card">
+            <div className="form-section">
+              <div className="form-section-heading">
+                <span>
+                  01
+                </span>
+
+                <div>
+                  <h2>
+                    Patient Information
+                  </h2>
+
+                  <p>
+                    Basic patient
+                    information.
+                  </p>
+                </div>
+              </div>
+
+              <div className="form-grid">
+                <div className="input-group">
+                  <label>
+                    Age
+                  </label>
 
                   <input
                     type="number"
-                    step="any"
-                    value={form[key]}
+                    min="0"
+                    value={form.age}
                     onChange={(e) =>
                       updateField(
-                        key,
+                        "age",
                         e.target.value
                       )
                     }
                   />
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="form-section">
-            <h2>Clinical Indicators</h2>
+                <div className="input-group">
+                  <label>
+                    Sex
+                  </label>
 
-            <div className="binary-grid">
-              {binaryFields
-                .filter(
-                  (field) =>
-                    field !== "sex"
-                )
-                .map((field) => (
-                  <label
-                    className="toggle-field"
-                    key={field}
+                  <select
+                    value={form.sex}
+                    onChange={(e) =>
+                      updateField(
+                        "sex",
+                        Number(
+                          e.target.value
+                        )
+                      )
+                    }
                   >
-                    <span>
-                      {field}
-                    </span>
+                    <option value={0}>
+                      Female / 0
+                    </option>
 
-                    <select
-                      value={form[field]}
-                      onChange={(e) =>
-                        updateField(
-                          field,
-                          Number(
+                    <option value={1}>
+                      Male / 1
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <div className="form-section-heading">
+                <span>
+                  02
+                </span>
+
+                <div>
+                  <h2>
+                    Thyroid Measurements
+                  </h2>
+
+                  <p>
+                    Enter the available
+                    laboratory measurements.
+                  </p>
+                </div>
+              </div>
+
+              <div className="form-grid">
+                {thyroidMeasurements.map(
+                  (item) => (
+                    <div
+                      className="input-group"
+                      key={item.key}
+                    >
+                      <label>
+                        {item.label}
+                      </label>
+
+                      <small>
+                        {item.description}
+                      </small>
+
+                      <input
+                        type="number"
+                        step="any"
+                        value={
+                          form[item.key]
+                        }
+                        onChange={(e) =>
+                          updateField(
+                            item.key,
                             e.target.value
                           )
-                        )
-                      }
-                    >
-                      <option value={0}>
-                        No
-                      </option>
-
-                      <option value={1}>
-                        Yes
-                      </option>
-                    </select>
-                  </label>
-                ))}
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button
-              className="secondary-button"
-              onClick={resetForm}
-              disabled={loading}
-            >
-              Reset
-            </button>
-
-            <button
-              className="primary-button analyze-button"
-              onClick={handleAnalyze}
-              disabled={loading}
-            >
-              {loading
-                ? "Analyzing..."
-                : "Analyze Thyroid →"}
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  };
-
-  const renderResultsPage = () => {
-    if (!result) {
-      return (
-        <section className="empty-results">
-          <div className="empty-icon">
-            📊
-          </div>
-
-          <h1>No Analysis Yet</h1>
-
-          <p>
-            Run a thyroid analysis to view the
-            prediction and AI explanations.
-          </p>
-
-          <button
-            className="primary-button"
-            onClick={() =>
-              goTo("prediction")
-            }
-          >
-            Start Analysis →
-          </button>
-        </section>
-      );
-    }
-
-    return (
-      <section className="results-page">
-        <div className="page-heading">
-          <span>ANALYSIS COMPLETE</span>
-
-          <h1>AI Prediction Results</h1>
-
-          <p>
-            Machine learning prediction with
-            explainable AI insights.
-          </p>
-        </div>
-
-        <div
-          className={`prediction-banner ${
-            predictionClass === 1
-              ? "positive"
-              : "negative"
-          }`}
-        >
-          <div className="prediction-symbol">
-            {predictionClass === 1
-              ? "⚠️"
-              : "✓"}
-          </div>
-
-          <div>
-            <span>MODEL PREDICTION</span>
-
-            <h2>{predictionLabel}</h2>
-
-            <p>
-              Model:{" "}
-              {result.model ||
-                result.model_name ||
-                "XGBoost"}
-            </p>
-          </div>
-        </div>
-
-        <div className="result-grid">
-          <div className="result-card">
-            <div className="result-card-header">
-              <span>
-                CLASS 0
-              </span>
-
-              <strong>
-                {formatPercent(class0)}
-              </strong>
-            </div>
-
-            <div className="progress-bar">
-              <div
-                style={{
-                  width: `${Math.max(
-                    0,
-                    Math.min(
-                      100,
-                      Number(class0) *
-                        100
-                    )
-                  )}%`,
-                }}
-              />
-            </div>
-
-            <p>
-              Thyroid Disease Not Predicted
-            </p>
-          </div>
-
-          <div className="result-card">
-            <div className="result-card-header">
-              <span>
-                CLASS 1
-              </span>
-
-              <strong>
-                {formatPercent(class1)}
-              </strong>
-            </div>
-
-            <div className="progress-bar">
-              <div
-                style={{
-                  width: `${Math.max(
-                    0,
-                    Math.min(
-                      100,
-                      Number(class1) *
-                        100
-                    )
-                  )}%`,
-                }}
-              />
-            </div>
-
-            <p>
-              Thyroid Disease Predicted
-            </p>
-          </div>
-        </div>
-
-        <div className="explanation-section">
-          <div className="section-heading left">
-            <span>EXPLAINABLE AI</span>
-
-            <h2>
-              SHAP Feature Impact
-            </h2>
-
-            <p>
-              These values show how individual
-              features influenced the model
-              prediction.
-            </p>
-          </div>
-
-          {shapData.length > 0 ? (
-            <div className="shap-list">
-              {shapData
-                .slice(0, 10)
-                .map((item, index) => (
-                  <div
-                    className="shap-row"
-                    key={`${item.feature}-${index}`}
-                  >
-                    <div className="shap-name">
-                      {item.feature}
+                        }
+                      />
                     </div>
+                  )
+                )}
+              </div>
+            </div>
 
-                    <div className="shap-value">
-                      {formatNumber(
-                        item.value
+            <div className="form-section">
+              <div className="form-section-heading">
+                <span>
+                  03
+                </span>
+
+                <div>
+                  <h2>
+                    Clinical Indicators
+                  </h2>
+
+                  <p>
+                    Select the patient's
+                    clinical indicators.
+                  </p>
+                </div>
+              </div>
+
+              <div className="binary-grid">
+                {clinicalFields.map(
+                  (field) => (
+                    <div
+                      className="select-field"
+                      key={field}
+                    >
+                      <label>
+                        {field}
+                      </label>
+
+                      <select
+                        value={form[field]}
+                        onChange={(e) =>
+                          updateField(
+                            field,
+                            Number(
+                              e.target.value
+                            )
+                          )
+                        }
+                      >
+                        <option value={0}>
+                          No / 0
+                        </option>
+
+                        <option value={1}>
+                          Yes / 1
+                        </option>
+                      </select>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            <div className="form-section">
+              <div className="form-section-heading">
+                <span>
+                  04
+                </span>
+
+                <div>
+                  <h2>
+                    Measurement Availability
+                  </h2>
+
+                  <p>
+                    Indicate whether each
+                    measurement is available.
+                  </p>
+                </div>
+              </div>
+
+              <div className="binary-grid">
+                {measurementAvailability.map(
+                  (field) => (
+                    <div
+                      className="select-field"
+                      key={field}
+                    >
+                      <label>
+                        {field}
+                      </label>
+
+                      <select
+                        value={form[field]}
+                        onChange={(e) =>
+                          updateField(
+                            field,
+                            Number(
+                              e.target.value
+                            )
+                          )
+                        }
+                      >
+                        <option value={0}>
+                          No / 0
+                        </option>
+
+                        <option value={1}>
+                          Yes / 1
+                        </option>
+                      </select>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button
+                className="secondary-button"
+                onClick={resetForm}
+                disabled={loading}
+              >
+                Reset
+              </button>
+
+              <button
+                className="primary-button analyze-button"
+                onClick={
+                  handleAnalyze
+                }
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    Analyze Thyroid
+                    <span>
+                      →
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
+        </main>
+      );
+    };
+
+  /* =======================================================
+     RESULTS
+  ======================================================= */
+
+  const renderResultsPage =
+    () => {
+      if (!result) {
+        return (
+          <main className="empty-results">
+            <div className="empty-results-icon">
+              ◌
+            </div>
+
+            <span>
+              RESULTS
+            </span>
+
+            <h1>
+              No Analysis Yet
+            </h1>
+
+            <p>
+              Run a thyroid analysis to
+              view the prediction and
+              explainable AI insights.
+            </p>
+
+            <button
+              className="primary-button"
+              onClick={() =>
+                goTo("prediction")
+              }
+            >
+              Start Analysis →
+            </button>
+          </main>
+        );
+      }
+
+      return (
+        <main className="results-page">
+          <section className="page-hero">
+            <div>
+              <span>
+                ANALYSIS COMPLETE
+              </span>
+
+              <h1>
+                Prediction Results
+              </h1>
+
+              <p>
+                Machine learning prediction
+                with explainable AI insights.
+              </p>
+            </div>
+
+            <div className="model-badge">
+              <small>
+                MODEL
+              </small>
+
+              <strong>
+                {result.model ||
+                  result.model_name ||
+                  "XGBoost"}
+              </strong>
+            </div>
+          </section>
+
+          <section
+            className={`prediction-banner ${
+              predictionClass === 1
+                ? "positive"
+                : "negative"
+            }`}
+          >
+            <div className="prediction-icon">
+              {predictionClass === 1
+                ? "!"
+                : "✓"}
+            </div>
+
+            <div>
+              <span>
+                MODEL PREDICTION
+              </span>
+
+              <h2>
+                {predictionLabel}
+              </h2>
+
+              <p>
+                XGBoost clinical
+                classification result
+              </p>
+            </div>
+          </section>
+
+          <section className="probability-section">
+            <div className="section-heading left">
+              <span>
+                PROBABILITY
+              </span>
+
+              <h2>
+                Prediction Confidence
+              </h2>
+            </div>
+
+            <div className="probability-grid">
+              <div className="probability-card">
+                <div>
+                  <span>
+                    CLASS 0
+                  </span>
+
+                  <strong>
+                    {formatPercent(
+                      class0
+                    )}
+                  </strong>
+                </div>
+
+                <div className="progress-track">
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          Number(
+                            class0
+                          ) * 100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <p>
+                  Thyroid Disease Not
+                  Predicted
+                </p>
+              </div>
+
+              <div className="probability-card">
+                <div>
+                  <span>
+                    CLASS 1
+                  </span>
+
+                  <strong>
+                    {formatPercent(
+                      class1
+                    )}
+                  </strong>
+                </div>
+
+                <div className="progress-track">
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          Number(
+                            class1
+                          ) * 100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <p>
+                  Thyroid Disease
+                  Predicted
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="explanation-section">
+            <div className="section-heading left">
+              <span>
+                01 · EXPLAINABLE AI
+              </span>
+
+              <h2>
+                SHAP Feature Impact
+              </h2>
+
+              <p>
+                SHAP values show how individual
+                features contributed to the
+                model prediction.
+              </p>
+            </div>
+
+            {shapData.length > 0 ? (
+              <div className="shap-list">
+                {shapData
+                  .slice(0, 10)
+                  .map(
+                    (
+                      item,
+                      index
+                    ) => (
+                      <div
+                        className="shap-row"
+                        key={`${item.feature}-${index}`}
+                      >
+                        <div className="shap-name">
+                          <span>
+                            {String(
+                              index + 1
+                            ).padStart(
+                              2,
+                              "0"
+                            )}
+                          </span>
+
+                          <strong>
+                            {
+                              item.feature
+                            }
+                          </strong>
+                        </div>
+
+                        <div className="shap-bar">
+                          <div
+                            className={
+                              item.value >=
+                              0
+                                ? "positive-bar"
+                                : "negative-bar"
+                            }
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.abs(
+                                  Number(
+                                    item.value
+                                  )
+                                ) * 100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+
+                        <div
+                          className={`shap-value ${
+                            item.value >=
+                            0
+                              ? "positive-text"
+                              : "negative-text"
+                          }`}
+                        >
+                          {item.value >=
+                          0
+                            ? "+"
+                            : ""}
+                          {formatNumber(
+                            item.value
+                          )}
+                        </div>
+                      </div>
+                    )
+                  )}
+              </div>
+            ) : (
+              <div className="empty-card">
+                SHAP explanation is not
+                available for this prediction.
+              </div>
+            )}
+          </section>
+
+          <section className="explanation-section">
+            <div className="section-heading left">
+              <span>
+                02 · COUNTERFACTUAL AI
+              </span>
+
+              <h2>
+                What Could Change the
+                Prediction?
+              </h2>
+
+              <p>
+                Counterfactual examples
+                demonstrate how changing
+                selected input values may
+                affect the model output.
+              </p>
+            </div>
+
+            {counterfactualData.length >
+            0 ? (
+              <div className="counterfactual-grid">
+                {counterfactualData.map(
+                  (
+                    item,
+                    index
+                  ) => (
+                    <div
+                      className="counterfactual-card"
+                      key={index}
+                    >
+                      <span>
+                        {item.feature}
+                      </span>
+
+                      <div className="cf-values">
+                        <strong>
+                          {item.from}
+                        </strong>
+
+                        <span>
+                          →
+                        </span>
+
+                        <strong>
+                          {item.to}
+                        </strong>
+                      </div>
+
+                      <small>
+                        Prediction:{" "}
+                        {
+                          item.prediction
+                        }
+                      </small>
+
+                      {item.probability !==
+                        null && (
+                        <small>
+                          Probability:{" "}
+                          {formatPercent(
+                            item.probability
+                          )}
+                        </small>
                       )}
                     </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <div className="empty-card">
+                No counterfactual examples
+                available.
+              </div>
+            )}
+          </section>
 
-                    <div className="shap-direction">
-                      {item.value > 0
-                        ? "↑"
-                        : item.value < 0
-                        ? "↓"
-                        : "→"}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <div className="empty-card">
-              SHAP explanation is not available.
-            </div>
-          )}
-        </div>
+          <section className="result-actions">
+            <button
+              className="secondary-button"
+              onClick={() =>
+                goTo("prediction")
+              }
+            >
+              ← New Analysis
+            </button>
 
-        <div className="explanation-section">
-          <div className="section-heading left">
-            <span>COUNTERFACTUAL AI</span>
-
-            <h2>
-              What Could Change the Prediction?
-            </h2>
-
-            <p>
-              Counterfactual examples demonstrate
-              how changing important input values
-              may affect the model prediction.
-            </p>
-          </div>
-
-          {counterfactualData.length > 0 ? (
-            <div className="counterfactual-grid">
-              {counterfactualData.map(
-                (item, index) => (
-                  <div
-                    className="counterfactual-card"
-                    key={index}
-                  >
-                    <span>
-                      {item.feature}
-                    </span>
-
-                    <div className="cf-values">
-                      <strong>
-                        {item.from}
-                      </strong>
-
-                      <span>→</span>
-
-                      <strong>
-                        {item.to}
-                      </strong>
-                    </div>
-
-                    <small>
-                      Prediction:{" "}
-                      {item.prediction}
-                    </small>
-
-                    {item.probability !==
-                      null && (
-                      <small>
-                        Probability:{" "}
-                        {formatPercent(
-                          item.probability
-                        )}
-                      </small>
-                    )}
-                  </div>
-                )
-              )}
-            </div>
-          ) : (
-            <div className="empty-card">
-              No counterfactual examples available.
-            </div>
-          )}
-        </div>
-
-        <div className="result-actions">
-          <button
-            className="secondary-button"
-            onClick={() =>
-              goTo("prediction")
-            }
-          >
-            ← New Analysis
-          </button>
-
-          <button
-            className="primary-button"
-            onClick={() => {
-              const report = `
+            <button
+              className="primary-button"
+              onClick={() => {
+                const report = `
 THYROCARE AI
 THYROID ANALYSIS REPORT
---------------------------------
+================================
 
 Prediction:
 ${predictionLabel}
@@ -1014,10 +1525,15 @@ Class 1 Probability:
 ${formatPercent(class1)}
 
 Model:
-${result.model || result.model_name || "XGBoost"}
+${
+  result.model ||
+  result.model_name ||
+  "XGBoost"
+}
 
 SHAP FEATURES
---------------------------------
+================================
+
 ${shapData
   .slice(0, 10)
   .map(
@@ -1029,7 +1545,8 @@ ${shapData
   .join("\n")}
 
 COUNTERFACTUALS
---------------------------------
+================================
+
 ${counterfactualData
   .map(
     (item) =>
@@ -1037,323 +1554,206 @@ ${counterfactualData
   )
   .join("\n")}
 
---------------------------------
+================================
+
 ThyroCare AI
 Final Year B.Tech Project
 Machine Learning & Explainable AI
 `;
 
-              const blob =
-                new Blob([report], {
-                  type: "text/plain",
-                });
+                const blob =
+                  new Blob(
+                    [report],
+                    {
+                      type: "text/plain",
+                    }
+                  );
 
-              const url =
-                URL.createObjectURL(blob);
+                const url =
+                  URL.createObjectURL(
+                    blob
+                  );
 
-              const link =
-                document.createElement("a");
+                const link =
+                  document.createElement(
+                    "a"
+                  );
 
-              link.href = url;
-              link.download =
-                "thyrocare-ai-report.txt";
+                link.href = url;
 
-              link.click();
+                link.download =
+                  "thyrocare-ai-report.txt";
 
-              URL.revokeObjectURL(url);
-            }}
-          >
-            Download Report ↓
-          </button>
-        </div>
-      </section>
-    );
-  };
+                document.body.appendChild(
+                  link
+                );
 
-  const renderAboutPage = () => {
-    return (
-      <section className="about-page">
-        <div className="page-heading">
-          <span>ABOUT THE PROJECT</span>
+                link.click();
 
-          <h1>
-            ThyroCare AI
-          </h1>
+                link.remove();
 
-          <p>
-            Enhancing Thyroid Disease Diagnosis
-            With Machine Learning and
-            Counterfactual Explainable AI.
-          </p>
-        </div>
+                URL.revokeObjectURL(
+                  url
+                );
+              }}
+            >
+              Download Report ↓
+            </button>
+          </section>
+        </main>
+      );
+    };
 
-        <div className="about-grid">
-          <div className="about-card">
-            <div className="feature-icon">
-              🤖
+  /* =======================================================
+     ABOUT
+  ======================================================= */
+
+  const renderAboutPage =
+    () => {
+      return (
+        <main className="about-page">
+          <section className="page-hero about-hero">
+            <div>
+              <span>
+                ABOUT THE PROJECT
+              </span>
+
+              <h1>
+                ThyroCare AI
+              </h1>
+
+              <p>
+                Enhancing Thyroid Disease
+                Diagnosis With Machine
+                Learning and Counterfactual
+                Explainable AI.
+              </p>
+            </div>
+          </section>
+
+          <section className="about-grid">
+            <div className="about-card">
+              <div className="about-icon">
+                AI
+              </div>
+
+              <span>
+                01
+              </span>
+
+              <h2>
+                Machine Learning
+              </h2>
+
+              <p>
+                The system uses an XGBoost
+                machine learning model
+                trained on thyroid clinical
+                data to classify thyroid
+                disease.
+              </p>
             </div>
 
-            <h2>Machine Learning</h2>
+            <div className="about-card">
+              <div className="about-icon">
+                S
+              </div>
 
-            <p>
-              The system uses an XGBoost machine
-              learning model trained on thyroid
-              clinical data.
-            </p>
-          </div>
+              <span>
+                02
+              </span>
 
-          <div className="about-card">
-            <div className="feature-icon">
-              🔎
+              <h2>
+                SHAP Explainability
+              </h2>
+
+              <p>
+                SHAP values provide insight
+                into which clinical features
+                influence the model's output.
+              </p>
             </div>
 
-            <h2>Explainable AI</h2>
+            <div className="about-card">
+              <div className="about-icon">
+                CF
+              </div>
 
-            <p>
-              SHAP values provide insight into
-              which clinical features influence
-              the model's output.
-            </p>
-          </div>
+              <span>
+                03
+              </span>
 
-          <div className="about-card">
-            <div className="feature-icon">
-              🔄
+              <h2>
+                Counterfactual Analysis
+              </h2>
+
+              <p>
+                Counterfactual examples
+                demonstrate how changing
+                selected measurements can
+                affect model predictions.
+              </p>
             </div>
+          </section>
 
-            <h2>Counterfactual Analysis</h2>
-
-            <p>
-              Counterfactual examples show how
-              changing selected measurements can
-              affect predictions.
-            </p>
-          </div>
-        </div>
-
-        <div className="technology-card">
-          <h2>Technology Stack</h2>
-
-          <div className="technology-list">
-            <span>React</span>
-            <span>Vite</span>
-            <span>FastAPI</span>
-            <span>Python</span>
-            <span>XGBoost</span>
-            <span>SHAP</span>
-            <span>Explainable AI</span>
-            <span>Render</span>
-            <span>Vercel</span>
-          </div>
-        </div>
-      </section>
-    );
-  };
-
-  const renderAdminDashboard = () => {
-    return (
-      <section className="admin-dashboard">
-        <div className="admin-dashboard-header">
-          <div>
+          <section className="technology-card">
             <span>
-              ADMINISTRATION
+              TECHNOLOGY
             </span>
 
-            <h1>
-              ThyroCare AI Dashboard
-            </h1>
+            <h2>
+              Built with modern AI
+              technologies.
+            </h2>
 
-            <p>
-              Manage datasets, machine learning
-              experiments and prediction analytics.
-            </p>
-          </div>
+            <div className="technology-list">
+              <span>React</span>
+              <span>Vite</span>
+              <span>FastAPI</span>
+              <span>Python</span>
+              <span>XGBoost</span>
+              <span>SHAP</span>
+              <span>Explainable AI</span>
+              <span>Render</span>
+              <span>Vercel</span>
+            </div>
+          </section>
+        </main>
+      );
+    };
 
-          <button
-            className="secondary-button"
-            onClick={() => {
-              setAdminAuthenticated(false);
-              goTo("home");
-            }}
-          >
-            Logout
-          </button>
+  /* =======================================================
+     FOOTER
+  ======================================================= */
+
+  const renderFooter = () => {
+    return (
+      <footer className="footer">
+        <div className="footer-brand">
+          <strong>
+            ThyroCare<span>AI</span>
+          </strong>
+
+          <span>
+            Thyroid Analysis
+          </span>
         </div>
 
-        <div className="admin-stats">
-          <div className="admin-stat-card">
-            <span>MODEL</span>
-
-            <strong>
-              XGBoost
-            </strong>
-
-            <small>
-              Production Model
-            </small>
-          </div>
-
-          <div className="admin-stat-card">
-            <span>FEATURES</span>
-
-            <strong>
-              25
-            </strong>
-
-            <small>
-              Clinical Features
-            </small>
-          </div>
-
-          <div className="admin-stat-card">
-            <span>EXPLAINABILITY</span>
-
-            <strong>
-              SHAP
-            </strong>
-
-            <small>
-              Enabled
-            </small>
-          </div>
-
-          <div className="admin-stat-card">
-            <span>COUNTERFACTUAL</span>
-
-            <strong>
-              ACTIVE
-            </strong>
-
-            <small>
-              AI Explanation
-            </small>
-          </div>
-        </div>
-
-        <div className="admin-module-grid">
-          <div className="admin-module">
-            <div className="admin-module-icon">
-              📁
-            </div>
-
-            <h2>
-              Dataset Management
-            </h2>
-
-            <p>
-              Upload and inspect thyroid datasets.
-            </p>
-
-            <button disabled>
-              Coming Soon
-            </button>
-          </div>
-
-          <div className="admin-module">
-            <div className="admin-module-icon">
-              🧹
-            </div>
-
-            <h2>
-              Dataset Preprocessing
-            </h2>
-
-            <p>
-              Remove duplicates, inspect missing
-              values and prepare training data.
-            </p>
-
-            <button disabled>
-              Coming Soon
-            </button>
-          </div>
-
-          <div className="admin-module">
-            <div className="admin-module-icon">
-              🧠
-            </div>
-
-            <h2>
-              Algorithm Training
-            </h2>
-
-            <p>
-              Train machine learning algorithms
-              using the uploaded dataset.
-            </p>
-
-            <button disabled>
-              Coming Soon
-            </button>
-          </div>
-
-          <div className="admin-module">
-            <div className="admin-module-icon">
-              🎯
-            </div>
-
-            <h2>
-              Test Accuracy
-            </h2>
-
-            <p>
-              View accuracy, precision, recall,
-              F1-score and ROC-AUC.
-            </p>
-
-            <button disabled>
-              Coming Soon
-            </button>
-          </div>
-
-          <div className="admin-module">
-            <div className="admin-module-icon">
-              📊
-            </div>
-
-            <h2>
-              Algorithm Comparison
-            </h2>
-
-            <p>
-              Compare Logistic Regression,
-              Decision Tree, Random Forest,
-              SVM and XGBoost.
-            </p>
-
-            <button disabled>
-              Coming Soon
-            </button>
-          </div>
-
-          <div className="admin-module">
-            <div className="admin-module-icon">
-              🗃️
-            </div>
-
-            <h2>
-              Prediction History
-            </h2>
-
-            <p>
-              Review previous prediction requests
-              and model results.
-            </p>
-
-            <button disabled>
-              Coming Soon
-            </button>
-          </div>
-        </div>
-      </section>
+        <p>
+          Final Year B.Tech Project ·
+          Machine Learning & Explainable AI
+        </p>
+      </footer>
     );
   };
+
+  /* =======================================================
+     PAGE
+  ======================================================= */
 
   return (
     <div className="app">
-      {page !== "admin" &&
-        page !== "admin-dashboard" &&
-        renderNavbar()}
+      {renderNavbar()}
 
       {page === "home" &&
         renderHomePage()}
@@ -1367,36 +1767,7 @@ Machine Learning & Explainable AI
       {page === "about" &&
         renderAboutPage()}
 
-      {page === "admin" && (
-        <AdminLogin
-          onLogin={() => {
-            setAdminAuthenticated(true);
-            setPage("admin-dashboard");
-          }}
-          onBack={() => goTo("home")}
-        />
-      )}
-
-      {page === "admin-dashboard" &&
-        adminAuthenticated &&
-        renderAdminDashboard()}
-
-      <footer className="footer">
-        <div>
-          <strong>
-            ThyroCare
-          </strong>
-
-          <span>
-            AI Thyroid Analysis
-          </span>
-        </div>
-
-        <p>
-          Final Year B.Tech Project • Machine
-          Learning & Explainable AI
-        </p>
-      </footer>
+      {renderFooter()}
     </div>
   );
-    }
+}
