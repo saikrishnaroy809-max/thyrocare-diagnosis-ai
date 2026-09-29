@@ -6,6 +6,26 @@ import AdminDashboard from "./admin/AdminDashboard";
 
 const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
 
+/*
+=========================================================
+ADMIN DEMO AUTHENTICATION
+=========================================================
+
+IMPORTANT:
+This is FRONTEND/DEMO authentication only.
+
+Username: admin
+Password: thyrocare123
+
+Do NOT use hardcoded credentials for production.
+A real application should authenticate through
+a secure backend.
+=========================================================
+*/
+
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "thyrocare123";
+
 /* =========================================================
    INITIAL FORM
 ========================================================= */
@@ -203,34 +223,64 @@ function normalizeCounterfactuals(counterfactuals) {
 export default function App() {
   const [page, setPage] = useState("home");
 
-  const [form, setForm] =
-    useState(initialForm);
+  const [form, setForm] = useState({
+    ...initialForm,
+  });
 
-  const [result, setResult] =
-    useState(null);
+  const [result, setResult] = useState(null);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const [menuOpen, setMenuOpen] =
-    useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   /* =======================================================
      ADMIN STATE
   ======================================================= */
 
   const [adminAuthenticated, setAdminAuthenticated] =
-    useState(false);
+    useState(() => {
+      try {
+        return (
+          sessionStorage.getItem(
+            "thyrocare_admin"
+          ) === "true"
+        );
+      } catch {
+        return false;
+      }
+    });
+
+  /*
+    Session-only analysis history.
+
+    We intentionally store prediction summaries rather
+    than patient input values.
+  */
+
+  const [analysisHistory, setAnalysisHistory] =
+    useState([]);
 
   /* =======================================================
      NAVIGATION
   ======================================================= */
 
   const goTo = (nextPage) => {
-    setPage(nextPage);
+    /*
+      If somebody tries to open Admin while not logged in,
+      show the login page instead.
+    */
+
+    if (
+      nextPage === "admin" &&
+      !adminAuthenticated
+    ) {
+      setPage("admin-login");
+    } else {
+      setPage(nextPage);
+    }
+
     setMenuOpen(false);
     setError("");
 
@@ -244,15 +294,40 @@ export default function App() {
      ADMIN LOGIN
   ======================================================= */
 
-  const handleAdminLogin = () => {
+  const handleAdminLogin = (
+    username,
+    password
+  ) => {
+    const valid =
+      username === ADMIN_USERNAME &&
+      password === ADMIN_PASSWORD;
+
+    if (!valid) {
+      return false;
+    }
+
     setAdminAuthenticated(true);
-    setPage("admin-dashboard");
+
+    try {
+      sessionStorage.setItem(
+        "thyrocare_admin",
+        "true"
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+
+    setPage("admin");
+
     setMenuOpen(false);
+    setError("");
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+
+    return true;
   };
 
   /* =======================================================
@@ -261,8 +336,18 @@ export default function App() {
 
   const handleAdminLogout = () => {
     setAdminAuthenticated(false);
+
+    try {
+      sessionStorage.removeItem(
+        "thyrocare_admin"
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+
     setPage("home");
     setMenuOpen(false);
+    setError("");
 
     window.scrollTo({
       top: 0,
@@ -274,7 +359,10 @@ export default function App() {
      UPDATE FORM
   ======================================================= */
 
-  const updateField = (field, value) => {
+  const updateField = (
+    field,
+    value
+  ) => {
     setForm((previous) => ({
       ...previous,
       [field]: value,
@@ -298,9 +386,12 @@ export default function App() {
         form["query on thyroxine"]
       ),
 
-      on_antithyroid_medication: Number(
-        form["on antithyroid medication"]
-      ),
+      on_antithyroid_medication:
+        Number(
+          form[
+            "on antithyroid medication"
+          ]
+        ),
 
       sick: Number(form.sick),
       pregnant: Number(form.pregnant),
@@ -417,7 +508,85 @@ export default function App() {
         );
       }
 
+      /* ===================================================
+         SAVE RESULT
+      =================================================== */
+
       setResult(data);
+
+      /* ===================================================
+         EXTRACT PREDICTION
+      =================================================== */
+
+      const predicted =
+        data?.prediction ??
+        data?.predicted_class ??
+        data?.class ??
+        null;
+
+      /* ===================================================
+         EXTRACT PROBABILITIES
+      =================================================== */
+
+      const probabilities =
+        data?.probabilities ||
+        data?.class_probabilities ||
+        {};
+
+      const historyClass0 =
+        probabilities?.["0"] ??
+        probabilities?.class_0 ??
+        probabilities?.not_disease ??
+        data?.class_0_probability ??
+        0;
+
+      const historyClass1 =
+        probabilities?.["1"] ??
+        probabilities?.class_1 ??
+        probabilities?.disease ??
+        data?.class_1_probability ??
+        0;
+
+      /* ===================================================
+         MODEL NAME
+      =================================================== */
+
+      const modelName =
+        data?.model_name ||
+        data?.model ||
+        data?.algorithm ||
+        "XGBoost";
+
+      /* ===================================================
+         ADD TO SESSION HISTORY
+      =================================================== */
+
+      setAnalysisHistory(
+        (previous) => [
+          {
+            id: Date.now(),
+
+            time:
+              new Date().toISOString(),
+
+            prediction: predicted,
+
+            probabilities: {
+              "0": historyClass0,
+              "1": historyClass1,
+            },
+
+            model: modelName,
+          },
+
+          ...previous,
+        ].slice(0, 20)
+      );
+
+      /* ===================================================
+         SHOW RESULTS
+      =================================================== */
+
       setPage("results");
 
       window.scrollTo({
@@ -425,7 +594,10 @@ export default function App() {
         behavior: "smooth",
       });
     } catch (err) {
-      if (err?.name === "AbortError") {
+      if (
+        err?.name ===
+        "AbortError"
+      ) {
         setError(
           "Prediction request timed out. Please try again."
         );
@@ -551,6 +723,7 @@ export default function App() {
               menuOpen ? "open" : ""
             }`}
           >
+
             <button
               className={
                 page === "home"
@@ -606,8 +779,7 @@ export default function App() {
             <button
               className={
                 page === "admin" ||
-                page ===
-                  "admin-dashboard"
+                page === "admin-login"
                   ? "active"
                   : ""
               }
@@ -615,8 +787,11 @@ export default function App() {
                 goTo("admin")
               }
             >
-              Admin
+              {adminAuthenticated
+                ? "Dashboard"
+                : "Admin"}
             </button>
+
           </div>
 
           <button
@@ -724,6 +899,7 @@ export default function App() {
                 <span>
                   MODEL
                 </span>
+
                 <strong>
                   XGBoost
                 </strong>
@@ -733,6 +909,7 @@ export default function App() {
                 <span>
                   ACCURACY
                 </span>
+
                 <strong>
                   99.87%
                 </strong>
@@ -742,6 +919,7 @@ export default function App() {
                 <span>
                   XAI
                 </span>
+
                 <strong>
                   SHAP + CF
                 </strong>
@@ -759,6 +937,7 @@ export default function App() {
             <span className="stat-number">
               99.87%
             </span>
+
             <span className="stat-label">
               Test Accuracy
             </span>
@@ -768,6 +947,7 @@ export default function App() {
             <span className="stat-number">
               25
             </span>
+
             <span className="stat-label">
               Clinical Features
             </span>
@@ -777,6 +957,7 @@ export default function App() {
             <span className="stat-number">
               XGB
             </span>
+
             <span className="stat-label">
               Prediction Model
             </span>
@@ -786,6 +967,7 @@ export default function App() {
             <span className="stat-number">
               XAI
             </span>
+
             <span className="stat-label">
               Explainable AI
             </span>
@@ -892,6 +1074,7 @@ export default function App() {
         <section className="cta-section">
 
           <div>
+
             <span>
               READY TO ANALYZE?
             </span>
@@ -900,6 +1083,7 @@ export default function App() {
               Explore your thyroid
               analysis.
             </h2>
+
           </div>
 
           <button
@@ -928,6 +1112,7 @@ export default function App() {
         <section className="page-hero">
 
           <div>
+
             <span>
               AI THYROID ANALYSIS
             </span>
@@ -942,9 +1127,11 @@ export default function App() {
               to generate an AI-powered
               prediction.
             </p>
+
           </div>
 
           <div className="model-badge">
+
             <small>
               MODEL
             </small>
@@ -956,6 +1143,7 @@ export default function App() {
             <span>
               99.87% accuracy
             </span>
+
           </div>
 
         </section>
@@ -1036,6 +1224,7 @@ export default function App() {
                     )
                   }
                 >
+
                   <option value={0}>
                     Female / 0
                   </option>
@@ -1043,6 +1232,7 @@ export default function App() {
                   <option value={1}>
                     Male / 1
                   </option>
+
                 </select>
 
               </div>
@@ -1286,7 +1476,6 @@ export default function App() {
   ======================================================= */
 
   const renderResultsPage = () => {
-
     if (!result) {
       return (
         <main className="empty-results">
@@ -1412,6 +1601,7 @@ export default function App() {
             <div className="probability-card">
 
               <div>
+
                 <span>
                   CLASS 0
                 </span>
@@ -1421,6 +1611,7 @@ export default function App() {
                     class0
                   )}
                 </strong>
+
               </div>
 
               <div className="progress-track">
@@ -1452,6 +1643,7 @@ export default function App() {
             <div className="probability-card">
 
               <div>
+
                 <span>
                   CLASS 1
                 </span>
@@ -1461,6 +1653,7 @@ export default function App() {
                     class1
                   )}
                 </strong>
+
               </div>
 
               <div className="progress-track">
@@ -1978,10 +2171,10 @@ Machine Learning & Explainable AI
   };
 
   /* =======================================================
-     ADMIN LOGIN
+     ADMIN LOGIN PAGE
   ======================================================= */
 
-  if (page === "admin" && !adminAuthenticated) {
+  if (page === "admin-login") {
     return (
       <div className="app">
 
@@ -2000,19 +2193,43 @@ Machine Learning & Explainable AI
      ADMIN DASHBOARD
   ======================================================= */
 
-  if (
-    page === "admin-dashboard" &&
-    adminAuthenticated
-  ) {
+  if (page === "admin") {
+    /*
+      Safety check:
+      Never render dashboard unless authenticated.
+    */
+
+    if (!adminAuthenticated) {
+      return (
+        <div className="app">
+
+          <AdminLogin
+            onLogin={handleAdminLogin}
+            onBack={() =>
+              goTo("home")
+            }
+          />
+
+        </div>
+      );
+    }
+
     return (
       <div className="app">
 
         <AdminDashboard
+          result={result}
+          analysisHistory={
+            analysisHistory
+          }
+          onNewAnalysis={() =>
+            goTo("prediction")
+          }
+          onViewResults={() =>
+            goTo("results")
+          }
           onLogout={
             handleAdminLogout
-          }
-          onBack={() =>
-            goTo("home")
           }
         />
 
@@ -2045,4 +2262,4 @@ Machine Learning & Explainable AI
 
     </div>
   );
-               }
+}
