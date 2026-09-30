@@ -11,15 +11,13 @@ const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
 ADMIN DEMO AUTHENTICATION
 =========================================================
 
-IMPORTANT:
-This is FRONTEND/DEMO authentication only.
-
 Username: admin
 Password: thyrocare123
 
-Do NOT use hardcoded credentials for production.
-A real application should authenticate through
-a secure backend.
+IMPORTANT:
+This is frontend/demo authentication only.
+For a real production application, authentication
+should be handled securely by the backend.
 =========================================================
 */
 
@@ -136,14 +134,55 @@ function formatPercent(value) {
   return `${(n * 100).toFixed(2)}%`;
 }
 
+/* =========================================================
+   SHAP NORMALIZER
+========================================================= */
+
 function normalizeShap(shap) {
   if (!shap) {
     return [];
   }
 
+  /*
+   * Backend can return:
+   *
+   * shap_values: [...]
+   *
+   * OR
+   *
+   * shap: {
+   *   available: true,
+   *   features: [...]
+   * }
+   */
+
+  if (
+    typeof shap === "object" &&
+    !Array.isArray(shap) &&
+    Array.isArray(shap.features)
+  ) {
+    return shap.features.map((item) => ({
+      feature:
+        item?.feature ||
+        item?.name ||
+        item?.column ||
+        "Feature",
+
+      value: Number(
+        item?.value ??
+          item?.shap_value ??
+          item?.impact ??
+          0
+      ),
+    }));
+  }
+
   if (Array.isArray(shap)) {
     return shap.map((item) => {
-      if (typeof item === "object" && item !== null) {
+      if (
+        typeof item === "object" &&
+        item !== null
+      ) {
         return {
           feature:
             item.feature ||
@@ -179,41 +218,159 @@ function normalizeShap(shap) {
   return [];
 }
 
-function normalizeCounterfactuals(counterfactuals) {
-  if (!Array.isArray(counterfactuals)) {
+/* =========================================================
+   COUNTERFACTUAL NORMALIZER
+========================================================= */
+
+/*
+IMPORTANT:
+
+The backend returns counterfactuals like:
+
+counterfactuals: {
+    available: true,
+    features: [...],
+    scenarios: [
+        {
+            changes: [
+                {
+                    feature: "TSH",
+                    original_value: 0,
+                    counterfactual_value: 7
+                }
+            ],
+            prediction: 1,
+            prediction_label:
+                "Thyroid Disease Predicted",
+            class_0_probability: ...,
+            class_1_probability: ...,
+            distance: ...
+        }
+    ]
+}
+
+The old frontend expected counterfactuals
+to be a simple array.
+
+This function converts the actual backend
+format into the format used by the Results UI.
+*/
+
+function normalizeCounterfactuals(
+  counterfactuals
+) {
+  if (!counterfactuals) {
     return [];
   }
 
-  return counterfactuals.map((item) => ({
-    feature:
-      item?.feature ||
-      item?.changed_feature ||
-      "Feature",
+  /* =======================================================
+     CURRENT BACKEND FORMAT
+  ======================================================= */
 
-    from:
-      item?.from ??
-      item?.original ??
-      item?.old_value ??
-      "-",
+  if (
+    typeof counterfactuals === "object" &&
+    !Array.isArray(counterfactuals) &&
+    Array.isArray(
+      counterfactuals.scenarios
+    )
+  ) {
+    return counterfactuals.scenarios.map(
+      (scenario, index) => {
+        const change =
+          scenario?.changes?.[0];
 
-    to:
-      item?.to ??
-      item?.new_value ??
-      item?.changed_to ??
-      "-",
+        const prediction =
+          scenario?.prediction;
 
-    prediction:
-      item?.prediction ??
-      item?.class ??
-      item?.target ??
-      "-",
+        let probability = null;
 
-    probability:
-      item?.probability ??
-      item?.class_probability ??
-      item?.prob ??
-      null,
-  }));
+        if (prediction === 1) {
+          probability =
+            scenario?.class_1_probability ??
+            null;
+        } else if (prediction === 0) {
+          probability =
+            scenario?.class_0_probability ??
+            null;
+        }
+
+        return {
+          id: index,
+
+          feature:
+            change?.feature ||
+            "Feature",
+
+          from:
+            change?.original_value ??
+            "-",
+
+          to:
+            change?.counterfactual_value ??
+            "-",
+
+          prediction:
+            scenario?.prediction_label ??
+            prediction ??
+            "-",
+
+          probability,
+
+          distance:
+            scenario?.distance ?? null,
+        };
+      }
+    );
+  }
+
+  /* =======================================================
+     SIMPLE ARRAY FORMAT
+  ======================================================= */
+
+  if (Array.isArray(counterfactuals)) {
+    return counterfactuals.map(
+      (item, index) => ({
+        id: index,
+
+        feature:
+          item?.feature ||
+          item?.changed_feature ||
+          "Feature",
+
+        from:
+          item?.from ??
+          item?.original ??
+          item?.old_value ??
+          item?.original_value ??
+          "-",
+
+        to:
+          item?.to ??
+          item?.new_value ??
+          item?.changed_to ??
+          item?.counterfactual_value ??
+          "-",
+
+        prediction:
+          item?.prediction_label ||
+          item?.prediction ??
+          item?.class ??
+          item?.target ??
+          "-",
+
+        probability:
+          item?.probability ??
+          item?.class_probability ??
+          item?.prob ??
+          null,
+
+        distance:
+          item?.distance ?? null,
+      })
+    );
+  }
+
+  return [];
 }
 
 /* =========================================================
@@ -221,57 +378,59 @@ function normalizeCounterfactuals(counterfactuals) {
 ========================================================= */
 
 export default function App() {
-  const [page, setPage] = useState("home");
+  const [page, setPage] =
+    useState("home");
 
-  const [form, setForm] = useState({
-    ...initialForm,
-  });
+  const [form, setForm] =
+    useState({
+      ...initialForm,
+    });
 
-  const [result, setResult] = useState(null);
+  const [result, setResult] =
+    useState(null);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
   /* =======================================================
      ADMIN STATE
   ======================================================= */
 
-  const [adminAuthenticated, setAdminAuthenticated] =
-    useState(() => {
-      try {
-        return (
-          sessionStorage.getItem(
-            "thyrocare_admin"
-          ) === "true"
-        );
-      } catch {
-        return false;
-      }
-    });
+  const [
+    adminAuthenticated,
+    setAdminAuthenticated,
+  ] = useState(() => {
+    try {
+      return (
+        sessionStorage.getItem(
+          "thyrocare_admin"
+        ) === "true"
+      );
+    } catch {
+      return false;
+    }
+  });
 
-  /*
-    Session-only analysis history.
+  /* =======================================================
+     SESSION ANALYSIS HISTORY
+  ======================================================= */
 
-    We intentionally store prediction summaries rather
-    than patient input values.
-  */
-
-  const [analysisHistory, setAnalysisHistory] =
-    useState([]);
+  const [
+    analysisHistory,
+    setAnalysisHistory,
+  ] = useState([]);
 
   /* =======================================================
      NAVIGATION
   ======================================================= */
 
   const goTo = (nextPage) => {
-    /*
-      If somebody tries to open Admin while not logged in,
-      show the login page instead.
-    */
-
     if (
       nextPage === "admin" &&
       !adminAuthenticated
@@ -318,7 +477,6 @@ export default function App() {
     }
 
     setPage("admin");
-
     setMenuOpen(false);
     setError("");
 
@@ -509,13 +667,13 @@ export default function App() {
       }
 
       /* ===================================================
-         SAVE RESULT
+         SAVE COMPLETE RESULT
       =================================================== */
 
       setResult(data);
 
       /* ===================================================
-         EXTRACT PREDICTION
+         PREDICTION
       =================================================== */
 
       const predicted =
@@ -525,7 +683,7 @@ export default function App() {
         null;
 
       /* ===================================================
-         EXTRACT PROBABILITIES
+         PROBABILITIES
       =================================================== */
 
       const probabilities =
@@ -548,7 +706,7 @@ export default function App() {
         0;
 
       /* ===================================================
-         MODEL NAME
+         MODEL
       =================================================== */
 
       const modelName =
@@ -558,7 +716,7 @@ export default function App() {
         "XGBoost";
 
       /* ===================================================
-         ADD TO SESSION HISTORY
+         SESSION HISTORY
       =================================================== */
 
       setAnalysisHistory(
@@ -584,7 +742,7 @@ export default function App() {
       );
 
       /* ===================================================
-         SHOW RESULTS
+         OPEN RESULTS
       =================================================== */
 
       setPage("results");
@@ -617,7 +775,7 @@ export default function App() {
   };
 
   /* =======================================================
-     RESET
+     RESET FORM
   ======================================================= */
 
   const resetForm = () => {
@@ -635,7 +793,7 @@ export default function App() {
   };
 
   /* =======================================================
-     RESULT DATA
+     SHAP DATA
   ======================================================= */
 
   const shapData = useMemo(() => {
@@ -646,6 +804,10 @@ export default function App() {
     );
   }, [result]);
 
+  /* =======================================================
+     COUNTERFACTUAL DATA
+  ======================================================= */
+
   const counterfactualData =
     useMemo(() => {
       return normalizeCounterfactuals(
@@ -655,11 +817,19 @@ export default function App() {
       );
     }, [result]);
 
+  /* =======================================================
+     PREDICTION CLASS
+  ======================================================= */
+
   const predictionClass =
     result?.prediction ??
     result?.predicted_class ??
     result?.class ??
     null;
+
+  /* =======================================================
+     PROBABILITIES
+  ======================================================= */
 
   const probabilities =
     result?.probabilities ||
@@ -679,6 +849,10 @@ export default function App() {
     probabilities?.disease ??
     result?.class_1_probability ??
     0;
+
+  /* =======================================================
+     PREDICTION LABEL
+  ======================================================= */
 
   const predictionLabel =
     predictionClass === 1
@@ -1102,7 +1276,7 @@ export default function App() {
   };
 
   /* =======================================================
-     PREDICTION
+     PREDICTION PAGE
   ======================================================= */
 
   const renderPredictionPage = () => {
@@ -1164,6 +1338,8 @@ export default function App() {
 
         <section className="form-card">
 
+          {/* PATIENT */}
+
           <div className="form-section">
 
             <div className="form-section-heading">
@@ -1224,7 +1400,6 @@ export default function App() {
                     )
                   }
                 >
-
                   <option value={0}>
                     Female / 0
                   </option>
@@ -1232,7 +1407,6 @@ export default function App() {
                   <option value={1}>
                     Male / 1
                   </option>
-
                 </select>
 
               </div>
@@ -1240,6 +1414,8 @@ export default function App() {
             </div>
 
           </div>
+
+          {/* THYROID MEASUREMENTS */}
 
           <div className="form-section">
 
@@ -1300,6 +1476,8 @@ export default function App() {
             </div>
 
           </div>
+
+          {/* CLINICAL */}
 
           <div className="form-section">
 
@@ -1365,6 +1543,8 @@ export default function App() {
 
           </div>
 
+          {/* MEASUREMENTS */}
+
           <div className="form-section">
 
             <div className="form-section-heading">
@@ -1429,6 +1609,8 @@ export default function App() {
 
           </div>
 
+          {/* ACTIONS */}
+
           <div className="form-actions">
 
             <button
@@ -1472,7 +1654,7 @@ export default function App() {
   };
 
   /* =======================================================
-     RESULTS
+     RESULTS PAGE
   ======================================================= */
 
   const renderResultsPage = () => {
@@ -1514,6 +1696,8 @@ export default function App() {
     return (
       <main className="results-page">
 
+        {/* RESULT HEADER */}
+
         <section className="page-hero">
 
           <div>
@@ -1549,6 +1733,8 @@ export default function App() {
 
         </section>
 
+        {/* PREDICTION */}
+
         <section
           className={`prediction-banner ${
             predictionClass === 1
@@ -1581,6 +1767,8 @@ export default function App() {
           </div>
 
         </section>
+
+        {/* PROBABILITIES */}
 
         <section className="probability-section">
 
@@ -1686,6 +1874,10 @@ export default function App() {
 
         </section>
 
+        {/* =================================================
+            SHAP
+        ================================================= */}
+
         <section className="explanation-section">
 
           <div className="section-heading left">
@@ -1699,9 +1891,10 @@ export default function App() {
             </h2>
 
             <p>
-              SHAP values show how individual
-              features contributed to the
-              model prediction.
+              SHAP values show how
+              individual features
+              contributed to the model
+              prediction.
             </p>
 
           </div>
@@ -1803,6 +1996,10 @@ export default function App() {
 
         </section>
 
+        {/* =================================================
+            COUNTERFACTUAL
+        ================================================= */}
+
         <section className="explanation-section">
 
           <div className="section-heading left">
@@ -1837,7 +2034,10 @@ export default function App() {
 
                   <div
                     className="counterfactual-card"
-                    key={index}
+                    key={
+                      item.id ??
+                      index
+                    }
                   >
 
                     <span>
@@ -1847,7 +2047,9 @@ export default function App() {
                     <div className="cf-values">
 
                       <strong>
-                        {item.from}
+                        {formatNumber(
+                          item.from
+                        )}
                       </strong>
 
                       <span>
@@ -1855,7 +2057,9 @@ export default function App() {
                       </span>
 
                       <strong>
-                        {item.to}
+                        {formatNumber(
+                          item.to
+                        )}
                       </strong>
 
                     </div>
@@ -1868,14 +2072,34 @@ export default function App() {
                     </small>
 
                     {item.probability !==
-                      null && (
-                      <small>
-                        Probability:{" "}
-                        {formatPercent(
+                      null &&
+                      Number.isFinite(
+                        Number(
                           item.probability
-                        )}
-                      </small>
-                    )}
+                        )
+                      ) && (
+                        <small>
+                          Probability:{" "}
+                          {formatPercent(
+                            item.probability
+                          )}
+                        </small>
+                      )}
+
+                    {item.distance !==
+                      null &&
+                      Number.isFinite(
+                        Number(
+                          item.distance
+                        )
+                      ) && (
+                        <small>
+                          Change distance:{" "}
+                          {formatNumber(
+                            item.distance
+                          )}
+                        </small>
+                      )}
 
                   </div>
 
@@ -1887,13 +2111,19 @@ export default function App() {
           ) : (
 
             <div className="empty-card">
+
               No counterfactual examples
               available.
+
             </div>
 
           )}
 
         </section>
+
+        {/* =================================================
+            ACTIONS
+        ================================================= */}
 
         <section className="result-actions">
 
@@ -1950,7 +2180,7 @@ COUNTERFACTUALS
 ${counterfactualData
   .map(
     (item) =>
-      `${item.feature}: ${item.from} -> ${item.to}`
+      `${item.feature}: ${item.from} -> ${item.to} | ${item.prediction}`
   )
   .join("\n")}
 
@@ -1959,6 +2189,12 @@ ${counterfactualData
 ThyroCare AI
 Final Year B.Tech Project
 Machine Learning & Explainable AI
+
+DISCLAIMER:
+This system is an academic AI project
+and is not a medical diagnosis.
+Consult a qualified healthcare
+professional for medical decisions.
 `;
 
               const blob =
@@ -2174,12 +2410,16 @@ Machine Learning & Explainable AI
      ADMIN LOGIN PAGE
   ======================================================= */
 
-  if (page === "admin-login") {
+  if (
+    page === "admin-login"
+  ) {
     return (
       <div className="app">
 
         <AdminLogin
-          onLogin={handleAdminLogin}
+          onLogin={
+            handleAdminLogin
+          }
           onBack={() =>
             goTo("home")
           }
@@ -2194,17 +2434,14 @@ Machine Learning & Explainable AI
   ======================================================= */
 
   if (page === "admin") {
-    /*
-      Safety check:
-      Never render dashboard unless authenticated.
-    */
-
     if (!adminAuthenticated) {
       return (
         <div className="app">
 
           <AdminLogin
-            onLogin={handleAdminLogin}
+            onLogin={
+              handleAdminLogin
+            }
             onBack={() =>
               goTo("home")
             }
@@ -2238,7 +2475,7 @@ Machine Learning & Explainable AI
   }
 
   /* =======================================================
-     NORMAL PUBLIC WEBSITE
+     PUBLIC WEBSITE
   ======================================================= */
 
   return (
@@ -2262,4 +2499,4 @@ Machine Learning & Explainable AI
 
     </div>
   );
-}
+     }
