@@ -38,9 +38,7 @@ export default function DatasetUpload() {
 
     if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
       setFile(null);
-
       setError("Please select a CSV file only.");
-
       event.target.value = "";
       return;
     }
@@ -157,6 +155,13 @@ export default function DatasetUpload() {
   // ==========================================================
 
   const handlePreprocess = async () => {
+    if (!datasetInfo) {
+      setError(
+        "Please upload the dataset before preprocessing."
+      );
+      return;
+    }
+
     setPreprocessing(true);
     setMessage("");
     setError("");
@@ -292,7 +297,6 @@ export default function DatasetUpload() {
 
       </div>
 
-
       {/* UPLOAD AREA */}
       <div className="dataset-upload-area">
 
@@ -308,7 +312,6 @@ export default function DatasetUpload() {
           Only CSV files are supported.
         </p>
 
-
         {/* NATIVE FILE INPUT */}
         <input
           ref={fileInputRef}
@@ -317,7 +320,6 @@ export default function DatasetUpload() {
           onChange={handleFileChange}
           className="dataset-native-input"
         />
-
 
         {/* FILE PICKER BUTTON */}
         <button
@@ -328,10 +330,8 @@ export default function DatasetUpload() {
           📁 Choose CSV File
         </button>
 
-
         {/* SELECTED FILE */}
         {file && (
-
           <div className="selected-dataset">
 
             <span className="selected-dataset-icon">
@@ -361,9 +361,7 @@ export default function DatasetUpload() {
             </button>
 
           </div>
-
         )}
-
 
         {/* UPLOAD BUTTON */}
         <button
@@ -377,10 +375,8 @@ export default function DatasetUpload() {
             : "⬆️ Upload Dataset"}
         </button>
 
-
         {/* PREPROCESS BUTTON */}
         {datasetInfo && (
-
           <button
             type="button"
             className="dataset-preprocess-button"
@@ -391,13 +387,10 @@ export default function DatasetUpload() {
               ? "⚙️ Preprocessing..."
               : "🧹 Preprocess Dataset"}
           </button>
-
         )}
-
 
         {/* TRAIN BUTTON */}
         {preprocessInfo && (
-
           <button
             type="button"
             className="dataset-upload-button"
@@ -408,41 +401,31 @@ export default function DatasetUpload() {
               ? "⏳ Training Models..."
               : "🤖 Train Algorithms"}
           </button>
-
         )}
-
 
         {/* SUCCESS MESSAGE */}
         {message && (
-
           <div className="dataset-success">
             ✅ {message}
           </div>
-
         )}
-
 
         {/* ERROR MESSAGE */}
         {error && (
-
           <div className="dataset-error">
             ❌ {error}
           </div>
-
         )}
 
       </div>
 
-
       {/* DATASET INFORMATION */}
       {datasetInfo && (
-
         <div className="dataset-info">
 
           <div className="dataset-info-title">
             📊 Dataset Information
           </div>
-
 
           <div className="dataset-info-grid">
 
@@ -456,7 +439,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Rows
@@ -466,7 +448,6 @@ export default function DatasetUpload() {
                 {datasetInfo.rows}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -478,7 +459,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Target
@@ -489,7 +469,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Missing Values
@@ -499,7 +478,6 @@ export default function DatasetUpload() {
                 {datasetInfo.missingValues}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -514,19 +492,15 @@ export default function DatasetUpload() {
           </div>
 
         </div>
-
       )}
-
 
       {/* PREPROCESSING RESULTS */}
       {preprocessInfo && (
-
         <div className="dataset-info preprocessing-results">
 
           <div className="dataset-info-title">
             🧹 Preprocessing Results
           </div>
-
 
           <div className="dataset-info-grid">
 
@@ -540,7 +514,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Processed Rows
@@ -550,7 +523,6 @@ export default function DatasetUpload() {
                 {preprocessInfo.processed_rows ?? "—"}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -562,7 +534,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Processed Columns
@@ -572,7 +543,6 @@ export default function DatasetUpload() {
                 {preprocessInfo.processed_columns ?? "—"}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -584,7 +554,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Empty Rows Removed
@@ -594,7 +563,6 @@ export default function DatasetUpload() {
                 {preprocessInfo.empty_rows_removed ?? "—"}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -606,7 +574,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Missing After
@@ -616,7 +583,6 @@ export default function DatasetUpload() {
                 {preprocessInfo.missing_values_after ?? "—"}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -628,7 +594,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Numeric Features
@@ -638,7 +603,6 @@ export default function DatasetUpload() {
                 {preprocessInfo.numeric_feature_count ?? "—"}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -651,7 +615,6 @@ export default function DatasetUpload() {
             </div>
 
           </div>
-
 
           {/* CLASS DISTRIBUTION */}
           {preprocessInfo.target_distribution &&
@@ -696,7 +659,6 @@ export default function DatasetUpload() {
 
             )}
 
-
           {/* FEATURE INFORMATION */}
           {preprocessInfo.numeric_features &&
             preprocessInfo.numeric_features.length > 0 && (
@@ -726,7 +688,6 @@ export default function DatasetUpload() {
               </div>
 
             )}
-
 
           {preprocessInfo.categorical_features &&
             preprocessInfo.categorical_features.length > 0 && (
@@ -758,19 +719,15 @@ export default function DatasetUpload() {
             )}
 
         </div>
-
       )}
-
 
       {/* TRAINING RESULTS */}
       {trainingInfo && (
-
         <div className="dataset-info training-results">
 
           <div className="dataset-info-title">
             🤖 Model Training Results
           </div>
-
 
           {/* TRAINING SUMMARY */}
           <div className="dataset-info-grid">
@@ -787,7 +744,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Target
@@ -799,7 +755,6 @@ export default function DatasetUpload() {
                   "—"}
               </strong>
             </div>
-
 
             <div>
               <span>
@@ -813,7 +768,6 @@ export default function DatasetUpload() {
               </strong>
             </div>
 
-
             <div>
               <span>
                 Training Status
@@ -826,7 +780,6 @@ export default function DatasetUpload() {
 
           </div>
 
-
           {/* MODEL RESULTS */}
           {trainingInfo.results &&
             Array.isArray(trainingInfo.results) &&
@@ -837,7 +790,6 @@ export default function DatasetUpload() {
                 <h3>
                   📈 Algorithm Performance
                 </h3>
-
 
                 <div className="distribution-list">
 
@@ -879,43 +831,20 @@ export default function DatasetUpload() {
             )}
 
         </div>
-
       )}
 
     </section>
   );
 }
 
-What changed?
+After replacing it
 
-Only one new workflow was added:
+Save the file and commit it to GitHub → "main".
 
-Upload Dataset
-↓
-Preprocess Dataset
-↓
-🤖 Train Algorithms
-↓
-Backend "/admin/train"
-↓
-5 ML algorithms are trained
+Use a commit message such as:
 
-The training button appears only after preprocessing succeeds, so the user cannot accidentally train before preprocessing.
+"Update DatasetUpload training workflow"
 
-Your current workflow
+Then check Vercel.
 
-After replacing the file:
-
-1. Save "DatasetUpload.jsx".
-2. Push the change to GitHub.
-3. Vercel will deploy automatically.
-4. Open your Admin Dashboard.
-5. Upload "new-thyroid.csv".
-6. Click Upload Dataset.
-7. Click Preprocess Dataset.
-8. You should then see 🤖 Train Algorithms.
-9. Click it.
-
-Don't change "index.css" yet. Your existing CSS will handle the button using the existing ".dataset-upload-button" styling.
-
-After you click Train Algorithms, send me the result/error you see. Then we'll add the Model Comparison graph + detailed accuracy/precision/recall/F1/ROC-AUC section without redesigning your existing dashboard.
+Important: the new Vercel deployment must show a commit newer than "f849f0a". If it still shows "f849f0a", the code is not the problem—the Vercel/Git deployment connection is still using the old commit.
