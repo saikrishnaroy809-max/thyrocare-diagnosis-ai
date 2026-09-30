@@ -1,7 +1,7 @@
 # ============================================================
 # THYROCARE AI - FASTAPI BACKEND
 # Thyroid Disease Prediction + SHAP + Counterfactual AI
-# + Admin Dataset Upload
+# Admin Dataset Upload + Dataset Preprocessing
 # ============================================================
 
 from pathlib import Path
@@ -26,7 +26,7 @@ app = FastAPI(
         "AI-powered thyroid disease prediction "
         "with Explainable AI and Admin Dataset Management"
     ),
-    version="4.0.0",
+    version="5.0.0",
 )
 
 
@@ -55,7 +55,6 @@ MODEL_PATH = (
     / "thyroid_xgboost_final.joblib"
 )
 
-# Admin uploaded dataset directory
 DATASET_DIR = BASE_DIR / "datasets"
 
 DATASET_DIR.mkdir(
@@ -67,9 +66,13 @@ UPLOADED_DATASET_PATH = (
     DATASET_DIR / "uploaded_dataset.csv"
 )
 
+PREPROCESSED_DATASET_PATH = (
+    DATASET_DIR / "preprocessed_dataset.csv"
+)
+
 
 # ============================================================
-# LOAD MODEL
+# LOAD EXISTING MODEL
 # ============================================================
 
 model = None
@@ -173,6 +176,9 @@ DATASET = None
 DATASET_NAME = None
 DATASET_TARGET = None
 
+PREPROCESSED_DATASET = None
+PREPROCESSING_INFO = None
+
 
 # ============================================================
 # TARGET COLUMN DETECTION
@@ -208,18 +214,10 @@ def detect_target_column(
     If none are found, checks the last column.
     """
 
-    # --------------------------------------------------------
-    # Exact candidate matching
-    # --------------------------------------------------------
-
     for candidate in TARGET_COLUMN_CANDIDATES:
 
         if candidate in dataframe.columns:
             return candidate
-
-    # --------------------------------------------------------
-    # Case-insensitive matching
-    # --------------------------------------------------------
 
     normalized = {
         str(column).strip().lower(): column
@@ -233,10 +231,6 @@ def detect_target_column(
         if key in normalized:
             return normalized[key]
 
-    # --------------------------------------------------------
-    # Last-column fallback
-    # --------------------------------------------------------
-
     if len(dataframe.columns) > 0:
         return dataframe.columns[-1]
 
@@ -245,9 +239,6 @@ def detect_target_column(
 
 # ============================================================
 # REQUEST MODEL
-#
-# IMPORTANT:
-# These names match the React frontend.
 # ============================================================
 
 class PredictionRequest(BaseModel):
@@ -303,6 +294,7 @@ def request_to_dataframe(
 
         "on thyroxine": req.on_thyroxine,
         "query on thyroxine": req.query_on_thyroxine,
+
         "on antithyroid medication":
             req.on_antithyroid_medication,
 
@@ -424,10 +416,6 @@ def generate_shap(
 
         feature_names = FEATURE_NAMES.copy()
 
-        # ----------------------------------------------------
-        # Handle sklearn pipeline
-        # ----------------------------------------------------
-
         if hasattr(
             model,
             "named_steps",
@@ -473,10 +461,6 @@ def generate_shap(
                         FEATURE_NAMES.copy()
                     )
 
-        # ----------------------------------------------------
-        # TreeExplainer
-        # ----------------------------------------------------
-
         explainer = shap.TreeExplainer(
             classifier
         )
@@ -484,10 +468,6 @@ def generate_shap(
         shap_values = explainer.shap_values(
             transformed
         )
-
-        # ----------------------------------------------------
-        # Handle SHAP formats
-        # ----------------------------------------------------
 
         if isinstance(
             shap_values,
@@ -666,10 +646,6 @@ def create_candidate_values(
 
         return []
 
-    # --------------------------------------------------------
-    # TSH
-    # --------------------------------------------------------
-
     if feature == "TSH":
 
         values = [
@@ -690,10 +666,6 @@ def create_candidate_values(
             if abs(x - current) > 0.001
         ]
 
-    # --------------------------------------------------------
-    # TT4
-    # --------------------------------------------------------
-
     if feature == "TT4":
 
         values = [
@@ -712,10 +684,6 @@ def create_candidate_values(
             if abs(x - current) > 0.001
         ]
 
-    # --------------------------------------------------------
-    # T4U
-    # --------------------------------------------------------
-
     if feature == "T4U":
 
         values = [
@@ -732,10 +700,6 @@ def create_candidate_values(
             for x in values
             if abs(x - current) > 0.001
         ]
-
-    # --------------------------------------------------------
-    # FTI
-    # --------------------------------------------------------
 
     if feature == "FTI":
 
@@ -755,47 +719,24 @@ def create_candidate_values(
             if abs(x - current) > 0.001
         ]
 
-    # --------------------------------------------------------
-    # AGE
-    # --------------------------------------------------------
-
     if feature == "age":
 
         values = [
-            max(
-                1,
-                current - 10,
-            ),
-            max(
-                1,
-                current - 5,
-            ),
+            max(1, current - 10),
+            max(1, current - 5),
             current + 5,
-            min(
-                100,
-                current + 10,
-            ),
+            min(100, current + 10),
         ]
 
         return [
-            round(
-                float(x),
-                2,
-            )
+            round(float(x), 2)
             for x in values
             if abs(x - current) > 0.001
         ]
 
-    # --------------------------------------------------------
-    # BINARY
-    # --------------------------------------------------------
-
     if feature in BINARY_FEATURES:
 
-        if int(
-            round(current)
-        ) == 0:
-
+        if int(round(current)) == 0:
             return [1]
 
         return [0]
@@ -815,51 +756,29 @@ def feature_distance(
 
     try:
 
-        old = float(
-            old_value
-        )
-
-        new = float(
-            new_value
-        )
+        old = float(old_value)
+        new = float(new_value)
 
     except Exception:
 
         return 1.0
 
     if feature == "age":
-
-        return abs(
-            new - old
-        ) / 20.0
+        return abs(new - old) / 20.0
 
     if feature == "TSH":
-
-        return abs(
-            new - old
-        ) / 10.0
+        return abs(new - old) / 10.0
 
     if feature == "TT4":
-
-        return abs(
-            new - old
-        ) / 100.0
+        return abs(new - old) / 100.0
 
     if feature == "T4U":
-
-        return abs(
-            new - old
-        )
+        return abs(new - old)
 
     if feature == "FTI":
+        return abs(new - old) / 100.0
 
-        return abs(
-            new - old
-        ) / 100.0
-
-    return abs(
-        new - old
-    )
+    return abs(new - old)
 
 
 def total_distance(
@@ -934,28 +853,19 @@ def generate_counterfactuals(
 
                 if feature not in search_features:
 
-                    if (
-                        feature
-                        not in MEASURED_FEATURES
-                    ):
+                    if feature not in MEASURED_FEATURES:
 
                         search_features.append(
                             feature
                         )
 
-            if len(
-                search_features
-            ) >= 8:
-
+            if len(search_features) >= 8:
                 break
 
     except Exception:
-
         pass
 
-    search_features = (
-        search_features[:8]
-    )
+    search_features = search_features[:8]
 
     scenarios = []
 
@@ -988,13 +898,9 @@ def generate_counterfactuals(
             )
 
             if new_prediction is None:
-
                 continue
 
-            if (
-                new_prediction
-                != original_prediction
-            ):
+            if new_prediction != original_prediction:
 
                 probabilities = (
                     get_probabilities(
@@ -1011,51 +917,42 @@ def generate_counterfactuals(
                     {
                         "changes": [
                             {
-                                "feature":
-                                    feature,
+                                "feature": feature,
 
-                                "original_value":
-                                    (
-                                        float(
-                                            current_value
-                                        )
-                                        if isinstance(
-                                            current_value,
-                                            (
-                                                np.integer,
-                                                np.floating,
-                                            ),
-                                        )
-                                        else current_value
-                                    ),
+                                "original_value": (
+                                    float(current_value)
+                                    if isinstance(
+                                        current_value,
+                                        (
+                                            np.integer,
+                                            np.floating,
+                                        ),
+                                    )
+                                    else current_value
+                                ),
 
-                                "counterfactual_value":
-                                    (
-                                        float(
-                                            new_value
-                                        )
-                                        if isinstance(
-                                            new_value,
-                                            (
-                                                np.integer,
-                                                np.floating,
-                                            ),
-                                        )
-                                        else new_value
-                                    ),
+                                "counterfactual_value": (
+                                    float(new_value)
+                                    if isinstance(
+                                        new_value,
+                                        (
+                                            np.integer,
+                                            np.floating,
+                                        ),
+                                    )
+                                    else new_value
+                                ),
                             }
                         ],
 
-                        "prediction":
-                            new_prediction,
+                        "prediction": new_prediction,
 
-                        "prediction_label":
-                            (
-                                "Thyroid Disease Predicted"
-                                if new_prediction == 1
-                                else
-                                "Thyroid Disease Not Predicted"
-                            ),
+                        "prediction_label": (
+                            "Thyroid Disease Predicted"
+                            if new_prediction == 1
+                            else
+                            "Thyroid Disease Not Predicted"
+                        ),
 
                         "class_0_probability":
                             probabilities[
@@ -1067,8 +964,7 @@ def generate_counterfactuals(
                                 "class_1_probability"
                             ],
 
-                        "distance":
-                            distance,
+                        "distance": distance,
                     }
                 )
 
@@ -1087,13 +983,10 @@ def generate_counterfactuals(
 
         key = (
             change["feature"],
-            change[
-                "counterfactual_value"
-            ],
+            change["counterfactual_value"],
         )
 
         if key not in unique:
-
             unique[key] = scenario
 
     scenarios = list(
@@ -1129,18 +1022,13 @@ def generate_counterfactuals(
 
         "features": [
             {
-                "feature":
-                    item["feature"],
+                "feature": item["feature"],
 
                 "original_value":
-                    item[
-                        "original_value"
-                    ],
+                    item["original_value"],
 
                 "counterfactual_value":
-                    item[
-                        "counterfactual_value"
-                    ],
+                    item["counterfactual_value"],
             }
 
             for item in best_changes
@@ -1152,13 +1040,311 @@ def generate_counterfactuals(
             scenarios[0]["prediction"],
 
         "target_label":
-            scenarios[0][
-                "prediction_label"
-            ],
+            scenarios[0]["prediction_label"],
 
         "message":
             "Counterfactual scenarios generated successfully.",
     }
+
+
+# ============================================================
+# DATASET PREPROCESSING
+# ============================================================
+
+def preprocess_dataset(
+    dataframe: pd.DataFrame,
+    target_column: str | None,
+):
+    """
+    Generic preprocessing for an uploaded CSV.
+
+    Steps:
+    1. Copy dataset
+    2. Normalize column names
+    3. Remove completely empty rows
+    4. Remove duplicate rows
+    5. Handle missing numeric values
+    6. Handle missing categorical values
+    7. Detect target
+    8. Generate class distribution
+    """
+
+    df = dataframe.copy()
+
+    original_rows = int(df.shape[0])
+    original_columns = int(df.shape[1])
+
+    # --------------------------------------------------------
+    # Clean column names
+    # --------------------------------------------------------
+
+    df.columns = [
+        str(column).strip()
+        for column in df.columns
+    ]
+
+    # --------------------------------------------------------
+    # Remove completely empty rows
+    # --------------------------------------------------------
+
+    df = df.dropna(
+        how="all"
+    ).copy()
+
+    empty_rows_removed = (
+        original_rows - int(df.shape[0])
+    )
+
+    # --------------------------------------------------------
+    # Remove duplicate rows
+    # --------------------------------------------------------
+
+    duplicate_count = int(
+        df.duplicated().sum()
+    )
+
+    df = df.drop_duplicates().copy()
+
+    # --------------------------------------------------------
+    # Detect target again after
+    # column cleanup
+    # --------------------------------------------------------
+
+    detected_target = (
+        detect_target_column(df)
+    )
+
+    if target_column in df.columns:
+        final_target = target_column
+    else:
+        final_target = detected_target
+
+    # --------------------------------------------------------
+    # Missing values before filling
+    # --------------------------------------------------------
+
+    missing_before = int(
+        df.isna().sum().sum()
+    )
+
+    missing_by_column = {
+        str(column): int(value)
+        for column, value
+        in df.isna().sum().items()
+        if int(value) > 0
+    }
+
+    # --------------------------------------------------------
+    # Separate target from features
+    # --------------------------------------------------------
+
+    feature_columns = [
+        column
+        for column in df.columns
+        if column != final_target
+    ]
+
+    numeric_columns = [
+        column
+        for column in feature_columns
+        if pd.api.types.is_numeric_dtype(
+            df[column]
+        )
+    ]
+
+    categorical_columns = [
+        column
+        for column in feature_columns
+        if column not in numeric_columns
+    ]
+
+    # --------------------------------------------------------
+    # Fill numeric missing values
+    # --------------------------------------------------------
+
+    for column in numeric_columns:
+
+        if df[column].isna().any():
+
+            median_value = df[column].median()
+
+            if pd.isna(median_value):
+                median_value = 0
+
+            df[column] = (
+                df[column].fillna(
+                    median_value
+                )
+            )
+
+    # --------------------------------------------------------
+    # Fill categorical missing values
+    # --------------------------------------------------------
+
+    for column in categorical_columns:
+
+        if df[column].isna().any():
+
+            mode = df[column].mode(
+                dropna=True
+            )
+
+            if len(mode) > 0:
+
+                replacement = mode.iloc[0]
+
+            else:
+
+                replacement = "Unknown"
+
+            df[column] = (
+                df[column].fillna(
+                    replacement
+                )
+            )
+
+    # --------------------------------------------------------
+    # Handle missing target values
+    # --------------------------------------------------------
+
+    target_missing_removed = 0
+
+    if final_target is not None:
+
+        before_target = int(
+            df.shape[0]
+        )
+
+        df = df.dropna(
+            subset=[final_target]
+        ).copy()
+
+        target_missing_removed = (
+            before_target - int(df.shape[0])
+        )
+
+    # --------------------------------------------------------
+    # Missing values after preprocessing
+    # --------------------------------------------------------
+
+    missing_after = int(
+        df.isna().sum().sum()
+    )
+
+    # --------------------------------------------------------
+    # Target distribution
+    # --------------------------------------------------------
+
+    target_distribution = {}
+
+    if (
+        final_target is not None
+        and final_target in df.columns
+    ):
+
+        counts = (
+            df[final_target]
+            .value_counts(dropna=False)
+        )
+
+        target_distribution = {
+            str(key): int(value)
+            for key, value
+            in counts.items()
+        }
+
+    # --------------------------------------------------------
+    # Dataset type information
+    # --------------------------------------------------------
+
+    numeric_after = [
+        str(column)
+        for column
+        in df.select_dtypes(
+            include=np.number
+        ).columns
+        if column != final_target
+    ]
+
+    categorical_after = [
+        str(column)
+        for column
+        in df.columns
+        if column != final_target
+        and column not in numeric_after
+    ]
+
+    # --------------------------------------------------------
+    # Save preprocessed dataset
+    # --------------------------------------------------------
+
+    df.to_csv(
+        PREPROCESSED_DATASET_PATH,
+        index=False,
+    )
+
+    info = {
+        "success": True,
+
+        "status": "preprocessed",
+
+        "original_rows":
+            original_rows,
+
+        "original_columns":
+            original_columns,
+
+        "processed_rows":
+            int(df.shape[0]),
+
+        "processed_columns":
+            int(df.shape[1]),
+
+        "empty_rows_removed":
+            int(empty_rows_removed),
+
+        "duplicate_rows_removed":
+            int(duplicate_count),
+
+        "target_missing_rows_removed":
+            int(target_missing_removed),
+
+        "missing_values_before":
+            int(missing_before),
+
+        "missing_values_after":
+            int(missing_after),
+
+        "missing_values_by_column":
+            missing_by_column,
+
+        "target_column":
+            (
+                str(final_target)
+                if final_target is not None
+                else None
+            ),
+
+        "target_distribution":
+            target_distribution,
+
+        "numeric_features":
+            numeric_after,
+
+        "categorical_features":
+            categorical_after,
+
+        "numeric_feature_count":
+            len(numeric_after),
+
+        "categorical_feature_count":
+            len(categorical_after),
+
+        "preprocessed_file":
+            PREPROCESSED_DATASET_PATH.name,
+    }
+
+    return df, info
 
 
 # ============================================================
@@ -1170,10 +1356,19 @@ def root():
 
     return {
         "name": "ThyroCare AI API",
+
         "status": "online",
-        "version": "4.0.0",
+
+        "version": "5.0.0",
+
         "model_loaded":
             model is not None,
+
+        "dataset_uploaded":
+            DATASET is not None,
+
+        "preprocessed":
+            PREPROCESSED_DATASET is not None,
     }
 
 
@@ -1205,6 +1400,9 @@ def health():
 
         "dataset_uploaded":
             DATASET is not None,
+
+        "dataset_preprocessed":
+            PREPROCESSED_DATASET is not None,
     }
 
 
@@ -1246,6 +1444,9 @@ def info():
 
             "target":
                 DATASET_TARGET,
+
+            "preprocessed":
+                PREPROCESSED_DATASET is not None,
         },
     }
 
@@ -1262,10 +1463,8 @@ async def upload_dataset(
     global DATASET
     global DATASET_NAME
     global DATASET_TARGET
-
-    # --------------------------------------------------------
-    # Validate filename
-    # --------------------------------------------------------
+    global PREPROCESSED_DATASET
+    global PREPROCESSING_INFO
 
     if not file.filename:
 
@@ -1285,10 +1484,6 @@ async def upload_dataset(
 
     try:
 
-        # ----------------------------------------------------
-        # Read uploaded file
-        # ----------------------------------------------------
-
         contents = await file.read()
 
         if not contents:
@@ -1299,7 +1494,7 @@ async def upload_dataset(
             )
 
         # ----------------------------------------------------
-        # Save uploaded dataset
+        # Save dataset
         # ----------------------------------------------------
 
         with open(
@@ -1312,16 +1507,12 @@ async def upload_dataset(
             )
 
         # ----------------------------------------------------
-        # Read CSV
+        # Read dataset
         # ----------------------------------------------------
 
         dataframe = pd.read_csv(
             UPLOADED_DATASET_PATH
         )
-
-        # ----------------------------------------------------
-        # Validate dataframe
-        # ----------------------------------------------------
 
         if dataframe.empty:
 
@@ -1354,7 +1545,7 @@ async def upload_dataset(
         )
 
         # ----------------------------------------------------
-        # Store dataset in memory
+        # Store dataset
         # ----------------------------------------------------
 
         DATASET = dataframe.copy()
@@ -1364,7 +1555,14 @@ async def upload_dataset(
         DATASET_TARGET = target_column
 
         # ----------------------------------------------------
-        # Dataset statistics
+        # Reset preprocessing state
+        # ----------------------------------------------------
+
+        PREPROCESSED_DATASET = None
+        PREPROCESSING_INFO = None
+
+        # ----------------------------------------------------
+        # Statistics
         # ----------------------------------------------------
 
         missing_values = int(
@@ -1389,11 +1587,8 @@ async def upload_dataset(
             - numeric_columns
         )
 
-        # ----------------------------------------------------
-        # Return information to frontend
-        # ----------------------------------------------------
-
         return {
+
             "success": True,
 
             "message":
@@ -1448,6 +1643,9 @@ async def upload_dataset(
 
             "categorical_columns":
                 categorical_columns,
+
+            "preprocessed":
+                False,
         }
 
     except HTTPException:
@@ -1481,11 +1679,13 @@ def dataset_status():
 
         return {
             "uploaded": False,
+
             "message":
                 "No dataset has been uploaded.",
         }
 
     return {
+
         "uploaded": True,
 
         "filename":
@@ -1524,6 +1724,122 @@ def dataset_status():
                 DATASET.duplicated()
                 .sum()
             ),
+
+        "preprocessed":
+            PREPROCESSED_DATASET is not None,
+
+        "preprocessing":
+            PREPROCESSING_INFO,
+    }
+
+
+# ============================================================
+# ADMIN - PREPROCESS DATASET
+# ============================================================
+
+@app.post("/admin/preprocess")
+def admin_preprocess():
+
+    global PREPROCESSED_DATASET
+    global PREPROCESSING_INFO
+
+    # --------------------------------------------------------
+    # Check dataset
+    # --------------------------------------------------------
+
+    if DATASET is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No dataset has been uploaded. "
+                "Upload a CSV dataset first."
+            ),
+        )
+
+    try:
+
+        print(
+            "Starting dataset preprocessing..."
+        )
+
+        # ----------------------------------------------------
+        # Preprocess
+        # ----------------------------------------------------
+
+        processed_df, info = (
+            preprocess_dataset(
+                DATASET,
+                DATASET_TARGET,
+            )
+        )
+
+        # ----------------------------------------------------
+        # Store results
+        # ----------------------------------------------------
+
+        PREPROCESSED_DATASET = (
+            processed_df.copy()
+        )
+
+        PREPROCESSING_INFO = info
+
+        print(
+            "Dataset preprocessing completed."
+        )
+
+        return {
+            "success": True,
+
+            "message":
+                "Dataset preprocessing completed successfully.",
+
+            "dataset_name":
+                DATASET_NAME,
+
+            **info,
+        }
+
+    except Exception as e:
+
+        print(
+            "PREPROCESSING ERROR:",
+            str(e),
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Dataset preprocessing failed: "
+                f"{str(e)}"
+            ),
+        )
+
+
+# ============================================================
+# ADMIN - PREPROCESSING STATUS
+# ============================================================
+
+@app.get("/admin/preprocess")
+def preprocessing_status():
+
+    if PREPROCESSED_DATASET is None:
+
+        return {
+            "preprocessed": False,
+
+            "message":
+                "Dataset has not been preprocessed yet.",
+        }
+
+    return {
+        "preprocessed": True,
+
+        "dataset_name":
+            DATASET_NAME,
+
+        "information":
+            PREPROCESSING_INFO,
     }
 
 
@@ -1627,6 +1943,7 @@ def predict(
                 ],
 
             "probabilities": {
+
                 "class_0":
                     result[
                         "class_0_probability"
@@ -1677,3 +1994,55 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
     )
+
+What this new version adds
+
+Your backend now has:
+
+POST /admin/upload-dataset
+GET  /admin/dataset
+
+POST /admin/preprocess       ← NEW
+GET  /admin/preprocess       ← NEW
+
+POST /predict
+GET  /health
+GET  /info
+GET  /
+
+The preprocessing handles:
+
+Missing values
+→ numeric columns use median
+→ categorical columns use mode
+
+Duplicate rows
+→ removed
+
+Empty rows
+→ removed
+
+Target column
+→ automatically detected
+
+Class distribution
+→ calculated
+
+Feature types
+→ numeric/categorical identified
+
+Preprocessed CSV
+→ saved as "preprocessed_dataset.csv"
+
+⚠️ Important
+
+Don't upload your 60,000-row dataset yet.
+
+First:
+
+1. Replace your current "app.py" with the code above.
+2. Commit it to GitHub.
+3. Let Render deploy.
+4. Open your Render "/health" endpoint and make sure it says ""status": "healthy"".
+
+After that, tell me "Done". Then we'll add the Preprocess Dataset button to your existing Admin Dashboard without changing your current UI.
