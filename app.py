@@ -1,12 +1,23 @@
-# ============================================================
-# THYROCARE AI - FASTAPI BACKEND
-# Thyroid Disease Prediction + SHAP + Counterfactual AI
-# Admin Dataset Upload + Preprocessing + Model Training
-# Persistent Admin State
-# ============================================================
+"""
+============================================================
+THYROCARE AI - FASTAPI BACKEND
+============================================================
+
+Thyroid Disease Prediction + SHAP + Counterfactual AI
+
+Admin Dataset Upload
+Admin Preprocessing
+Admin Model Training
+Model Comparison
+Persistent Admin State
+Persistent Prediction History
+
+============================================================
+"""
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 import json
 import os
 
@@ -54,7 +65,7 @@ app = FastAPI(
         "AI-powered thyroid disease prediction "
         "with Explainable AI and Admin ML Management"
     ),
-    version="7.0.0",
+    version="7.1.0",
 )
 
 
@@ -64,7 +75,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://thyrocare-diagnosis-ai.vercel.app",
+        "https://thyrocare-diagnosis-ai-q2ln.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,16 +93,41 @@ app.add_middleware(
 
 BASE_DIR = Path(__file__).resolve().parent
 
-MODEL_PATH = BASE_DIR / "model" / "thyroid_xgboost_final.joblib"
+MODEL_PATH = (
+    BASE_DIR
+    / "model"
+    / "thyroid_xgboost_final.joblib"
+)
 
 DATASET_DIR = BASE_DIR / "datasets"
-DATASET_DIR.mkdir(parents=True, exist_ok=True)
+DATASET_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
-UPLOADED_DATASET_PATH = DATASET_DIR / "uploaded_dataset.csv"
-PREPROCESSED_DATASET_PATH = DATASET_DIR / "preprocessed_dataset.csv"
-TRAINING_RESULTS_PATH = DATASET_DIR / "training_results.json"
-TRAINING_MODELS_PATH = DATASET_DIR / "training_models.joblib"
-ADMIN_STATE_PATH = DATASET_DIR / "admin_state.json"
+UPLOADED_DATASET_PATH = (
+    DATASET_DIR / "uploaded_dataset.csv"
+)
+
+PREPROCESSED_DATASET_PATH = (
+    DATASET_DIR / "preprocessed_dataset.csv"
+)
+
+TRAINING_RESULTS_PATH = (
+    DATASET_DIR / "training_results.json"
+)
+
+TRAINING_MODELS_PATH = (
+    DATASET_DIR / "training_models.joblib"
+)
+
+ADMIN_STATE_PATH = (
+    DATASET_DIR / "admin_state.json"
+)
+
+PREDICTION_HISTORY_PATH = (
+    DATASET_DIR / "prediction_history.json"
+)
 
 
 # ============================================================
@@ -145,7 +186,6 @@ FEATURE_NAMES = [
     "FTI",
 ]
 
-
 CONTINUOUS_FEATURES = [
     "age",
     "TSH",
@@ -154,7 +194,6 @@ CONTINUOUS_FEATURES = [
     "FTI",
 ]
 
-
 MEASURED_FEATURES = [
     "TSH measured",
     "T3 measured",
@@ -162,7 +201,6 @@ MEASURED_FEATURES = [
     "T4U measured",
     "FTI measured",
 ]
-
 
 BINARY_FEATURES = [
     "sex",
@@ -198,6 +236,8 @@ TRAINING_RESULTS = []
 TRAINING_MODELS = {}
 TRAINING_INFO = None
 
+PREDICTION_HISTORY = []
+
 
 # ============================================================
 # TARGET COLUMN DETECTION
@@ -223,8 +263,9 @@ TARGET_COLUMN_CANDIDATES = [
 ]
 
 
-def detect_target_column(dataframe: pd.DataFrame):
-
+def detect_target_column(
+    dataframe: pd.DataFrame,
+):
     for candidate in TARGET_COLUMN_CANDIDATES:
         if candidate in dataframe.columns:
             return candidate
@@ -240,8 +281,6 @@ def detect_target_column(dataframe: pd.DataFrame):
         if key in normalized:
             return normalized[key]
 
-    # If no known target name exists,
-    # use the final column.
     if len(dataframe.columns) > 0:
         return dataframe.columns[-1]
 
@@ -253,29 +292,23 @@ def detect_target_column(dataframe: pd.DataFrame):
 # ============================================================
 
 def save_admin_state():
-
     state = {
         "dataset_name": DATASET_NAME,
-
         "dataset_target": (
             str(DATASET_TARGET)
             if DATASET_TARGET is not None
             else None
         ),
-
         "preprocessing_info": PREPROCESSING_INFO,
-
         "training_info": TRAINING_INFO,
     }
 
     try:
-
         with open(
             ADMIN_STATE_PATH,
             "w",
             encoding="utf-8",
         ) as file:
-
             json.dump(
                 state,
                 file,
@@ -286,7 +319,6 @@ def save_admin_state():
         print("Admin state saved.")
 
     except Exception as e:
-
         print(
             "ADMIN STATE SAVE ERROR:",
             str(e),
@@ -294,15 +326,12 @@ def save_admin_state():
 
 
 def save_training_state():
-
     try:
-
         with open(
             TRAINING_RESULTS_PATH,
             "w",
             encoding="utf-8",
         ) as file:
-
             json.dump(
                 {
                     "results": TRAINING_RESULTS,
@@ -314,7 +343,6 @@ def save_training_state():
             )
 
         if TRAINING_MODELS:
-
             joblib.dump(
                 TRAINING_MODELS,
                 TRAINING_MODELS_PATH,
@@ -323,9 +351,34 @@ def save_training_state():
         print("Training state saved.")
 
     except Exception as e:
-
         print(
             "TRAINING STATE SAVE ERROR:",
+            str(e),
+        )
+
+
+def save_prediction_history():
+    try:
+        with open(
+            PREDICTION_HISTORY_PATH,
+            "w",
+            encoding="utf-8",
+        ) as file:
+            json.dump(
+                PREDICTION_HISTORY,
+                file,
+                indent=2,
+                default=str,
+            )
+
+        print(
+            "Prediction history saved:",
+            len(PREDICTION_HISTORY),
+        )
+
+    except Exception as e:
+        print(
+            "PREDICTION HISTORY SAVE ERROR:",
             str(e),
         )
 
@@ -343,6 +396,8 @@ def load_admin_state():
     global TRAINING_MODELS
     global TRAINING_INFO
 
+    global PREDICTION_HISTORY
+
     print("============================================")
     print("Restoring saved admin state...")
     print("============================================")
@@ -352,9 +407,7 @@ def load_admin_state():
     # --------------------------------------------------------
 
     if UPLOADED_DATASET_PATH.exists():
-
         try:
-
             DATASET = pd.read_csv(
                 UPLOADED_DATASET_PATH
             )
@@ -365,7 +418,6 @@ def load_admin_state():
             )
 
         except Exception as e:
-
             print(
                 "Dataset restore error:",
                 str(e),
@@ -376,9 +428,7 @@ def load_admin_state():
     # --------------------------------------------------------
 
     if PREPROCESSED_DATASET_PATH.exists():
-
         try:
-
             PREPROCESSED_DATASET = pd.read_csv(
                 PREPROCESSED_DATASET_PATH
             )
@@ -389,7 +439,6 @@ def load_admin_state():
             )
 
         except Exception as e:
-
             print(
                 "Preprocessed dataset restore error:",
                 str(e),
@@ -400,15 +449,12 @@ def load_admin_state():
     # --------------------------------------------------------
 
     if ADMIN_STATE_PATH.exists():
-
         try:
-
             with open(
                 ADMIN_STATE_PATH,
                 "r",
                 encoding="utf-8",
             ) as file:
-
                 state = json.load(file)
 
             DATASET_NAME = state.get(
@@ -430,7 +476,6 @@ def load_admin_state():
             print("Admin metadata restored.")
 
         except Exception as e:
-
             print(
                 "Admin metadata restore error:",
                 str(e),
@@ -444,7 +489,6 @@ def load_admin_state():
         DATASET is not None
         and DATASET_TARGET is None
     ):
-
         DATASET_TARGET = detect_target_column(
             DATASET
         )
@@ -454,15 +498,12 @@ def load_admin_state():
     # --------------------------------------------------------
 
     if TRAINING_RESULTS_PATH.exists():
-
         try:
-
             with open(
                 TRAINING_RESULTS_PATH,
                 "r",
                 encoding="utf-8",
             ) as file:
-
                 training_state = json.load(file)
 
             TRAINING_RESULTS = training_state.get(
@@ -471,7 +512,6 @@ def load_admin_state():
             )
 
             if TRAINING_INFO is None:
-
                 TRAINING_INFO = training_state.get(
                     "training"
                 )
@@ -482,7 +522,6 @@ def load_admin_state():
             )
 
         except Exception as e:
-
             print(
                 "Training results restore error:",
                 str(e),
@@ -493,9 +532,7 @@ def load_admin_state():
     # --------------------------------------------------------
 
     if TRAINING_MODELS_PATH.exists():
-
         try:
-
             TRAINING_MODELS = joblib.load(
                 TRAINING_MODELS_PATH
             )
@@ -506,11 +543,51 @@ def load_admin_state():
             )
 
         except Exception as e:
-
             print(
                 "Trained model restore error:",
                 str(e),
             )
+
+    # --------------------------------------------------------
+    # Prediction history
+    # --------------------------------------------------------
+
+    if PREDICTION_HISTORY_PATH.exists():
+
+        try:
+            with open(
+                PREDICTION_HISTORY_PATH,
+                "r",
+                encoding="utf-8",
+            ) as file:
+                saved_history = json.load(file)
+
+            if isinstance(
+                saved_history,
+                list,
+            ):
+                PREDICTION_HISTORY = (
+                    saved_history
+                )
+            else:
+                PREDICTION_HISTORY = []
+
+            print(
+                "Prediction history restored:",
+                len(PREDICTION_HISTORY),
+            )
+
+        except Exception as e:
+
+            print(
+                "Prediction history restore error:",
+                str(e),
+            )
+
+            PREDICTION_HISTORY = []
+
+    else:
+        PREDICTION_HISTORY = []
 
     print("Admin state restoration completed.")
     print("============================================")
@@ -572,7 +649,8 @@ def request_to_dataframe(
         "sex": req.sex,
 
         "on thyroxine": req.on_thyroxine,
-        "query on thyroxine": req.query_on_thyroxine,
+        "query on thyroxine":
+            req.query_on_thyroxine,
 
         "on antithyroid medication":
             req.on_antithyroid_medication,
@@ -601,8 +679,7 @@ def request_to_dataframe(
         "TSH measured":
             req.TSH_measured,
 
-        "TSH":
-            req.TSH,
+        "TSH": req.TSH,
 
         "T3 measured":
             req.T3_measured,
@@ -610,20 +687,17 @@ def request_to_dataframe(
         "TT4 measured":
             req.TT4_measured,
 
-        "TT4":
-            req.TT4,
+        "TT4": req.TT4,
 
         "T4U measured":
             req.T4U_measured,
 
-        "T4U":
-            req.T4U,
+        "T4U": req.T4U,
 
         "FTI measured":
             req.FTI_measured,
 
-        "FTI":
-            req.FTI,
+        "FTI": req.FTI,
     }
 
     return pd.DataFrame(
@@ -641,7 +715,6 @@ def get_prediction(
 ) -> Dict[str, Any]:
 
     if model is None:
-
         raise RuntimeError(
             "Production model could not be loaded: "
             f"{MODEL_LOAD_ERROR}"
@@ -664,21 +737,15 @@ def get_prediction(
     )
 
     if prediction == 1:
-
         label = "Thyroid Disease Predicted"
-
     else:
-
         label = "Thyroid Disease Not Predicted"
 
     return {
         "prediction": prediction,
-
         "label": label,
-
         "class_0_probability":
             class_0_probability,
-
         "class_1_probability":
             class_1_probability,
     }
@@ -693,7 +760,6 @@ def generate_shap(
 ) -> Dict[str, Any]:
 
     if model is None:
-
         return {
             "available": False,
             "features": [],
@@ -701,7 +767,6 @@ def generate_shap(
         }
 
     try:
-
         import shap
 
         classifier = model
@@ -713,7 +778,6 @@ def generate_shap(
         if hasattr(model, "named_steps"):
 
             if "classifier" in model.named_steps:
-
                 classifier = model.named_steps[
                     "classifier"
                 ]
@@ -729,14 +793,14 @@ def generate_shap(
                 )
 
                 try:
-
                     feature_names = list(
                         preprocessor.get_feature_names_out()
                     )
 
                 except Exception:
-
-                    feature_names = FEATURE_NAMES.copy()
+                    feature_names = (
+                        FEATURE_NAMES.copy()
+                    )
 
         explainer = shap.TreeExplainer(
             classifier
@@ -749,13 +813,10 @@ def generate_shap(
         if isinstance(shap_values, list):
 
             if len(shap_values) > 1:
-
                 values = np.asarray(
                     shap_values[1]
                 )[0]
-
             else:
-
                 values = np.asarray(
                     shap_values[0]
                 )[0]
@@ -767,7 +828,6 @@ def generate_shap(
             )
 
             if values.ndim == 3:
-
                 values = values[
                     0,
                     :,
@@ -775,11 +835,9 @@ def generate_shap(
                 ]
 
             elif values.ndim == 2:
-
                 values = values[0]
 
             else:
-
                 values = values.reshape(-1)
 
         values = values.astype(float)
@@ -802,8 +860,9 @@ def generate_shap(
             )
 
             if "__" in name:
-
-                name = name.split("__")[-1]
+                name = name.split(
+                    "__"
+                )[-1]
 
             result.append(
                 {
@@ -848,8 +907,9 @@ def safe_predict(
 ) -> Optional[int]:
 
     try:
-
-        prediction = model.predict(df)
+        prediction = model.predict(
+            df
+        )
 
         return int(
             prediction[0]
@@ -897,13 +957,11 @@ def create_candidate_values(
 ) -> List[Any]:
 
     try:
-
         current = float(
             current_value
         )
 
     except Exception:
-
         return []
 
     if feature == "TSH":
@@ -1011,12 +1069,10 @@ def feature_distance(
 ) -> float:
 
     try:
-
         old = float(old_value)
         new = float(new_value)
 
     except Exception:
-
         return 1.0
 
     if feature == "age":
@@ -1087,7 +1143,7 @@ def generate_counterfactuals(
 
         shap_features = shap_result.get(
             "features",
-            []
+            [],
         )
 
         for item in shap_features:
@@ -1158,7 +1214,8 @@ def generate_counterfactuals(
                     {
                         "changes": [
                             {
-                                "feature": feature,
+                                "feature":
+                                    feature,
 
                                 "original_value":
                                     float(
@@ -1215,7 +1272,6 @@ def generate_counterfactuals(
         )
 
         if key not in unique:
-
             unique[key] = scenario
 
     scenarios = list(
@@ -1233,7 +1289,6 @@ def generate_counterfactuals(
             "available": False,
             "features": [],
             "scenarios": [],
-
             "message": (
                 "No counterfactual scenario "
                 "was found within the tested "
@@ -1314,11 +1369,8 @@ def preprocess_dataset(
         target_column is not None
         and target_column in df.columns
     ):
-
         final_target = target_column
-
     else:
-
         final_target = detected_target
 
     missing_before = int(
@@ -1376,11 +1428,8 @@ def preprocess_dataset(
             )
 
             if len(mode) > 0:
-
                 replacement = mode.iloc[0]
-
             else:
-
                 replacement = "Unknown"
 
             df[column] = df[column].fillna(
@@ -1426,7 +1475,8 @@ def preprocess_dataset(
 
         target_distribution = {
             str(key): int(value)
-            for key, value in counts.items()
+            for key, value
+            in counts.items()
         }
 
     numeric_after = [
@@ -1606,7 +1656,6 @@ def calculate_roc_auc(
             model_pipeline,
             "predict_proba",
         ):
-
             return None
 
         probabilities = (
@@ -1950,7 +1999,9 @@ def train_admin_models():
                     int(len(y_test)),
             }
 
-            results.append(result)
+            results.append(
+                result
+            )
 
             trained_models[
                 model_name
@@ -2082,7 +2133,6 @@ def train_admin_models():
             len(results),
     }
 
-    # Save everything
     save_training_state()
     save_admin_state()
 
@@ -2261,7 +2311,6 @@ def generate_admin_shap_summary():
 
 @app.on_event("startup")
 def startup_event():
-
     load_admin_state()
 
 
@@ -2281,7 +2330,7 @@ def root():
             "online",
 
         "version":
-            "7.0.0",
+            "7.1.0",
 
         "model_loaded":
             model is not None,
@@ -2297,6 +2346,9 @@ def root():
 
         "trained_model_count":
             len(TRAINING_MODELS),
+
+        "prediction_history_count":
+            len(PREDICTION_HISTORY),
     }
 
 
@@ -2339,6 +2391,9 @@ def health():
 
         "trained_model_count":
             len(TRAINING_MODELS),
+
+        "prediction_history_count":
+            len(PREDICTION_HISTORY),
 
         "dataset_name":
             DATASET_NAME,
@@ -2411,6 +2466,15 @@ def info():
                     in TRAINING_RESULTS
                 ],
         },
+
+        "prediction_history": {
+
+            "available":
+                True,
+
+            "count":
+                len(PREDICTION_HISTORY),
+        },
     }
 
 
@@ -2467,7 +2531,9 @@ async def upload_dataset(
             "wb",
         ) as output_file:
 
-            output_file.write(contents)
+            output_file.write(
+                contents
+            )
 
         dataframe = pd.read_csv(
             UPLOADED_DATASET_PATH
@@ -2608,7 +2674,6 @@ async def upload_dataset(
         }
 
     except HTTPException:
-
         raise
 
     except Exception as e:
@@ -2730,7 +2795,9 @@ def admin_preprocess():
             DATASET_TARGET,
         )
 
-        PREPROCESSED_DATASET = processed_df.copy()
+        PREPROCESSED_DATASET = (
+            processed_df.copy()
+        )
 
         PREPROCESSING_INFO = info
 
@@ -2739,7 +2806,6 @@ def admin_preprocess():
         )
 
         if detected_target:
-
             DATASET_TARGET = detected_target
 
         save_admin_state()
@@ -2998,6 +3064,58 @@ def admin_shap():
 
 
 # ============================================================
+# ADMIN - PREDICTION HISTORY
+# ============================================================
+
+@app.get("/admin/prediction-history")
+def prediction_history():
+
+    return {
+
+        "available":
+            True,
+
+        "count":
+            len(PREDICTION_HISTORY),
+
+        "history":
+            PREDICTION_HISTORY,
+    }
+
+
+@app.delete("/admin/prediction-history")
+def clear_prediction_history():
+
+    global PREDICTION_HISTORY
+
+    PREDICTION_HISTORY = []
+
+    try:
+
+        if PREDICTION_HISTORY_PATH.exists():
+            PREDICTION_HISTORY_PATH.unlink()
+
+    except Exception as e:
+
+        print(
+            "PREDICTION HISTORY CLEAR ERROR:",
+            str(e),
+        )
+
+    return {
+
+        "success":
+            True,
+
+        "message":
+            "Prediction history cleared.",
+
+        "count":
+            0,
+    }
+
+
+# ============================================================
 # PREDICTION
 # ============================================================
 
@@ -3006,23 +3124,38 @@ def predict(
     req: PredictionRequest,
 ):
 
+    global PREDICTION_HISTORY
+
     try:
+
+        # ----------------------------------------------------
+        # Convert request
+        # ----------------------------------------------------
 
         df = request_to_dataframe(
             req
         )
 
+        # ----------------------------------------------------
         # Main prediction
+        # ----------------------------------------------------
+
         result = get_prediction(
             df
         )
 
+        # ----------------------------------------------------
         # SHAP
+        # ----------------------------------------------------
+
         shap_result = generate_shap(
             df
         )
 
+        # ----------------------------------------------------
         # Counterfactuals
+        # ----------------------------------------------------
+
         counterfactual_result = (
             generate_counterfactuals(
                 df,
@@ -3030,6 +3163,74 @@ def predict(
                 shap_result,
             )
         )
+
+        # ----------------------------------------------------
+        # Save prediction history
+        # ----------------------------------------------------
+
+        next_id = 1
+
+        if PREDICTION_HISTORY:
+
+            existing_ids = []
+
+            for item in PREDICTION_HISTORY:
+
+                try:
+                    existing_ids.append(
+                        int(item.get("id", 0))
+                    )
+                except Exception:
+                    pass
+
+            if existing_ids:
+                next_id = max(
+                    existing_ids
+                ) + 1
+
+        history_record = {
+
+            "id":
+                next_id,
+
+            "timestamp":
+                datetime.now().isoformat(),
+
+            "prediction":
+                result["prediction"],
+
+            "prediction_label":
+                result["label"],
+
+            "class_0_probability":
+                result[
+                    "class_0_probability"
+                ],
+
+            "class_1_probability":
+                result[
+                    "class_1_probability"
+                ],
+
+            "model":
+                "XGBoost",
+        }
+
+        PREDICTION_HISTORY.insert(
+            0,
+            history_record,
+        )
+
+        # Keep latest 100 predictions
+        PREDICTION_HISTORY = (
+            PREDICTION_HISTORY[:100]
+        )
+
+        save_prediction_history()
+
+        # ----------------------------------------------------
+        # Response
+        # ----------------------------------------------------
 
         return {
 
@@ -3079,6 +3280,15 @@ def predict(
 
             "counterfactuals":
                 counterfactual_result,
+
+            "history_saved":
+                True,
+
+            "history_id":
+                next_id,
+
+            "prediction_history_count":
+                len(PREDICTION_HISTORY),
         }
 
     except Exception as e:
@@ -3113,5 +3323,5 @@ if __name__ == "__main__":
         "app:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
-        )
+        reload=False,
+)
