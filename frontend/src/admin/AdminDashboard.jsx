@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 /* =========================================================
    THYROCARE AI
    ADMIN DASHBOARD
-   ========================================================= */
+========================================================= */
 
 export default function AdminDashboard({
   result,
@@ -14,7 +14,7 @@ export default function AdminDashboard({
 }) {
   /* =========================================================
      BASIC RESULT DATA
-     ========================================================= */
+  ========================================================= */
 
   const prediction =
     result?.prediction ??
@@ -33,10 +33,6 @@ export default function AdminDashboard({
     result?.class_probabilities ??
     {};
 
-  /* =========================================================
-     PROBABILITIES
-     ========================================================= */
-
   const class0Probability =
     probabilities?.["0"] ??
     probabilities?.class_0 ??
@@ -53,7 +49,7 @@ export default function AdminDashboard({
 
   /* =========================================================
      HELPERS
-     ========================================================= */
+  ========================================================= */
 
   const formatPercent = (value) => {
     const number = Number(value);
@@ -63,7 +59,9 @@ export default function AdminDashboard({
     }
 
     const percentage =
-      number <= 1 ? number * 100 : number;
+      number <= 1
+        ? number * 100
+        : number;
 
     return `${percentage.toFixed(2)}%`;
   };
@@ -98,7 +96,7 @@ export default function AdminDashboard({
 
   /* =========================================================
      SHAP DATA
-     ========================================================= */
+  ========================================================= */
 
   const shapValues =
     result?.shap_values ??
@@ -107,15 +105,41 @@ export default function AdminDashboard({
     [];
 
   const topShap = useMemo(() => {
-    if (!Array.isArray(shapValues)) {
+    let values = shapValues;
+
+    /*
+     * Backend can return:
+     *
+     * shap_values: [...]
+     *
+     * OR
+     *
+     * shap: {
+     *   available: true,
+     *   features: [...]
+     * }
+     */
+
+    if (
+      !Array.isArray(values) &&
+      values &&
+      Array.isArray(values.features)
+    ) {
+      values = values.features;
+    }
+
+    if (!Array.isArray(values)) {
       return [];
     }
 
-    return shapValues
+    return values
       .map((item, index) => {
-        if (typeof item === "number") {
+        if (
+          typeof item === "number"
+        ) {
           return {
-            feature: `Feature ${index + 1}`,
+            feature:
+              `Feature ${index + 1}`,
             value: Number(item),
           };
         }
@@ -133,33 +157,87 @@ export default function AdminDashboard({
             item?.name ??
             item?.feature_name ??
             `Feature ${index + 1}`,
-          value: Number.isFinite(value) ? value : 0,
+
+          value:
+            Number.isFinite(value)
+              ? value
+              : 0,
         };
       })
       .sort(
         (a, b) =>
-          Math.abs(b.value) - Math.abs(a.value)
+          Math.abs(b.value) -
+          Math.abs(a.value)
       )
       .slice(0, 5);
   }, [shapValues]);
 
   /* =========================================================
      HISTORY
-     ========================================================= */
+  ========================================================= */
 
-  const historyCount = analysisHistory.length;
+  const historyCount =
+    analysisHistory.length;
+
+  /* =========================================================
+     VIEW RESULTS HANDLER
+     
+     IMPORTANT:
+     This explicitly calls the callback supplied
+     by App.jsx.
+  ========================================================= */
+
+  const handleViewResults = () => {
+    if (!result) {
+      return;
+    }
+
+    if (
+      typeof onViewResults ===
+      "function"
+    ) {
+      onViewResults();
+    }
+  };
+
+  /* =========================================================
+     NEW ANALYSIS HANDLER
+  ========================================================= */
+
+  const handleNewAnalysis = () => {
+    if (
+      typeof onNewAnalysis ===
+      "function"
+    ) {
+      onNewAnalysis();
+    }
+  };
+
+  /* =========================================================
+     LOGOUT HANDLER
+  ========================================================= */
+
+  const handleLogout = () => {
+    if (
+      typeof onLogout ===
+      "function"
+    ) {
+      onLogout();
+    }
+  };
 
   /* =========================================================
      RENDER
-     ========================================================= */
+  ========================================================= */
 
   return (
     <main className="admin-dashboard">
+
       <div className="admin-dashboard-container">
 
         {/* =====================================================
             TOP BAR
-            ===================================================== */}
+        ===================================================== */}
 
         <section className="admin-topbar">
 
@@ -170,6 +248,7 @@ export default function AdminDashboard({
             </div>
 
             <div>
+
               <span className="admin-eyebrow">
                 THYROCARE AI
               </span>
@@ -182,6 +261,7 @@ export default function AdminDashboard({
                 Monitor prediction activity,
                 model responses and explainability.
               </p>
+
             </div>
 
           </div>
@@ -191,7 +271,9 @@ export default function AdminDashboard({
             <button
               type="button"
               className="admin-secondary-button"
-              onClick={onNewAnalysis}
+              onClick={
+                handleNewAnalysis
+              }
             >
               <span>＋</span>
               New Analysis
@@ -200,7 +282,9 @@ export default function AdminDashboard({
             <button
               type="button"
               className="admin-secondary-button"
-              onClick={onViewResults}
+              onClick={
+                handleViewResults
+              }
               disabled={!result}
             >
               View Results
@@ -209,7 +293,9 @@ export default function AdminDashboard({
             <button
               type="button"
               className="admin-secondary-button admin-danger-button"
-              onClick={onLogout}
+              onClick={
+                handleLogout
+              }
             >
               Logout
             </button>
@@ -220,11 +306,9 @@ export default function AdminDashboard({
 
         {/* =====================================================
             STATISTICS
-            ===================================================== */}
+        ===================================================== */}
 
         <section className="admin-stats-grid">
-
-          {/* ANALYSES */}
 
           <div className="admin-stat-card">
 
@@ -250,8 +334,6 @@ export default function AdminDashboard({
 
           </div>
 
-          {/* MODEL */}
-
           <div className="admin-stat-card">
 
             <div className="admin-stat-icon">
@@ -275,8 +357,6 @@ export default function AdminDashboard({
             </div>
 
           </div>
-
-          {/* LATEST CLASS */}
 
           <div className="admin-stat-card">
 
@@ -303,8 +383,6 @@ export default function AdminDashboard({
             </div>
 
           </div>
-
-          {/* SYSTEM */}
 
           <div className="admin-stat-card">
 
@@ -334,19 +412,20 @@ export default function AdminDashboard({
 
         {/* =====================================================
             MAIN GRID
-            ===================================================== */}
+        ===================================================== */}
 
         <section className="admin-content-grid">
 
           {/* ===================================================
               LATEST ANALYSIS
-              =================================================== */}
+          =================================================== */}
 
           <div className="admin-panel">
 
             <div className="admin-panel-header">
 
               <div>
+
                 <span className="admin-panel-badge">
                   LATEST
                 </span>
@@ -359,11 +438,15 @@ export default function AdminDashboard({
                   Most recent model prediction
                   generated by ThyroCare AI.
                 </p>
+
               </div>
 
               <span className="admin-status">
-                <span className="admin-status-dot"></span>
+
+                <span className="admin-status-dot" />
+
                 System Ready
+
               </span>
 
             </div>
@@ -388,7 +471,9 @@ export default function AdminDashboard({
                 <button
                   type="button"
                   className="primary-button"
-                  onClick={onNewAnalysis}
+                  onClick={
+                    handleNewAnalysis
+                  }
                 >
                   Start Analysis
                 </button>
@@ -420,13 +505,12 @@ export default function AdminDashboard({
 
                 </div>
 
-                {/* PROBABILITIES */}
-
                 <div className="admin-probabilities">
 
                   <div className="admin-probability">
 
                     <div className="admin-probability-header">
+
                       <span>
                         Class 0
                       </span>
@@ -436,6 +520,7 @@ export default function AdminDashboard({
                           class0Probability
                         )}
                       </strong>
+
                     </div>
 
                     <div className="admin-progress">
@@ -446,7 +531,8 @@ export default function AdminDashboard({
                           width: `${Math.min(
                             Number(
                               class0Probability <= 1
-                                ? class0Probability * 100
+                                ? class0Probability *
+                                    100
                                 : class0Probability
                             ) || 0,
                             100
@@ -465,6 +551,7 @@ export default function AdminDashboard({
                   <div className="admin-probability">
 
                     <div className="admin-probability-header">
+
                       <span>
                         Class 1
                       </span>
@@ -474,6 +561,7 @@ export default function AdminDashboard({
                           class1Probability
                         )}
                       </strong>
+
                     </div>
 
                     <div className="admin-progress">
@@ -484,7 +572,8 @@ export default function AdminDashboard({
                           width: `${Math.min(
                             Number(
                               class1Probability <= 1
-                                ? class1Probability * 100
+                                ? class1Probability *
+                                    100
                                 : class1Probability
                             ) || 0,
                             100
@@ -502,6 +591,18 @@ export default function AdminDashboard({
 
                 </div>
 
+                {/* DIRECT RESULT BUTTON */}
+
+                <button
+                  type="button"
+                  className="primary-button admin-view-results-button"
+                  onClick={
+                    handleViewResults
+                  }
+                >
+                  Open Full Results →
+                </button>
+
               </div>
 
             )}
@@ -510,7 +611,7 @@ export default function AdminDashboard({
 
           {/* ===================================================
               SYSTEM INFORMATION
-              =================================================== */}
+          =================================================== */}
 
           <div className="admin-panel">
 
@@ -537,28 +638,40 @@ export default function AdminDashboard({
             <div className="admin-info-list">
 
               <div className="admin-info-row">
-                <span>Application</span>
+                <span>
+                  Application
+                </span>
+
                 <strong>
                   ThyroCare AI
                 </strong>
               </div>
 
               <div className="admin-info-row">
-                <span>Model</span>
+                <span>
+                  Model
+                </span>
+
                 <strong>
                   {modelName}
                 </strong>
               </div>
 
               <div className="admin-info-row">
-                <span>Explainability</span>
+                <span>
+                  Explainability
+                </span>
+
                 <strong>
                   SHAP
                 </strong>
               </div>
 
               <div className="admin-info-row">
-                <span>Counterfactuals</span>
+                <span>
+                  Counterfactuals
+                </span>
+
                 <strong>
                   {result
                     ? "Available"
@@ -567,14 +680,20 @@ export default function AdminDashboard({
               </div>
 
               <div className="admin-info-row">
-                <span>Prediction Service</span>
+                <span>
+                  Prediction Service
+                </span>
+
                 <strong>
                   Configured
                 </strong>
               </div>
 
               <div className="admin-info-row">
-                <span>Session History</span>
+                <span>
+                  Session History
+                </span>
+
                 <strong>
                   {historyCount} records
                 </strong>
@@ -584,7 +703,7 @@ export default function AdminDashboard({
 
             <div className="admin-system-status">
 
-              <span className="admin-status-dot"></span>
+              <span className="admin-status-dot" />
 
               <span>
                 ThyroCare AI interface ready
@@ -598,7 +717,7 @@ export default function AdminDashboard({
 
         {/* =====================================================
             RECENT ANALYSIS
-            ===================================================== */}
+        ===================================================== */}
 
         <section className="admin-panel admin-history-panel">
 
@@ -705,10 +824,11 @@ export default function AdminDashboard({
                         "XGBoost";
 
                       const isPositive =
-                        Number(itemPrediction) === 1;
+                        Number(
+                          itemPrediction
+                        ) === 1;
 
                       return (
-
                         <tr
                           key={
                             item?.id ??
@@ -767,7 +887,6 @@ export default function AdminDashboard({
                           </td>
 
                         </tr>
-
                       );
                     }
                   )}
@@ -783,8 +902,8 @@ export default function AdminDashboard({
         </section>
 
         {/* =====================================================
-            SHAP EXPLANATION
-            ===================================================== */}
+            SHAP
+        ===================================================== */}
 
         <section
           className="admin-panel"
@@ -814,7 +933,8 @@ export default function AdminDashboard({
 
           </div>
 
-          {!result || topShap.length === 0 ? (
+          {!result ||
+          topShap.length === 0 ? (
 
             <div className="admin-empty">
 
@@ -841,15 +961,19 @@ export default function AdminDashboard({
                 (item, index) => {
 
                   const numericValue =
-                    Number(item.value) || 0;
+                    Number(
+                      item.value
+                    ) || 0;
 
-                  const magnitude = Math.min(
-                    Math.abs(numericValue) * 100,
-                    100
-                  );
+                  const magnitude =
+                    Math.min(
+                      Math.abs(
+                        numericValue
+                      ) * 100,
+                      100
+                    );
 
                   return (
-
                     <div
                       className="admin-shap-item"
                       key={`${item.feature}-${index}`}
@@ -890,13 +1014,14 @@ export default function AdminDashboard({
                           {numericValue >= 0
                             ? "+"
                             : ""}
-                          {numericValue.toFixed(4)}
+                          {numericValue.toFixed(
+                            4
+                          )}
                         </strong>
 
                       </div>
 
                     </div>
-
                   );
                 }
               )}
@@ -908,8 +1033,8 @@ export default function AdminDashboard({
         </section>
 
         {/* =====================================================
-            MEDICAL / ACADEMIC NOTICE
-            ===================================================== */}
+            NOTICE
+        ===================================================== */}
 
         <section
           className="admin-panel admin-disclaimer"
@@ -942,6 +1067,7 @@ export default function AdminDashboard({
         </section>
 
       </div>
+
     </main>
   );
-                              }
+           }
