@@ -419,7 +419,10 @@ export default function DatasetUpload() {
 
       </div>
 
-      {/* DATASET INFORMATION */}
+      {/* ======================================================
+          DATASET INFORMATION
+          ====================================================== */}
+
       {datasetInfo && (
         <div className="dataset-info">
 
@@ -430,60 +433,42 @@ export default function DatasetUpload() {
           <div className="dataset-info-grid">
 
             <div>
-              <span>
-                Dataset
-              </span>
-
+              <span>Dataset</span>
               <strong>
                 {datasetInfo.filename}
               </strong>
             </div>
 
             <div>
-              <span>
-                Rows
-              </span>
-
+              <span>Rows</span>
               <strong>
                 {datasetInfo.rows}
               </strong>
             </div>
 
             <div>
-              <span>
-                Columns
-              </span>
-
+              <span>Columns</span>
               <strong>
                 {datasetInfo.columns}
               </strong>
             </div>
 
             <div>
-              <span>
-                Target
-              </span>
-
+              <span>Target</span>
               <strong>
                 {datasetInfo.target}
               </strong>
             </div>
 
             <div>
-              <span>
-                Missing Values
-              </span>
-
+              <span>Missing Values</span>
               <strong>
                 {datasetInfo.missingValues}
               </strong>
             </div>
 
             <div>
-              <span>
-                Duplicate Rows
-              </span>
-
+              <span>Duplicate Rows</span>
               <strong>
                 {datasetInfo.duplicateRows}
               </strong>
@@ -494,7 +479,10 @@ export default function DatasetUpload() {
         </div>
       )}
 
-      {/* PREPROCESSING RESULTS */}
+      {/* ======================================================
+          PREPROCESSING RESULTS
+          ====================================================== */}
+
       {preprocessInfo && (
         <div className="dataset-info preprocessing-results">
 
@@ -505,110 +493,77 @@ export default function DatasetUpload() {
           <div className="dataset-info-grid">
 
             <div>
-              <span>
-                Original Rows
-              </span>
-
+              <span>Original Rows</span>
               <strong>
                 {preprocessInfo.original_rows ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Processed Rows
-              </span>
-
+              <span>Processed Rows</span>
               <strong>
                 {preprocessInfo.processed_rows ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Original Columns
-              </span>
-
+              <span>Original Columns</span>
               <strong>
                 {preprocessInfo.original_columns ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Processed Columns
-              </span>
-
+              <span>Processed Columns</span>
               <strong>
                 {preprocessInfo.processed_columns ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Duplicates Removed
-              </span>
-
+              <span>Duplicates Removed</span>
               <strong>
                 {preprocessInfo.duplicate_rows_removed ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Empty Rows Removed
-              </span>
-
+              <span>Empty Rows Removed</span>
               <strong>
                 {preprocessInfo.empty_rows_removed ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Missing Before
-              </span>
-
+              <span>Missing Before</span>
               <strong>
                 {preprocessInfo.missing_values_before ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Missing After
-              </span>
-
+              <span>Missing After</span>
               <strong>
                 {preprocessInfo.missing_values_after ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Target
-              </span>
-
+              <span>Target</span>
               <strong>
                 {preprocessInfo.target_column ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Numeric Features
-              </span>
-
+              <span>Numeric Features</span>
               <strong>
                 {preprocessInfo.numeric_feature_count ?? "—"}
               </strong>
             </div>
 
             <div>
-              <span>
-                Categorical Features
-              </span>
-
+              <span>Categorical Features</span>
               <strong>
                 {preprocessInfo.categorical_feature_count ?? "—"}
               </strong>
@@ -659,7 +614,7 @@ export default function DatasetUpload() {
 
             )}
 
-          {/* FEATURE INFORMATION */}
+          {/* NUMERIC FEATURES */}
           {preprocessInfo.numeric_features &&
             preprocessInfo.numeric_features.length > 0 && (
 
@@ -669,13 +624,24 @@ export default function DatasetUpload() {
                   🔢 Numeric Features
                 </h3>
 
-                <div className="feature-tags">
+                <div
+                  className="feature-tags"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
 
                   {preprocessInfo.numeric_features.map(
-                    (feature) => (
+                    (feature, index) => (
 
                       <span
-                        key={feature}
+                        key={`${feature}-${index}`}
+                        style={{
+                          display: "inline-block",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         {feature}
                       </span>
@@ -689,6 +655,7 @@ export default function DatasetUpload() {
 
             )}
 
+          {/* CATEGORICAL FEATURES */}
           {preprocessInfo.categorical_features &&
             preprocessInfo.categorical_features.length > 0 && (
 
@@ -698,13 +665,24 @@ export default function DatasetUpload() {
                   🔤 Categorical Features
                 </h3>
 
-                <div className="feature-tags">
+                <div
+                  className="feature-tags"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
 
                   {preprocessInfo.categorical_features.map(
-                    (feature) => (
+                    (feature, index) => (
 
                       <span
-                        key={feature}
+                        key={`${feature}-${index}`}
+                        style={{
+                          display: "inline-block",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         {feature}
                       </span>
@@ -721,7 +699,10 @@ export default function DatasetUpload() {
         </div>
       )}
 
-      {/* TRAINING RESULTS */}
+      {/* ======================================================
+          TRAINING RESULTS
+          ====================================================== */}
+
       {trainingInfo && (
         <div className="dataset-info training-results">
 
@@ -738,8 +719,10 @@ export default function DatasetUpload() {
               </span>
 
               <strong>
-                {trainingInfo.dataset_name ??
+                {trainingInfo.dataset ??
+                  trainingInfo.dataset_name ??
                   trainingInfo.filename ??
+                  datasetInfo?.filename ??
                   "—"}
               </strong>
             </div>
@@ -750,8 +733,9 @@ export default function DatasetUpload() {
               </span>
 
               <strong>
-                {trainingInfo.target_column ??
-                  trainingInfo.target ??
+                {trainingInfo.target ??
+                  trainingInfo.target_column ??
+                  preprocessInfo?.target_column ??
                   "—"}
               </strong>
             </div>
@@ -762,8 +746,16 @@ export default function DatasetUpload() {
               </span>
 
               <strong>
-                {trainingInfo.results?.length ??
-                  trainingInfo.models_trained?.length ??
+                {trainingInfo.training?.successful_models ??
+                  trainingInfo.results?.filter(
+                    (model) =>
+                      model.status === "success"
+                  ).length ??
+                  trainingInfo.results?.length ??
+                  "—"}
+                {" / "}
+                {trainingInfo.training?.total_models ??
+                  trainingInfo.results?.length ??
                   "—"}
               </strong>
             </div>
@@ -774,11 +766,87 @@ export default function DatasetUpload() {
               </span>
 
               <strong>
-                Completed
+                {trainingInfo.trained === true
+                  ? "Completed"
+                  : "Completed"}
               </strong>
             </div>
 
           </div>
+
+          {/* TRAINING DETAILS */}
+          {trainingInfo.training && (
+            <div
+              className="dataset-info-grid"
+              style={{ marginTop: "16px" }}
+            >
+
+              <div>
+                <span>
+                  Total Rows
+                </span>
+
+                <strong>
+                  {trainingInfo.training.rows ?? "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Features
+                </span>
+
+                <strong>
+                  {trainingInfo.training.features ?? "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Training Rows
+                </span>
+
+                <strong>
+                  {trainingInfo.training.training_rows ?? "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Testing Rows
+                </span>
+
+                <strong>
+                  {trainingInfo.training.testing_rows ?? "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Classes
+                </span>
+
+                <strong>
+                  {trainingInfo.training.class_count ?? "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Test Size
+                </span>
+
+                <strong>
+                  {trainingInfo.training.test_size != null
+                    ? `${(
+                        trainingInfo.training.test_size * 100
+                      ).toFixed(0)}%`
+                    : "—"}
+                </strong>
+              </div>
+
+            </div>
+          )}
 
           {/* MODEL RESULTS */}
           {trainingInfo.results &&
@@ -803,6 +871,11 @@ export default function DatasetUpload() {
                           model.name ||
                           index
                         }
+                        style={{
+                          alignItems: "flex-start",
+                          gap: "12px",
+                          flexWrap: "wrap",
+                        }}
                       >
 
                         <span>
@@ -812,12 +885,63 @@ export default function DatasetUpload() {
                         </span>
 
                         <strong>
-                          {typeof model.accuracy === "number"
+                          {model.accuracy_percent != null
+                            ? `${model.accuracy_percent.toFixed(2)}%`
+                            : typeof model.accuracy === "number"
                             ? `${(
                                 model.accuracy * 100
                               ).toFixed(2)}%`
-                            : model.accuracy ?? "—"}
+                            : "—"}
                         </strong>
+
+                        <div
+                          style={{
+                            width: "100%",
+                            display: "grid",
+                            gridTemplateColumns:
+                              "repeat(2, minmax(120px, 1fr))",
+                            gap: "6px 12px",
+                            marginTop: "6px",
+                            fontSize: "13px",
+                            opacity: 0.85,
+                          }}
+                        >
+
+                          <span>
+                            Precision:{" "}
+                            {typeof model.precision === "number"
+                              ? `${(
+                                  model.precision * 100
+                                ).toFixed(2)}%`
+                              : "—"}
+                          </span>
+
+                          <span>
+                            Recall:{" "}
+                            {typeof model.recall === "number"
+                              ? `${(
+                                  model.recall * 100
+                                ).toFixed(2)}%`
+                              : "—"}
+                          </span>
+
+                          <span>
+                            F1 Score:{" "}
+                            {typeof model.f1_score === "number"
+                              ? `${(
+                                  model.f1_score * 100
+                                ).toFixed(2)}%`
+                              : "—"}
+                          </span>
+
+                          <span>
+                            ROC-AUC:{" "}
+                            {typeof model.roc_auc === "number"
+                              ? model.roc_auc.toFixed(4)
+                              : "—"}
+                          </span>
+
+                        </div>
 
                       </div>
 
@@ -835,4 +959,4 @@ export default function DatasetUpload() {
 
     </section>
   );
-      }
+                          }
