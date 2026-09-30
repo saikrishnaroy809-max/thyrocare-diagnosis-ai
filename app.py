@@ -1,7 +1,7 @@
 # ============================================================
 # THYROCARE AI - FASTAPI BACKEND
 # Thyroid Disease Prediction + SHAP + Counterfactual AI
-# Admin Dataset Upload + Dataset Preprocessing
+# Admin Dataset Upload + Preprocessing + Model Training
 # ============================================================
 
 from pathlib import Path
@@ -15,6 +15,28 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+# Machine Learning
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import (
+    OneHotEncoder,
+    LabelEncoder,
+)
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+)
+from xgboost import XGBClassifier
+
 
 # ============================================================
 # APP CONFIGURATION
@@ -24,9 +46,9 @@ app = FastAPI(
     title="ThyroCare AI API",
     description=(
         "AI-powered thyroid disease prediction "
-        "with Explainable AI and Admin Dataset Management"
+        "with Explainable AI and Admin ML Management"
     ),
-    version="5.0.0",
+    version="6.0.0",
 )
 
 
@@ -70,19 +92,26 @@ PREPROCESSED_DATASET_PATH = (
     DATASET_DIR / "preprocessed_dataset.csv"
 )
 
+TRAINING_RESULTS_PATH = (
+    DATASET_DIR / "training_results.json"
+)
+
 
 # ============================================================
-# LOAD EXISTING MODEL
+# LOAD EXISTING PRODUCTION MODEL
 # ============================================================
 
 model = None
 MODEL_LOAD_ERROR = None
 
 try:
-    model = joblib.load(MODEL_PATH)
+
+    model = joblib.load(
+        MODEL_PATH
+    )
 
     print(
-        "ThyroCare model loaded successfully."
+        "ThyroCare production model loaded successfully."
     )
 
 except Exception as e:
@@ -100,29 +129,40 @@ except Exception as e:
 # ============================================================
 
 FEATURE_NAMES = [
+
     "age",
     "sex",
+
     "on thyroxine",
     "query on thyroxine",
     "on antithyroid medication",
+
     "sick",
     "pregnant",
+
     "thyroid surgery",
     "I131 treatment",
+
     "query hypothyroid",
     "query hyperthyroid",
+
     "lithium",
     "goitre",
     "tumor",
     "hypopituitary",
     "psych",
+
     "TSH measured",
     "TSH",
+
     "T3 measured",
+
     "TT4 measured",
     "TT4",
+
     "T4U measured",
     "T4U",
+
     "FTI measured",
     "FTI",
 ]
@@ -147,16 +187,21 @@ MEASURED_FEATURES = [
 
 
 BINARY_FEATURES = [
+
     "sex",
     "on thyroxine",
     "query on thyroxine",
     "on antithyroid medication",
+
     "sick",
     "pregnant",
+
     "thyroid surgery",
     "I131 treatment",
+
     "query hypothyroid",
     "query hyperthyroid",
+
     "lithium",
     "goitre",
     "tumor",
@@ -176,26 +221,38 @@ DATASET_TARGET = None
 PREPROCESSED_DATASET = None
 PREPROCESSING_INFO = None
 
+TRAINING_RESULTS = []
+TRAINING_MODELS = {}
+TRAINING_INFO = None
+
 
 # ============================================================
 # TARGET COLUMN DETECTION
 # ============================================================
 
 TARGET_COLUMN_CANDIDATES = [
+
     "binaryClass",
     "binaryclass",
+
     "target",
     "Target",
+
     "class",
     "Class",
+
     "label",
     "Label",
+
     "diagnosis",
     "Diagnosis",
+
     "thyroid",
     "Thyroid",
+
     "thyroid_disease",
     "thyroid disease",
+
     "disease",
     "Disease",
 ]
@@ -208,21 +265,33 @@ def detect_target_column(
     for candidate in TARGET_COLUMN_CANDIDATES:
 
         if candidate in dataframe.columns:
+
             return candidate
 
     normalized = {
-        str(column).strip().lower(): column
-        for column in dataframe.columns
+
+        str(column)
+        .strip()
+        .lower(): column
+
+        for column
+        in dataframe.columns
     }
 
     for candidate in TARGET_COLUMN_CANDIDATES:
 
-        key = candidate.strip().lower()
+        key = (
+            candidate
+            .strip()
+            .lower()
+        )
 
         if key in normalized:
+
             return normalized[key]
 
     if len(dataframe.columns) > 0:
+
         return dataframe.columns[-1]
 
     return None
@@ -379,9 +448,9 @@ def get_prediction(
         model.predict(df)[0]
     )
 
-    probabilities = model.predict_proba(
-        df
-    )[0]
+    probabilities = (
+        model.predict_proba(df)[0]
+    )
 
     class_0_probability = float(
         probabilities[0]
@@ -441,7 +510,10 @@ def generate_shap(
 
         classifier = model
         transformed = df
-        feature_names = FEATURE_NAMES.copy()
+
+        feature_names = (
+            FEATURE_NAMES.copy()
+        )
 
         if hasattr(
             model,
@@ -567,10 +639,17 @@ def generate_shap(
 
             result.append(
                 {
-                    "feature": name,
-                    "value": value,
-                    "impact": value,
-                    "abs_impact": abs(value),
+                    "feature":
+                        name,
+
+                    "value":
+                        value,
+
+                    "impact":
+                        value,
+
+                    "abs_impact":
+                        abs(value),
                 }
             )
 
@@ -581,8 +660,12 @@ def generate_shap(
         )
 
         return {
-            "available": True,
-            "features": result[:15],
+
+            "available":
+                True,
+
+            "features":
+                result[:15],
         }
 
     except Exception as e:
@@ -593,9 +676,15 @@ def generate_shap(
         )
 
         return {
-            "available": False,
-            "features": [],
-            "error": str(e),
+
+            "available":
+                False,
+
+            "features":
+                [],
+
+            "error":
+                str(e),
         }
 
 
@@ -657,13 +746,17 @@ def get_probabilities(
     except Exception:
 
         return {
-            "class_0_probability": 0.0,
-            "class_1_probability": 0.0,
+
+            "class_0_probability":
+                0.0,
+
+            "class_1_probability":
+                0.0,
         }
 
 
 # ============================================================
-# CANDIDATE VALUES
+# COUNTERFACTUAL CANDIDATE VALUES
 # ============================================================
 
 def create_candidate_values(
@@ -863,13 +956,22 @@ def generate_counterfactuals(
     if model is None:
 
         return {
-            "available": False,
-            "features": [],
-            "scenarios": [],
-            "message": "Model is not loaded.",
+
+            "available":
+                False,
+
+            "features":
+                [],
+
+            "scenarios":
+                [],
+
+            "message":
+                "Model is not loaded.",
         }
 
     search_features = [
+
         "TSH",
         "TT4",
         "T4U",
@@ -879,9 +981,11 @@ def generate_counterfactuals(
 
     try:
 
-        shap_features = shap_result.get(
-            "features",
-            []
+        shap_features = (
+            shap_result.get(
+                "features",
+                []
+            )
         )
 
         for item in shap_features:
@@ -901,12 +1005,16 @@ def generate_counterfactuals(
                         )
 
             if len(search_features) >= 8:
+
                 break
 
     except Exception:
+
         pass
 
-    search_features = search_features[:8]
+    search_features = (
+        search_features[:8]
+    )
 
     scenarios = []
 
@@ -939,9 +1047,13 @@ def generate_counterfactuals(
             )
 
             if new_prediction is None:
+
                 continue
 
-            if new_prediction != original_prediction:
+            if (
+                new_prediction
+                != original_prediction
+            ):
 
                 probabilities = (
                     get_probabilities(
@@ -949,15 +1061,20 @@ def generate_counterfactuals(
                     )
                 )
 
-                distance = total_distance(
-                    original_df,
-                    candidate_df,
+                distance = (
+                    total_distance(
+                        original_df,
+                        candidate_df,
+                    )
                 )
 
                 scenarios.append(
                     {
+
                         "changes": [
+
                             {
+
                                 "feature":
                                     feature,
 
@@ -1055,14 +1172,22 @@ def generate_counterfactuals(
     if not scenarios:
 
         return {
-            "available": False,
-            "features": [],
-            "scenarios": [],
-            "message": (
-                "No counterfactual scenario "
-                "was found within the tested "
-                "feature ranges."
-            ),
+
+            "available":
+                False,
+
+            "features":
+                [],
+
+            "scenarios":
+                [],
+
+            "message":
+                (
+                    "No counterfactual scenario "
+                    "was found within the tested "
+                    "feature ranges."
+                ),
         }
 
     scenarios = scenarios[:3]
@@ -1079,6 +1204,7 @@ def generate_counterfactuals(
         "features": [
 
             {
+
                 "feature":
                     item["feature"],
 
@@ -1086,7 +1212,9 @@ def generate_counterfactuals(
                     item["original_value"],
 
                 "counterfactual_value":
-                    item["counterfactual_value"],
+                    item[
+                        "counterfactual_value"
+                    ],
             }
 
             for item in best_changes
@@ -1099,10 +1227,15 @@ def generate_counterfactuals(
             scenarios[0]["prediction"],
 
         "target_label":
-            scenarios[0]["prediction_label"],
+            scenarios[0][
+                "prediction_label"
+            ],
 
         "message":
-            "Counterfactual scenarios generated successfully.",
+            (
+                "Counterfactual scenarios "
+                "generated successfully."
+            ),
     }
 
 
@@ -1125,31 +1258,28 @@ def preprocess_dataset(
         df.shape[1]
     )
 
-    # --------------------------------------------------------
     # Clean column names
-    # --------------------------------------------------------
 
     df.columns = [
+
         str(column).strip()
-        for column in df.columns
+
+        for column
+        in df.columns
     ]
 
-    # --------------------------------------------------------
-    # Remove completely empty rows
-    # --------------------------------------------------------
+    # Remove empty rows
 
     df = df.dropna(
         how="all"
     ).copy()
 
     empty_rows_removed = (
-        original_rows -
-        int(df.shape[0])
+        original_rows
+        - int(df.shape[0])
     )
 
-    # --------------------------------------------------------
-    # Remove duplicate rows
-    # --------------------------------------------------------
+    # Remove duplicates
 
     duplicate_count = int(
         df.duplicated().sum()
@@ -1157,9 +1287,7 @@ def preprocess_dataset(
 
     df = df.drop_duplicates().copy()
 
-    # --------------------------------------------------------
     # Detect target
-    # --------------------------------------------------------
 
     detected_target = (
         detect_target_column(df)
@@ -1176,9 +1304,7 @@ def preprocess_dataset(
 
         final_target = detected_target
 
-    # --------------------------------------------------------
-    # Missing values before filling
-    # --------------------------------------------------------
+    # Missing before
 
     missing_before = int(
         df.isna().sum().sum()
@@ -1195,9 +1321,7 @@ def preprocess_dataset(
         if int(value) > 0
     }
 
-    # --------------------------------------------------------
-    # Separate target from features
-    # --------------------------------------------------------
+    # Feature columns
 
     feature_columns = [
 
@@ -1228,9 +1352,7 @@ def preprocess_dataset(
         if column not in numeric_columns
     ]
 
-    # --------------------------------------------------------
-    # Fill numeric missing values
-    # --------------------------------------------------------
+    # Numeric missing values
 
     for column in numeric_columns:
 
@@ -1250,9 +1372,7 @@ def preprocess_dataset(
                 )
             )
 
-    # --------------------------------------------------------
-    # Fill categorical missing values
-    # --------------------------------------------------------
+    # Categorical missing values
 
     for column in categorical_columns:
 
@@ -1266,7 +1386,9 @@ def preprocess_dataset(
 
             if len(mode) > 0:
 
-                replacement = mode.iloc[0]
+                replacement = (
+                    mode.iloc[0]
+                )
 
             else:
 
@@ -1278,9 +1400,7 @@ def preprocess_dataset(
                 )
             )
 
-    # --------------------------------------------------------
-    # Handle missing target values
-    # --------------------------------------------------------
+    # Missing target
 
     target_missing_removed = 0
 
@@ -1300,21 +1420,17 @@ def preprocess_dataset(
         ).copy()
 
         target_missing_removed = (
-            before_target -
-            int(df.shape[0])
+            before_target
+            - int(df.shape[0])
         )
 
-    # --------------------------------------------------------
-    # Missing values after
-    # --------------------------------------------------------
+    # Missing after
 
     missing_after = int(
         df.isna().sum().sum()
     )
 
-    # --------------------------------------------------------
     # Target distribution
-    # --------------------------------------------------------
 
     target_distribution = {}
 
@@ -1339,9 +1455,7 @@ def preprocess_dataset(
             in counts.items()
         }
 
-    # --------------------------------------------------------
     # Feature types
-    # --------------------------------------------------------
 
     numeric_after = [
 
@@ -1367,18 +1481,12 @@ def preprocess_dataset(
         )
     ]
 
-    # --------------------------------------------------------
-    # Save preprocessed dataset
-    # --------------------------------------------------------
+    # Save
 
     df.to_csv(
         PREPROCESSED_DATASET_PATH,
         index=False,
     )
-
-    # --------------------------------------------------------
-    # Information
-    # --------------------------------------------------------
 
     info = {
 
@@ -1448,6 +1556,682 @@ def preprocess_dataset(
 
 
 # ============================================================
+# ADMIN MODEL TRAINING HELPERS
+# ============================================================
+
+def make_preprocessor(
+    X: pd.DataFrame,
+):
+
+    numeric_features = list(
+        X.select_dtypes(
+            include=np.number
+        ).columns
+    )
+
+    categorical_features = list(
+        X.select_dtypes(
+            exclude=np.number
+        ).columns
+    )
+
+    numeric_pipeline = Pipeline(
+        steps=[
+            (
+                "imputer",
+                SimpleImputer(
+                    strategy="median"
+                ),
+            )
+        ]
+    )
+
+    categorical_pipeline = Pipeline(
+        steps=[
+            (
+                "imputer",
+                SimpleImputer(
+                    strategy="most_frequent"
+                ),
+            ),
+            (
+                "onehot",
+                OneHotEncoder(
+                    handle_unknown="ignore"
+                ),
+            ),
+        ]
+    )
+
+    transformers = []
+
+    if numeric_features:
+
+        transformers.append(
+            (
+                "numeric",
+                numeric_pipeline,
+                numeric_features,
+            )
+        )
+
+    if categorical_features:
+
+        transformers.append(
+            (
+                "categorical",
+                categorical_pipeline,
+                categorical_features,
+            )
+        )
+
+    return ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",
+    )
+
+
+def calculate_roc_auc(
+    model_pipeline,
+    X_test,
+    y_test,
+    number_of_classes: int,
+):
+
+    try:
+
+        if not hasattr(
+            model_pipeline,
+            "predict_proba",
+        ):
+
+            return None
+
+        probabilities = (
+            model_pipeline.predict_proba(
+                X_test
+            )
+        )
+
+        if number_of_classes == 2:
+
+            return float(
+                roc_auc_score(
+                    y_test,
+                    probabilities[:, 1],
+                )
+            )
+
+        return float(
+            roc_auc_score(
+                y_test,
+                probabilities,
+                multi_class="ovr",
+                average="macro",
+            )
+        )
+
+    except Exception as e:
+
+        print(
+            "ROC-AUC calculation warning:",
+            str(e),
+        )
+
+        return None
+
+
+def build_training_models(
+    number_of_classes: int,
+):
+
+    models = {
+
+        "Logistic Regression":
+            LogisticRegression(
+                max_iter=2000,
+                random_state=42,
+            ),
+
+        "Decision Tree":
+            DecisionTreeClassifier(
+                random_state=42,
+                max_depth=10,
+            ),
+
+        "Random Forest":
+            RandomForestClassifier(
+                n_estimators=200,
+                random_state=42,
+                n_jobs=-1,
+                class_weight="balanced",
+            ),
+
+        "SVM":
+            SVC(
+                probability=True,
+                random_state=42,
+                class_weight="balanced",
+            ),
+    }
+
+    # --------------------------------------------------------
+    # XGBoost
+    # --------------------------------------------------------
+
+    if number_of_classes == 2:
+
+        models["XGBoost"] = XGBClassifier(
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.05,
+            subsample=0.9,
+            colsample_bytree=0.9,
+            objective="binary:logistic",
+            eval_metric="logloss",
+            random_state=42,
+            n_jobs=2,
+        )
+
+    else:
+
+        models["XGBoost"] = XGBClassifier(
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.05,
+            subsample=0.9,
+            colsample_bytree=0.9,
+            objective="multi:softprob",
+            num_class=number_of_classes,
+            eval_metric="mlogloss",
+            random_state=42,
+            n_jobs=2,
+        )
+
+    return models
+
+
+def train_admin_models():
+
+    global TRAINING_RESULTS
+    global TRAINING_MODELS
+    global TRAINING_INFO
+
+    if PREPROCESSED_DATASET is None:
+
+        raise ValueError(
+            "Dataset must be preprocessed "
+            "before training."
+        )
+
+    if not DATASET_TARGET:
+
+        raise ValueError(
+            "Target column could not be detected."
+        )
+
+    df = (
+        PREPROCESSED_DATASET.copy()
+    )
+
+    target_column = DATASET_TARGET
+
+    if target_column not in df.columns:
+
+        target_column = (
+            detect_target_column(df)
+        )
+
+    if not target_column:
+
+        raise ValueError(
+            "Target column was not found."
+        )
+
+    # --------------------------------------------------------
+    # Remove rows with invalid target
+    # --------------------------------------------------------
+
+    df = df.dropna(
+        subset=[target_column]
+    ).copy()
+
+    if df.empty:
+
+        raise ValueError(
+            "Dataset contains no usable rows."
+        )
+
+    X = df.drop(
+        columns=[target_column]
+    )
+
+    y_raw = df[
+        target_column
+    ]
+
+    if X.shape[1] == 0:
+
+        raise ValueError(
+            "Dataset contains no feature columns."
+        )
+
+    # --------------------------------------------------------
+    # Encode target
+    # --------------------------------------------------------
+
+    label_encoder = LabelEncoder()
+
+    y = label_encoder.fit_transform(
+        y_raw.astype(str)
+    )
+
+    class_count = len(
+        label_encoder.classes_
+    )
+
+    if class_count < 2:
+
+        raise ValueError(
+            "Training requires at least "
+            "2 target classes."
+        )
+
+    if len(df) < 10:
+
+        raise ValueError(
+            "At least 10 rows are recommended "
+            "for model training."
+        )
+
+    # --------------------------------------------------------
+    # Train/test split
+    # --------------------------------------------------------
+
+    test_size = 0.20
+
+    try:
+
+        X_train, X_test, y_train, y_test = (
+            train_test_split(
+                X,
+                y,
+                test_size=test_size,
+                random_state=42,
+                stratify=y,
+            )
+        )
+
+    except ValueError:
+
+        # Fallback for very small /
+        # highly imbalanced datasets
+
+        X_train, X_test, y_train, y_test = (
+            train_test_split(
+                X,
+                y,
+                test_size=test_size,
+                random_state=42,
+            )
+        )
+
+    # --------------------------------------------------------
+    # Build models
+    # --------------------------------------------------------
+
+    models = build_training_models(
+        class_count
+    )
+
+    results = []
+    trained_models = {}
+
+    # --------------------------------------------------------
+    # Train every algorithm
+    # --------------------------------------------------------
+
+    for model_name, classifier in (
+        models.items()
+    ):
+
+        print(
+            f"Training {model_name}..."
+        )
+
+        try:
+
+            preprocessor = (
+                make_preprocessor(
+                    X_train
+                )
+            )
+
+            pipeline = Pipeline(
+                steps=[
+                    (
+                        "preprocessor",
+                        preprocessor,
+                    ),
+                    (
+                        "classifier",
+                        classifier,
+                    ),
+                ]
+            )
+
+            pipeline.fit(
+                X_train,
+                y_train,
+            )
+
+            predictions = (
+                pipeline.predict(
+                    X_test
+                )
+            )
+
+            accuracy = (
+                accuracy_score(
+                    y_test,
+                    predictions,
+                )
+            )
+
+            precision = (
+                precision_score(
+                    y_test,
+                    predictions,
+                    average="macro",
+                    zero_division=0,
+                )
+            )
+
+            recall = (
+                recall_score(
+                    y_test,
+                    predictions,
+                    average="macro",
+                    zero_division=0,
+                )
+            )
+
+            f1 = (
+                f1_score(
+                    y_test,
+                    predictions,
+                    average="macro",
+                    zero_division=0,
+                )
+            )
+
+            roc_auc = (
+                calculate_roc_auc(
+                    pipeline,
+                    X_test,
+                    y_test,
+                    class_count,
+                )
+            )
+
+            result = {
+
+                "model":
+                    model_name,
+
+                "status":
+                    "success",
+
+                "accuracy":
+                    round(
+                        float(accuracy),
+                        6,
+                    ),
+
+                "accuracy_percent":
+                    round(
+                        float(
+                            accuracy * 100
+                        ),
+                        2,
+                    ),
+
+                "precision":
+                    round(
+                        float(precision),
+                        6,
+                    ),
+
+                "recall":
+                    round(
+                        float(recall),
+                        6,
+                    ),
+
+                "f1_score":
+                    round(
+                        float(f1),
+                        6,
+                    ),
+
+                "roc_auc":
+                    (
+                        round(
+                            float(roc_auc),
+                            6,
+                        )
+                        if roc_auc
+                        is not None
+                        else None
+                    ),
+
+                "test_samples":
+                    int(
+                        len(y_test)
+                    ),
+            }
+
+            results.append(
+                result
+            )
+
+            trained_models[
+                model_name
+            ] = pipeline
+
+            print(
+                f"{model_name} completed:"
+                f" accuracy={accuracy:.4f}"
+            )
+
+        except Exception as e:
+
+            print(
+                f"{model_name} ERROR:",
+                str(e),
+            )
+
+            results.append(
+                {
+
+                    "model":
+                        model_name,
+
+                    "status":
+                        "failed",
+
+                    "accuracy":
+                        None,
+
+                    "accuracy_percent":
+                        None,
+
+                    "precision":
+                        None,
+
+                    "recall":
+                        None,
+
+                    "f1_score":
+                        None,
+
+                    "roc_auc":
+                        None,
+
+                    "test_samples":
+                        int(
+                            len(y_test)
+                        ),
+
+                    "error":
+                        str(e),
+                }
+            )
+
+    # --------------------------------------------------------
+    # Sort successful models by F1
+    # --------------------------------------------------------
+
+    successful_results = [
+
+        item
+
+        for item
+        in results
+
+        if item["status"]
+        == "success"
+    ]
+
+    successful_results.sort(
+        key=lambda item:
+            item["f1_score"],
+        reverse=True,
+    )
+
+    # Keep original model order
+    # for consistent frontend display
+
+    model_order = {
+
+        "Logistic Regression": 1,
+        "Decision Tree": 2,
+        "Random Forest": 3,
+        "SVM": 4,
+        "XGBoost": 5,
+    }
+
+    results.sort(
+        key=lambda item:
+            model_order.get(
+                item["model"],
+                99,
+            )
+    )
+
+    # --------------------------------------------------------
+    # Save state
+    # --------------------------------------------------------
+
+    TRAINING_RESULTS = results
+
+    TRAINING_MODELS = (
+        trained_models
+    )
+
+    TRAINING_INFO = {
+
+        "dataset":
+            DATASET_NAME,
+
+        "target":
+            target_column,
+
+        "rows":
+            int(df.shape[0]),
+
+        "features":
+            int(X.shape[1]),
+
+        "training_rows":
+            int(X_train.shape[0]),
+
+        "testing_rows":
+            int(X_test.shape[0]),
+
+        "classes":
+            [
+                str(item)
+                for item
+                in label_encoder.classes_
+            ],
+
+        "class_count":
+            int(class_count),
+
+        "test_size":
+            test_size,
+
+        "random_state":
+            42,
+
+        "successful_models":
+            len(successful_results),
+
+        "total_models":
+            len(results),
+    }
+
+    # --------------------------------------------------------
+    # Save lightweight JSON results
+    # --------------------------------------------------------
+
+    try:
+
+        import json
+
+        with open(
+            TRAINING_RESULTS_PATH,
+            "w",
+            encoding="utf-8",
+        ) as output:
+
+            json.dump(
+                {
+                    "results":
+                        TRAINING_RESULTS,
+
+                    "training":
+                        TRAINING_INFO,
+                },
+                output,
+                indent=2,
+            )
+
+    except Exception as e:
+
+        print(
+            "Could not save training JSON:",
+            str(e),
+        )
+
+    return {
+
+        "success":
+            True,
+
+        "message":
+            "Model training completed.",
+
+        "training":
+            TRAINING_INFO,
+
+        "results":
+            TRAINING_RESULTS,
+    }
+
+
+# ============================================================
 # ROOT
 # ============================================================
 
@@ -1463,7 +2247,7 @@ def root():
             "online",
 
         "version":
-            "5.0.0",
+            "6.0.0",
 
         "model_loaded":
             model is not None,
@@ -1473,6 +2257,9 @@ def root():
 
         "preprocessed":
             PREPROCESSED_DATASET is not None,
+
+        "models_trained":
+            len(TRAINING_RESULTS) > 0,
     }
 
 
@@ -1509,6 +2296,9 @@ def health():
 
         "dataset_preprocessed":
             PREPROCESSED_DATASET is not None,
+
+        "models_trained":
+            len(TRAINING_RESULTS) > 0,
     }
 
 
@@ -1562,6 +2352,19 @@ def info():
             "preprocessed":
                 PREPROCESSED_DATASET is not None,
         },
+
+        "training": {
+
+            "trained":
+                len(TRAINING_RESULTS) > 0,
+
+            "models":
+                [
+                    item["model"]
+                    for item
+                    in TRAINING_RESULTS
+                ],
+        },
     }
 
 
@@ -1579,6 +2382,9 @@ async def upload_dataset(
     global DATASET_TARGET
     global PREPROCESSED_DATASET
     global PREPROCESSING_INFO
+    global TRAINING_RESULTS
+    global TRAINING_MODELS
+    global TRAINING_INFO
 
     if not file.filename:
 
@@ -1587,13 +2393,19 @@ async def upload_dataset(
             detail="No file selected.",
         )
 
-    filename = file.filename.lower()
+    filename = (
+        file.filename.lower()
+    )
 
-    if not filename.endswith(".csv"):
+    if not filename.endswith(
+        ".csv"
+    ):
 
         raise HTTPException(
             status_code=400,
-            detail="Only CSV files are supported.",
+            detail=(
+                "Only CSV files are supported."
+            ),
         )
 
     try:
@@ -1604,12 +2416,12 @@ async def upload_dataset(
 
             raise HTTPException(
                 status_code=400,
-                detail="The uploaded file is empty.",
+                detail=(
+                    "The uploaded file is empty."
+                ),
             )
 
-        # ----------------------------------------------------
-        # Save dataset
-        # ----------------------------------------------------
+        # Save
 
         with open(
             UPLOADED_DATASET_PATH,
@@ -1620,9 +2432,7 @@ async def upload_dataset(
                 contents
             )
 
-        # ----------------------------------------------------
-        # Read dataset
-        # ----------------------------------------------------
+        # Read
 
         dataframe = pd.read_csv(
             UPLOADED_DATASET_PATH
@@ -1638,7 +2448,9 @@ async def upload_dataset(
                 ),
             )
 
-        if len(dataframe.columns) == 0:
+        if len(
+            dataframe.columns
+        ) == 0:
 
             raise HTTPException(
                 status_code=400,
@@ -1648,9 +2460,7 @@ async def upload_dataset(
                 ),
             )
 
-        # ----------------------------------------------------
         # Detect target
-        # ----------------------------------------------------
 
         target_column = (
             detect_target_column(
@@ -1658,27 +2468,32 @@ async def upload_dataset(
             )
         )
 
-        # ----------------------------------------------------
-        # Store dataset
-        # ----------------------------------------------------
+        # Store
 
-        DATASET = dataframe.copy()
+        DATASET = (
+            dataframe.copy()
+        )
 
-        DATASET_NAME = file.filename
+        DATASET_NAME = (
+            file.filename
+        )
 
-        DATASET_TARGET = target_column
+        DATASET_TARGET = (
+            target_column
+        )
 
-        # ----------------------------------------------------
         # Reset preprocessing
-        # ----------------------------------------------------
 
         PREPROCESSED_DATASET = None
-
         PREPROCESSING_INFO = None
 
-        # ----------------------------------------------------
+        # Reset training
+
+        TRAINING_RESULTS = []
+        TRAINING_MODELS = {}
+        TRAINING_INFO = None
+
         # Statistics
-        # ----------------------------------------------------
 
         missing_values = int(
             dataframe.isna()
@@ -1717,16 +2532,24 @@ async def upload_dataset(
                 file.filename,
 
             "rows":
-                int(dataframe.shape[0]),
+                int(
+                    dataframe.shape[0]
+                ),
 
             "columns":
-                int(dataframe.shape[1]),
+                int(
+                    dataframe.shape[1]
+                ),
 
             "shape": [
 
-                int(dataframe.shape[0]),
+                int(
+                    dataframe.shape[0]
+                ),
 
-                int(dataframe.shape[1]),
+                int(
+                    dataframe.shape[1]
+                ),
             ],
 
             "column_names": [
@@ -1740,14 +2563,16 @@ async def upload_dataset(
             "target_column":
                 (
                     str(target_column)
-                    if target_column is not None
+                    if target_column
+                    is not None
                     else None
                 ),
 
             "target":
                 (
                     str(target_column)
-                    if target_column is not None
+                    if target_column
+                    is not None
                     else None
                 ),
 
@@ -1764,6 +2589,9 @@ async def upload_dataset(
                 categorical_columns,
 
             "preprocessed":
+                False,
+
+            "models_trained":
                 False,
         }
 
@@ -1814,16 +2642,24 @@ def dataset_status():
             DATASET_NAME,
 
         "rows":
-            int(DATASET.shape[0]),
+            int(
+                DATASET.shape[0]
+            ),
 
         "columns":
-            int(DATASET.shape[1]),
+            int(
+                DATASET.shape[1]
+            ),
 
         "shape": [
 
-            int(DATASET.shape[0]),
+            int(
+                DATASET.shape[0]
+            ),
 
-            int(DATASET.shape[1]),
+            int(
+                DATASET.shape[1]
+            ),
         ],
 
         "target_column":
@@ -1851,10 +2687,15 @@ def dataset_status():
             ),
 
         "preprocessed":
-            PREPROCESSED_DATASET is not None,
+            PREPROCESSED_DATASET
+            is not None,
 
         "preprocessing":
             PREPROCESSING_INFO,
+
+        "models_trained":
+            len(TRAINING_RESULTS)
+            > 0,
     }
 
 
@@ -1907,7 +2748,10 @@ def admin_preprocess():
                 True,
 
             "message":
-                "Dataset preprocessing completed successfully.",
+                (
+                    "Dataset preprocessing "
+                    "completed successfully."
+                ),
 
             "dataset_name":
                 DATASET_NAME,
@@ -1946,7 +2790,10 @@ def preprocessing_status():
                 False,
 
             "message":
-                "Dataset has not been preprocessed yet.",
+                (
+                    "Dataset has not been "
+                    "preprocessed yet."
+                ),
         }
 
     return {
@@ -1959,6 +2806,181 @@ def preprocessing_status():
 
         "information":
             PREPROCESSING_INFO,
+    }
+
+
+# ============================================================
+# ADMIN - TRAIN MODELS
+# ============================================================
+
+@app.post("/admin/train")
+def admin_train():
+
+    if DATASET is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No dataset has been uploaded. "
+                "Upload a CSV dataset first."
+            ),
+        )
+
+    if PREPROCESSED_DATASET is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Dataset has not been preprocessed. "
+                "Click Preprocess Dataset first."
+            ),
+        )
+
+    try:
+
+        print(
+            "Starting admin model training..."
+        )
+
+        result = (
+            train_admin_models()
+        )
+
+        print(
+            "Admin model training completed."
+        )
+
+        return result
+
+    except Exception as e:
+
+        print(
+            "TRAINING ERROR:",
+            str(e),
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Model training failed: "
+                f"{str(e)}"
+            ),
+        )
+
+
+# ============================================================
+# ADMIN - MODEL COMPARISON
+# ============================================================
+
+@app.get("/admin/model-comparison")
+def model_comparison():
+
+    if not TRAINING_RESULTS:
+
+        return {
+
+            "trained":
+                False,
+
+            "message":
+                (
+                    "No models have been trained yet."
+                ),
+
+            "results":
+                [],
+        }
+
+    return {
+
+        "trained":
+            True,
+
+        "dataset":
+            DATASET_NAME,
+
+        "target":
+            DATASET_TARGET,
+
+        "results":
+            TRAINING_RESULTS,
+
+        "training":
+            TRAINING_INFO,
+    }
+
+
+# ============================================================
+# ADMIN - METRICS
+# ============================================================
+
+@app.get("/admin/metrics")
+def admin_metrics():
+
+    if not TRAINING_RESULTS:
+
+        return {
+
+            "available":
+                False,
+
+            "message":
+                (
+                    "Training metrics are not "
+                    "available yet."
+                ),
+
+            "metrics":
+                [],
+        }
+
+    return {
+
+        "available":
+            True,
+
+        "dataset":
+            DATASET_NAME,
+
+        "target":
+            DATASET_TARGET,
+
+        "metrics":
+            TRAINING_RESULTS,
+
+        "training":
+            TRAINING_INFO,
+    }
+
+
+# ============================================================
+# ADMIN - TRAINING STATUS
+# ============================================================
+
+@app.get("/admin/train")
+def training_status():
+
+    if not TRAINING_RESULTS:
+
+        return {
+
+            "trained":
+                False,
+
+            "message":
+                "Models have not been trained yet.",
+        }
+
+    return {
+
+        "trained":
+            True,
+
+        "training":
+            TRAINING_INFO,
+
+        "results":
+            TRAINING_RESULTS,
     }
 
 
@@ -1977,9 +2999,7 @@ def predict(
             "Prediction request received."
         )
 
-        # ----------------------------------------------------
         # Convert request
-        # ----------------------------------------------------
 
         df = request_to_dataframe(
             req
@@ -1989,9 +3009,7 @@ def predict(
             "Input dataframe created."
         )
 
-        # ----------------------------------------------------
         # Prediction
-        # ----------------------------------------------------
 
         result = get_prediction(
             df
@@ -2002,9 +3020,7 @@ def predict(
             result["prediction"],
         )
 
-        # ----------------------------------------------------
         # SHAP
-        # ----------------------------------------------------
 
         shap_result = generate_shap(
             df
@@ -2014,9 +3030,7 @@ def predict(
             "SHAP completed."
         )
 
-        # ----------------------------------------------------
         # Counterfactual
-        # ----------------------------------------------------
 
         counterfactual_result = (
             generate_counterfactuals(
@@ -2029,10 +3043,6 @@ def predict(
         print(
             "Counterfactual completed."
         )
-
-        # ----------------------------------------------------
-        # Response
-        # ----------------------------------------------------
 
         return {
 
