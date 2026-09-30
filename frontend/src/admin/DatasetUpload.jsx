@@ -7,9 +7,17 @@ export default function DatasetUpload() {
 
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [preprocessing, setPreprocessing] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
   const [datasetInfo, setDatasetInfo] = useState(null);
+  const [preprocessInfo, setPreprocessInfo] = useState(null);
+
+  // ==========================================================
+  // FILE SELECTION
+  // ==========================================================
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files?.[0];
@@ -17,21 +25,34 @@ export default function DatasetUpload() {
     setMessage("");
     setError("");
     setDatasetInfo(null);
+    setPreprocessInfo(null);
 
     if (!selectedFile) {
       setFile(null);
       return;
     }
 
-    if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
+    if (
+      !selectedFile.name
+        .toLowerCase()
+        .endsWith(".csv")
+    ) {
       setFile(null);
-      setError("Please select a CSV file only.");
+
+      setError(
+        "Please select a CSV file only."
+      );
+
       event.target.value = "";
       return;
     }
 
     setFile(selectedFile);
   };
+
+  // ==========================================================
+  // OPEN FILE PICKER
+  // ==========================================================
 
   const openFilePicker = () => {
     setError("");
@@ -42,9 +63,15 @@ export default function DatasetUpload() {
     }
   };
 
+  // ==========================================================
+  // UPLOAD DATASET
+  // ==========================================================
+
   const handleUpload = async () => {
     if (!file) {
-      setError("Please select a CSV dataset first.");
+      setError(
+        "Please select a CSV dataset first."
+      );
       return;
     }
 
@@ -52,11 +79,15 @@ export default function DatasetUpload() {
     setMessage("");
     setError("");
     setDatasetInfo(null);
+    setPreprocessInfo(null);
 
     try {
       const formData = new FormData();
 
-      formData.append("file", file);
+      formData.append(
+        "file",
+        file
+      );
 
       const response = await fetch(
         `${API_URL}/admin/upload-dataset`,
@@ -66,7 +97,8 @@ export default function DatasetUpload() {
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -103,10 +135,12 @@ export default function DatasetUpload() {
           "Not detected",
 
         missingValues:
-          data?.missing_values ?? "—",
+          data?.missing_values ??
+          "—",
 
         duplicateRows:
-          data?.duplicate_rows ?? "—",
+          data?.duplicate_rows ??
+          "—",
       });
 
     } catch (err) {
@@ -125,24 +159,90 @@ export default function DatasetUpload() {
     }
   };
 
+  // ==========================================================
+  // PREPROCESS DATASET
+  // ==========================================================
+
+  const handlePreprocess = async () => {
+    setPreprocessing(true);
+    setMessage("");
+    setError("");
+    setPreprocessInfo(null);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/admin/preprocess`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            data?.message ||
+            "Dataset preprocessing failed."
+        );
+      }
+
+      setPreprocessInfo(data);
+
+      setMessage(
+        data?.message ||
+          "Dataset preprocessing completed successfully."
+      );
+
+    } catch (err) {
+      console.error(
+        "Dataset preprocessing error:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Unable to preprocess dataset."
+      );
+
+    } finally {
+      setPreprocessing(false);
+    }
+  };
+
+  // ==========================================================
+  // UI
+  // ==========================================================
+
   return (
     <section className="admin-feature-card dataset-upload-card">
 
+      {/* HEADER */}
       <div className="admin-feature-header">
+
         <div>
+
           <span className="admin-feature-icon">
             📤
           </span>
 
-          <h2>Upload Dataset</h2>
+          <h2>
+            Upload Dataset
+          </h2>
 
           <p>
-            Upload a CSV dataset for preprocessing,
-            model training and analysis.
+            Upload a CSV dataset for
+            preprocessing, model training
+            and analysis.
           </p>
+
         </div>
+
       </div>
 
+
+      {/* UPLOAD AREA */}
       <div className="dataset-upload-area">
 
         <div className="dataset-upload-icon">
@@ -157,7 +257,9 @@ export default function DatasetUpload() {
           Only CSV files are supported.
         </p>
 
-        {/* Native file input */}
+
+        {/* NATIVE FILE INPUT */}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -166,7 +268,9 @@ export default function DatasetUpload() {
           className="dataset-native-input"
         />
 
-        {/* File picker button */}
+
+        {/* FILE PICKER BUTTON */}
+
         <button
           type="button"
           className="dataset-file-button"
@@ -175,8 +279,11 @@ export default function DatasetUpload() {
           📁 Choose CSV File
         </button>
 
-        {/* Selected file */}
+
+        {/* SELECTED FILE */}
+
         {file && (
+
           <div className="selected-dataset">
 
             <span className="selected-dataset-icon">
@@ -190,7 +297,9 @@ export default function DatasetUpload() {
               </strong>
 
               <small>
-                {(file.size / 1024).toFixed(1)} KB
+                {(file.size / 1024).toFixed(1)}
+                {" "}
+                KB
               </small>
 
             </div>
@@ -204,9 +313,12 @@ export default function DatasetUpload() {
             </button>
 
           </div>
+
         )}
 
-        {/* Upload button */}
+
+        {/* UPLOAD BUTTON */}
+
         <button
           type="button"
           className="dataset-upload-button"
@@ -218,74 +330,121 @@ export default function DatasetUpload() {
             : "⬆️ Upload Dataset"}
         </button>
 
-        {/* Success */}
+
+        {/* PREPROCESS BUTTON */}
+
+        {datasetInfo && (
+
+          <button
+            type="button"
+            className="dataset-preprocess-button"
+            onClick={handlePreprocess}
+            disabled={preprocessing}
+          >
+            {preprocessing
+              ? "⚙️ Preprocessing..."
+              : "🧹 Preprocess Dataset"}
+          </button>
+
+        )}
+
+
+        {/* SUCCESS MESSAGE */}
+
         {message && (
+
           <div className="dataset-success">
             ✅ {message}
           </div>
+
         )}
 
-        {/* Error */}
+
+        {/* ERROR MESSAGE */}
+
         {error && (
+
           <div className="dataset-error">
             ❌ {error}
           </div>
+
         )}
 
       </div>
 
-      {/* Dataset information */}
+
+      {/* DATASET INFORMATION */}
+
       {datasetInfo && (
+
         <div className="dataset-info">
 
           <div className="dataset-info-title">
             📊 Dataset Information
           </div>
 
+
           <div className="dataset-info-grid">
 
             <div>
-              <span>Dataset</span>
+              <span>
+                Dataset
+              </span>
 
               <strong>
                 {datasetInfo.filename}
               </strong>
             </div>
 
+
             <div>
-              <span>Rows</span>
+              <span>
+                Rows
+              </span>
 
               <strong>
                 {datasetInfo.rows}
               </strong>
             </div>
 
+
             <div>
-              <span>Columns</span>
+              <span>
+                Columns
+              </span>
 
               <strong>
                 {datasetInfo.columns}
               </strong>
             </div>
 
+
             <div>
-              <span>Target</span>
+              <span>
+                Target
+              </span>
 
               <strong>
                 {datasetInfo.target}
               </strong>
             </div>
 
+
             <div>
-              <span>Missing Values</span>
+              <span>
+                Missing Values
+              </span>
 
               <strong>
                 {datasetInfo.missingValues}
               </strong>
             </div>
 
+
             <div>
-              <span>Duplicate Rows</span>
+              <span>
+                Duplicate Rows
+              </span>
 
               <strong>
                 {datasetInfo.duplicateRows}
@@ -295,32 +454,256 @@ export default function DatasetUpload() {
           </div>
 
         </div>
+
+      )}
+
+
+      {/* PREPROCESSING RESULTS */}
+
+      {preprocessInfo && (
+
+        <div className="dataset-info preprocessing-results">
+
+          <div className="dataset-info-title">
+            🧹 Preprocessing Results
+          </div>
+
+
+          <div className="dataset-info-grid">
+
+            <div>
+              <span>
+                Original Rows
+              </span>
+
+              <strong>
+                {preprocessInfo.original_rows ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Processed Rows
+              </span>
+
+              <strong>
+                {preprocessInfo.processed_rows ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Original Columns
+              </span>
+
+              <strong>
+                {preprocessInfo.original_columns ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Processed Columns
+              </span>
+
+              <strong>
+                {preprocessInfo.processed_columns ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Duplicates Removed
+              </span>
+
+              <strong>
+                {preprocessInfo.duplicate_rows_removed ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Empty Rows Removed
+              </span>
+
+              <strong>
+                {preprocessInfo.empty_rows_removed ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Missing Before
+              </span>
+
+              <strong>
+                {preprocessInfo.missing_values_before ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Missing After
+              </span>
+
+              <strong>
+                {preprocessInfo.missing_values_after ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Target
+              </span>
+
+              <strong>
+                {preprocessInfo.target_column ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Numeric Features
+              </span>
+
+              <strong>
+                {preprocessInfo.numeric_feature_count ?? "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Categorical Features
+              </span>
+
+              <strong>
+                {preprocessInfo.categorical_feature_count ?? "—"}
+              </strong>
+            </div>
+
+          </div>
+
+
+          {/* CLASS DISTRIBUTION */}
+
+          {preprocessInfo.target_distribution &&
+            Object.keys(
+              preprocessInfo.target_distribution
+            ).length > 0 && (
+
+              <div className="preprocessing-distribution">
+
+                <h3>
+                  🎯 Target Class Distribution
+                </h3>
+
+                <div className="distribution-list">
+
+                  {Object.entries(
+                    preprocessInfo.target_distribution
+                  ).map(
+                    ([key, value]) => (
+
+                      <div
+                        className="distribution-item"
+                        key={key}
+                      >
+
+                        <span>
+                          Class {key}
+                        </span>
+
+                        <strong>
+                          {value}
+                        </strong>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+
+          {/* FEATURE INFORMATION */}
+
+          {preprocessInfo.numeric_features &&
+            preprocessInfo.numeric_features.length > 0 && (
+
+              <div className="preprocessing-feature-list">
+
+                <h3>
+                  🔢 Numeric Features
+                </h3>
+
+                <div className="feature-tags">
+
+                  {preprocessInfo.numeric_features.map(
+                    (feature) => (
+
+                      <span
+                        key={feature}
+                      >
+                        {feature}
+                      </span>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+
+          {preprocessInfo.categorical_features &&
+            preprocessInfo.categorical_features.length > 0 && (
+
+              <div className="preprocessing-feature-list">
+
+                <h3>
+                  🔤 Categorical Features
+                </h3>
+
+                <div className="feature-tags">
+
+                  {preprocessInfo.categorical_features.map(
+                    (feature) => (
+
+                      <span
+                        key={feature}
+                      >
+                        {feature}
+                      </span>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+        </div>
+
       )}
 
     </section>
   );
 }
-
-Important
-
-This version does not use:
-
-style={{ display: "none" }}
-
-for the file input.
-
-The actual file input remains available to the browser, while our button triggers it.
-
-Now do only these steps
-
-1. Replace "DatasetUpload.jsx".
-2. Save it.
-3. Commit it to GitHub.
-4. Wait for Vercel → Ready.
-5. Open the website again.
-6. Go to Admin Dashboard.
-7. Tap Choose CSV File.
-
-You should now get the Android file picker.
-
-Don't change "index.css" yet. First let's make sure the file picker actually opens.
