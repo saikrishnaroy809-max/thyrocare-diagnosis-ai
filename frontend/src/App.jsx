@@ -287,7 +287,7 @@ function normalizeCounterfactuals(counterfactuals) {
   }
 
   /*
-   * If the backend wraps the object inside data.
+   * If backend wraps object inside data.
    */
 
   if (
@@ -301,7 +301,7 @@ function normalizeCounterfactuals(counterfactuals) {
   }
 
   /*
-   * Direct scenarios array.
+   * Direct scenario property.
    */
 
   if (
@@ -436,8 +436,28 @@ export default function App() {
       ...initialForm,
     });
 
+  /*
+   * IMPORTANT:
+   * Restore the latest result when the
+   * application is opened again during
+   * the same browser session.
+   */
+
   const [result, setResult] =
-    useState(null);
+    useState(() => {
+      try {
+        const saved =
+          sessionStorage.getItem(
+            "thyrocare_latest_result"
+          );
+
+        return saved
+          ? JSON.parse(saved)
+          : null;
+      } catch {
+        return null;
+      }
+    });
 
   const [loading, setLoading] =
     useState(false);
@@ -471,10 +491,29 @@ export default function App() {
      HISTORY
   ======================================================= */
 
+  /*
+   * IMPORTANT:
+   * Restore prediction history from
+   * sessionStorage.
+   */
+
   const [
     analysisHistory,
     setAnalysisHistory,
-  ] = useState([]);
+  ] = useState(() => {
+    try {
+      const saved =
+        sessionStorage.getItem(
+          "thyrocare_analysis_history"
+        );
+
+      return saved
+        ? JSON.parse(saved)
+        : [];
+    } catch {
+      return [];
+    }
+  });
 
   /* =======================================================
      NAVIGATION
@@ -725,24 +764,40 @@ export default function App() {
         );
       }
 
-      /*
-       * IMPORTANT:
-       * Save the COMPLETE API response.
-       *
-       * This includes:
-       * prediction
-       * probabilities
-       * shap_values
-       * counterfactuals
-       */
+      /* =================================================
+         SAVE COMPLETE RESULT
+      ================================================= */
 
       setResult(data);
+
+      /*
+       * Persist latest result so the
+       * Admin Dashboard can still access
+       * it after navigation.
+       */
+
+      try {
+        sessionStorage.setItem(
+          "thyrocare_latest_result",
+          JSON.stringify(data)
+        );
+      } catch {}
+
+
+      /* =================================================
+         EXTRACT PREDICTION
+      ================================================= */
 
       const predicted =
         data?.prediction ??
         data?.predicted_class ??
         data?.class ??
         null;
+
+
+      /* =================================================
+         EXTRACT PROBABILITIES
+      ================================================= */
 
       const probabilities =
         data?.probabilities ||
@@ -763,33 +818,72 @@ export default function App() {
         data?.class_1_probability ??
         0;
 
+
+      /* =================================================
+         MODEL NAME
+      ================================================= */
+
       const modelName =
         data?.model_name ||
         data?.model ||
         data?.algorithm ||
         "XGBoost";
 
+
+      /* =================================================
+         CREATE HISTORY ITEM
+      ================================================= */
+
+      const historyItem = {
+        id: Date.now(),
+
+        time:
+          new Date().toISOString(),
+
+        prediction: predicted,
+
+        probabilities: {
+          "0": Number(
+            historyClass0
+          ),
+
+          "1": Number(
+            historyClass1
+          ),
+        },
+
+        model: modelName,
+      };
+
+
+      /* =================================================
+         SAVE HISTORY
+      ================================================= */
+
       setAnalysisHistory(
-        (previous) => [
-          {
-            id: Date.now(),
+        (previous) => {
+          const nextHistory = [
+            historyItem,
+            ...previous,
+          ].slice(0, 20);
 
-            time:
-              new Date().toISOString(),
+          try {
+            sessionStorage.setItem(
+              "thyrocare_analysis_history",
+              JSON.stringify(
+                nextHistory
+              )
+            );
+          } catch {}
 
-            prediction: predicted,
-
-            probabilities: {
-              "0": historyClass0,
-              "1": historyClass1,
-            },
-
-            model: modelName,
-          },
-
-          ...previous,
-        ].slice(0, 20)
+          return nextHistory;
+        }
       );
+
+
+      /* =================================================
+         GO TO RESULTS
+      ================================================= */
 
       setPage("results");
 
@@ -797,6 +891,7 @@ export default function App() {
         top: 0,
         behavior: "smooth",
       });
+
     } catch (err) {
       if (
         err?.name ===
@@ -830,6 +925,19 @@ export default function App() {
     });
 
     setResult(null);
+
+    /*
+     * Clear only the latest result.
+     *
+     * Prediction history is preserved.
+     */
+
+    try {
+      sessionStorage.removeItem(
+        "thyrocare_latest_result"
+      );
+    } catch {}
+
     setError("");
 
     window.scrollTo({
@@ -1536,6 +1644,7 @@ export default function App() {
                   Select the patient's
                   clinical indicators.
                 </p>
+
               </div>
 
             </div>
@@ -1889,6 +1998,7 @@ export default function App() {
                       )
                     )}%`,
                   }}
+
                 />
 
               </div>
@@ -2132,7 +2242,6 @@ export default function App() {
                       )}
 
                   </div>
-
                 )
               )}
 
@@ -2529,4 +2638,4 @@ professional for medical decisions.
 
     </div>
   );
-     }
+         }
