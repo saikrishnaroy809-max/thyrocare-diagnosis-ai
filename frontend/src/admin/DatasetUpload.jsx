@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 
 const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
 
 export default function DatasetUpload() {
+  const fileInputRef = useRef(null);
+
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -21,16 +23,23 @@ export default function DatasetUpload() {
       return;
     }
 
-    const isCSV =
-      selectedFile.name.toLowerCase().endsWith(".csv");
-
-    if (!isCSV) {
+    if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
       setFile(null);
-      setError("Please select a CSV file.");
+      setError("Please select a CSV file only.");
+      event.target.value = "";
       return;
     }
 
     setFile(selectedFile);
+  };
+
+  const openFilePicker = () => {
+    setError("");
+    setMessage("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleUpload = async () => {
@@ -46,6 +55,7 @@ export default function DatasetUpload() {
 
     try {
       const formData = new FormData();
+
       formData.append("file", file);
 
       const response = await fetch(
@@ -80,25 +90,36 @@ export default function DatasetUpload() {
         rows:
           data?.rows ??
           data?.shape?.[0] ??
-          data?.row_count ??
           "—",
 
         columns:
           data?.columns ??
           data?.shape?.[1] ??
-          data?.column_count ??
           "—",
 
         target:
           data?.target_column ||
           data?.target ||
           "Not detected",
+
+        missingValues:
+          data?.missing_values ?? "—",
+
+        duplicateRows:
+          data?.duplicate_rows ?? "—",
       });
+
     } catch (err) {
+      console.error(
+        "Dataset upload error:",
+        err
+      );
+
       setError(
         err?.message ||
           "Unable to upload dataset."
       );
+
     } finally {
       setLoading(false);
     }
@@ -106,9 +127,12 @@ export default function DatasetUpload() {
 
   return (
     <section className="admin-feature-card dataset-upload-card">
+
       <div className="admin-feature-header">
         <div>
-          <span className="admin-feature-icon">📤</span>
+          <span className="admin-feature-icon">
+            📤
+          </span>
 
           <h2>Upload Dataset</h2>
 
@@ -120,6 +144,7 @@ export default function DatasetUpload() {
       </div>
 
       <div className="dataset-upload-area">
+
         <div className="dataset-upload-icon">
           📁
         </div>
@@ -132,35 +157,56 @@ export default function DatasetUpload() {
           Only CSV files are supported.
         </p>
 
-        <label
-          className="dataset-file-button"
-          htmlFor="thyroid-dataset-file"
-        >
-          Choose CSV File
-        </label>
-
+        {/* Native file input */}
         <input
-          id="thyroid-dataset-file"
+          ref={fileInputRef}
           type="file"
           accept=".csv,text/csv"
           onChange={handleFileChange}
-          style={{ display: "none" }}
+          className="dataset-native-input"
         />
 
+        {/* File picker button */}
+        <button
+          type="button"
+          className="dataset-file-button"
+          onClick={openFilePicker}
+        >
+          📁 Choose CSV File
+        </button>
+
+        {/* Selected file */}
         {file && (
           <div className="selected-dataset">
-            <span>📄</span>
 
-            <div>
-              <strong>{file.name}</strong>
+            <span className="selected-dataset-icon">
+              📄
+            </span>
+
+            <div className="selected-dataset-details">
+
+              <strong>
+                {file.name}
+              </strong>
 
               <small>
                 {(file.size / 1024).toFixed(1)} KB
               </small>
+
             </div>
+
+            <button
+              type="button"
+              className="change-dataset-button"
+              onClick={openFilePicker}
+            >
+              Change
+            </button>
+
           </div>
         )}
 
+        {/* Upload button */}
         <button
           type="button"
           className="dataset-upload-button"
@@ -168,32 +214,39 @@ export default function DatasetUpload() {
           disabled={!file || loading}
         >
           {loading
-            ? "Uploading..."
-            : "Upload Dataset"}
+            ? "⏳ Uploading..."
+            : "⬆️ Upload Dataset"}
         </button>
 
+        {/* Success */}
         {message && (
           <div className="dataset-success">
             ✅ {message}
           </div>
         )}
 
+        {/* Error */}
         {error && (
           <div className="dataset-error">
             ❌ {error}
           </div>
         )}
+
       </div>
 
+      {/* Dataset information */}
       {datasetInfo && (
         <div className="dataset-info">
+
           <div className="dataset-info-title">
             📊 Dataset Information
           </div>
 
           <div className="dataset-info-grid">
+
             <div>
               <span>Dataset</span>
+
               <strong>
                 {datasetInfo.filename}
               </strong>
@@ -201,6 +254,7 @@ export default function DatasetUpload() {
 
             <div>
               <span>Rows</span>
+
               <strong>
                 {datasetInfo.rows}
               </strong>
@@ -208,6 +262,7 @@ export default function DatasetUpload() {
 
             <div>
               <span>Columns</span>
+
               <strong>
                 {datasetInfo.columns}
               </strong>
@@ -215,13 +270,57 @@ export default function DatasetUpload() {
 
             <div>
               <span>Target</span>
+
               <strong>
                 {datasetInfo.target}
               </strong>
             </div>
+
+            <div>
+              <span>Missing Values</span>
+
+              <strong>
+                {datasetInfo.missingValues}
+              </strong>
+            </div>
+
+            <div>
+              <span>Duplicate Rows</span>
+
+              <strong>
+                {datasetInfo.duplicateRows}
+              </strong>
+            </div>
+
           </div>
+
         </div>
       )}
+
     </section>
   );
-              }
+}
+
+Important
+
+This version does not use:
+
+style={{ display: "none" }}
+
+for the file input.
+
+The actual file input remains available to the browser, while our button triggers it.
+
+Now do only these steps
+
+1. Replace "DatasetUpload.jsx".
+2. Save it.
+3. Commit it to GitHub.
+4. Wait for Vercel → Ready.
+5. Open the website again.
+6. Go to Admin Dashboard.
+7. Tap Choose CSV File.
+
+You should now get the Android file picker.
+
+Don't change "index.css" yet. First let's make sure the file picker actually opens.
