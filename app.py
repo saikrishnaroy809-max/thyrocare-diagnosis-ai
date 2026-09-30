@@ -2,10 +2,13 @@
 # THYROCARE AI - FASTAPI BACKEND
 # Thyroid Disease Prediction + SHAP + Counterfactual AI
 # Admin Dataset Upload + Preprocessing + Model Training
+# Persistent Admin State
 # ============================================================
 
 from pathlib import Path
 from typing import Any, Dict, List
+import json
+import os
 
 import joblib
 import numpy as np
@@ -15,7 +18,10 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Machine Learning
+# ============================================================
+# MACHINE LEARNING
+# ============================================================
+
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import (
     OneHotEncoder,
@@ -24,10 +30,12 @@ from sklearn.preprocessing import (
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -35,6 +43,7 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
 )
+
 from xgboost import XGBClassifier
 
 
@@ -48,7 +57,7 @@ app = FastAPI(
         "AI-powered thyroid disease prediction "
         "with Explainable AI and Admin ML Management"
     ),
-    version="6.0.0",
+    version="7.0.0",
 )
 
 
@@ -85,20 +94,33 @@ DATASET_DIR.mkdir(
 )
 
 UPLOADED_DATASET_PATH = (
-    DATASET_DIR / "uploaded_dataset.csv"
+    DATASET_DIR
+    / "uploaded_dataset.csv"
 )
 
 PREPROCESSED_DATASET_PATH = (
-    DATASET_DIR / "preprocessed_dataset.csv"
+    DATASET_DIR
+    / "preprocessed_dataset.csv"
 )
 
 TRAINING_RESULTS_PATH = (
-    DATASET_DIR / "training_results.json"
+    DATASET_DIR
+    / "training_results.json"
+)
+
+TRAINING_MODELS_PATH = (
+    DATASET_DIR
+    / "training_models.joblib"
+)
+
+ADMIN_STATE_PATH = (
+    DATASET_DIR
+    / "admin_state.json"
 )
 
 
 # ============================================================
-# LOAD EXISTING PRODUCTION MODEL
+# LOAD PRODUCTION MODEL
 # ============================================================
 
 model = None
@@ -125,7 +147,7 @@ except Exception as e:
 
 
 # ============================================================
-# ORIGINAL TRAINING FEATURES
+# ORIGINAL FEATURES
 # ============================================================
 
 FEATURE_NAMES = [
@@ -211,7 +233,7 @@ BINARY_FEATURES = [
 
 
 # ============================================================
-# ADMIN DATASET STATE
+# ADMIN STATE
 # ============================================================
 
 DATASET = None
@@ -265,36 +287,351 @@ def detect_target_column(
     for candidate in TARGET_COLUMN_CANDIDATES:
 
         if candidate in dataframe.columns:
-
             return candidate
 
     normalized = {
-
-        str(column)
-        .strip()
-        .lower(): column
-
-        for column
-        in dataframe.columns
+        str(column).strip().lower(): column
+        for column in dataframe.columns
     }
 
     for candidate in TARGET_COLUMN_CANDIDATES:
 
-        key = (
-            candidate
-            .strip()
-            .lower()
-        )
+        key = candidate.strip().lower()
 
         if key in normalized:
-
             return normalized[key]
 
     if len(dataframe.columns) > 0:
-
         return dataframe.columns[-1]
 
     return None
+
+
+# ============================================================
+# PERSISTENCE HELPERS
+# ============================================================
+
+def save_admin_state():
+    """
+    Save lightweight admin state.
+
+    This stores metadata only.
+    Dataset and trained models are stored
+    in their own files.
+    """
+
+    global DATASET_NAME
+    global DATASET_TARGET
+    global PREPROCESSING_INFO
+    global TRAINING_INFO
+
+    state = {
+
+        "dataset_name":
+            DATASET_NAME,
+
+        "dataset_target":
+            (
+                str(DATASET_TARGET)
+                if DATASET_TARGET is not None
+                else None
+            ),
+
+        "preprocessing_info":
+            PREPROCESSING_INFO,
+
+        "training_info":
+            TRAINING_INFO,
+    }
+
+    try:
+
+        with open(
+            ADMIN_STATE_PATH,
+            "w",
+            encoding="utf-8",
+        ) as file:
+
+            json.dump(
+                state,
+                file,
+                indent=2,
+                default=str,
+            )
+
+        print(
+            "Admin state saved."
+        )
+
+    except Exception as e:
+
+        print(
+            "ADMIN STATE SAVE ERROR:",
+            str(e),
+        )
+
+
+def save_training_state():
+    """
+    Save training results and trained pipelines.
+    """
+
+    global TRAINING_RESULTS
+    global TRAINING_MODELS
+    global TRAINING_INFO
+
+    try:
+
+        with open(
+            TRAINING_RESULTS_PATH,
+            "w",
+            encoding="utf-8",
+        ) as file:
+
+            json.dump(
+                {
+                    "results":
+                        TRAINING_RESULTS,
+
+                    "training":
+                        TRAINING_INFO,
+                },
+                file,
+                indent=2,
+                default=str,
+            )
+
+        if TRAINING_MODELS:
+
+            joblib.dump(
+                TRAINING_MODELS,
+                TRAINING_MODELS_PATH,
+            )
+
+        print(
+            "Training state saved."
+        )
+
+    except Exception as e:
+
+        print(
+            "TRAINING STATE SAVE ERROR:",
+            str(e),
+        )
+
+
+def load_admin_state():
+    """
+    Restore admin state from files when
+    the FastAPI process starts.
+    """
+
+    global DATASET
+    global DATASET_NAME
+    global DATASET_TARGET
+
+    global PREPROCESSED_DATASET
+    global PREPROCESSING_INFO
+
+    global TRAINING_RESULTS
+    global TRAINING_MODELS
+    global TRAINING_INFO
+
+    print(
+        "Checking for saved admin state..."
+    )
+
+    # --------------------------------------------------------
+    # Restore uploaded dataset
+    # --------------------------------------------------------
+
+    if UPLOADED_DATASET_PATH.exists():
+
+        try:
+
+            DATASET = pd.read_csv(
+                UPLOADED_DATASET_PATH
+            )
+
+            print(
+                "Uploaded dataset restored:",
+                DATASET.shape,
+            )
+
+        except Exception as e:
+
+            print(
+                "Could not restore uploaded dataset:",
+                str(e),
+            )
+
+    # --------------------------------------------------------
+    # Restore preprocessed dataset
+    # --------------------------------------------------------
+
+    if PREPROCESSED_DATASET_PATH.exists():
+
+        try:
+
+            PREPROCESSED_DATASET = (
+                pd.read_csv(
+                    PREPROCESSED_DATASET_PATH
+                )
+            )
+
+            print(
+                "Preprocessed dataset restored:",
+                PREPROCESSED_DATASET.shape,
+            )
+
+        except Exception as e:
+
+            print(
+                "Could not restore preprocessed dataset:",
+                str(e),
+            )
+
+    # --------------------------------------------------------
+    # Restore metadata
+    # --------------------------------------------------------
+
+    if ADMIN_STATE_PATH.exists():
+
+        try:
+
+            with open(
+                ADMIN_STATE_PATH,
+                "r",
+                encoding="utf-8",
+            ) as file:
+
+                state = json.load(file)
+
+            DATASET_NAME = (
+                state.get(
+                    "dataset_name"
+                )
+            )
+
+            DATASET_TARGET = (
+                state.get(
+                    "dataset_target"
+                )
+            )
+
+            PREPROCESSING_INFO = (
+                state.get(
+                    "preprocessing_info"
+                )
+            )
+
+            TRAINING_INFO = (
+                state.get(
+                    "training_info"
+                )
+            )
+
+            print(
+                "Admin metadata restored."
+            )
+
+        except Exception as e:
+
+            print(
+                "Could not restore admin metadata:",
+                str(e),
+            )
+
+    # --------------------------------------------------------
+    # If metadata doesn't contain target,
+    # detect it again.
+    # --------------------------------------------------------
+
+    if (
+        DATASET is not None
+        and DATASET_TARGET is None
+    ):
+
+        DATASET_TARGET = (
+            detect_target_column(
+                DATASET
+            )
+        )
+
+    # --------------------------------------------------------
+    # Restore training results
+    # --------------------------------------------------------
+
+    if TRAINING_RESULTS_PATH.exists():
+
+        try:
+
+            with open(
+                TRAINING_RESULTS_PATH,
+                "r",
+                encoding="utf-8",
+            ) as file:
+
+                training_state = (
+                    json.load(file)
+                )
+
+            TRAINING_RESULTS = (
+                training_state.get(
+                    "results",
+                    [],
+                )
+            )
+
+            if TRAINING_INFO is None:
+
+                TRAINING_INFO = (
+                    training_state.get(
+                        "training"
+                    )
+                )
+
+            print(
+                "Training results restored:",
+                len(TRAINING_RESULTS),
+            )
+
+        except Exception as e:
+
+            print(
+                "Could not restore training results:",
+                str(e),
+            )
+
+    # --------------------------------------------------------
+    # Restore trained model pipelines
+    # --------------------------------------------------------
+
+    if TRAINING_MODELS_PATH.exists():
+
+        try:
+
+            TRAINING_MODELS = (
+                joblib.load(
+                    TRAINING_MODELS_PATH
+                )
+            )
+
+            print(
+                "Trained models restored:",
+                len(TRAINING_MODELS),
+            )
+
+        except Exception as e:
+
+            print(
+                "Could not restore trained models:",
+                str(e),
+            )
+
+    print(
+        "Admin state restoration completed."
+    )
 
 
 # ============================================================
@@ -430,7 +767,7 @@ def request_to_dataframe(
 
 
 # ============================================================
-# MODEL PREDICTION
+# PRODUCTION MODEL PREDICTION
 # ============================================================
 
 def get_prediction(
@@ -489,7 +826,7 @@ def get_prediction(
 
 
 # ============================================================
-# SHAP EXPLANATION
+# SHAP
 # ============================================================
 
 def generate_shap(
@@ -499,9 +836,15 @@ def generate_shap(
     if model is None:
 
         return {
-            "available": False,
-            "features": [],
-            "error": "Model is not loaded.",
+
+            "available":
+                False,
+
+            "features":
+                [],
+
+            "error":
+                "Model is not loaded.",
         }
 
     try:
@@ -639,6 +982,7 @@ def generate_shap(
 
             result.append(
                 {
+
                     "feature":
                         name,
 
@@ -689,7 +1033,7 @@ def generate_shap(
 
 
 # ============================================================
-# SAFE MODEL PREDICTION
+# COUNTERFACTUAL HELPERS
 # ============================================================
 
 def safe_predict(
@@ -715,10 +1059,6 @@ def safe_predict(
 
         return None
 
-
-# ============================================================
-# SAFE PROBABILITIES
-# ============================================================
 
 def get_probabilities(
     df: pd.DataFrame,
@@ -754,10 +1094,6 @@ def get_probabilities(
                 0.0,
         }
 
-
-# ============================================================
-# COUNTERFACTUAL CANDIDATE VALUES
-# ============================================================
 
 def create_candidate_values(
     feature: str,
@@ -865,17 +1201,12 @@ def create_candidate_values(
     if feature in BINARY_FEATURES:
 
         if int(round(current)) == 0:
-
             return [1]
 
         return [0]
 
     return []
 
-
-# ============================================================
-# DISTANCE
-# ============================================================
 
 def feature_distance(
     feature: str,
@@ -893,23 +1224,18 @@ def feature_distance(
         return 1.0
 
     if feature == "age":
-
         return abs(new - old) / 20.0
 
     if feature == "TSH":
-
         return abs(new - old) / 10.0
 
     if feature == "TT4":
-
         return abs(new - old) / 100.0
 
     if feature == "T4U":
-
         return abs(new - old)
 
     if feature == "FTI":
-
         return abs(new - old) / 100.0
 
     return abs(new - old)
@@ -942,10 +1268,6 @@ def total_distance(
 
     return float(total)
 
-
-# ============================================================
-# COUNTERFACTUAL GENERATION
-# ============================================================
 
 def generate_counterfactuals(
     original_df: pd.DataFrame,
@@ -984,7 +1306,7 @@ def generate_counterfactuals(
         shap_features = (
             shap_result.get(
                 "features",
-                []
+                [],
             )
         )
 
@@ -998,18 +1320,19 @@ def generate_counterfactuals(
 
                 if feature not in search_features:
 
-                    if feature not in MEASURED_FEATURES:
+                    if (
+                        feature
+                        not in MEASURED_FEATURES
+                    ):
 
                         search_features.append(
                             feature
                         )
 
             if len(search_features) >= 8:
-
                 break
 
     except Exception:
-
         pass
 
     search_features = (
@@ -1047,7 +1370,6 @@ def generate_counterfactuals(
             )
 
             if new_prediction is None:
-
                 continue
 
             if (
@@ -1079,34 +1401,12 @@ def generate_counterfactuals(
                                     feature,
 
                                 "original_value":
-                                    (
-                                        float(
-                                            current_value
-                                        )
-                                        if isinstance(
-                                            current_value,
-                                            (
-                                                np.integer,
-                                                np.floating,
-                                            ),
-                                        )
-                                        else
+                                    float(
                                         current_value
                                     ),
 
                                 "counterfactual_value":
-                                    (
-                                        float(
-                                            new_value
-                                        )
-                                        if isinstance(
-                                            new_value,
-                                            (
-                                                np.integer,
-                                                np.floating,
-                                            ),
-                                        )
-                                        else
+                                    float(
                                         new_value
                                     ),
                             }
@@ -1192,33 +1492,13 @@ def generate_counterfactuals(
 
     scenarios = scenarios[:3]
 
-    best_changes = (
-        scenarios[0]["changes"]
-    )
-
     return {
 
         "available":
             True,
 
-        "features": [
-
-            {
-
-                "feature":
-                    item["feature"],
-
-                "original_value":
-                    item["original_value"],
-
-                "counterfactual_value":
-                    item[
-                        "counterfactual_value"
-                    ],
-            }
-
-            for item in best_changes
-        ],
+        "features":
+            scenarios[0]["changes"],
 
         "scenarios":
             scenarios,
@@ -1227,9 +1507,7 @@ def generate_counterfactuals(
             scenarios[0]["prediction"],
 
         "target_label":
-            scenarios[0][
-                "prediction_label"
-            ],
+            scenarios[0]["prediction_label"],
 
         "message":
             (
@@ -1258,17 +1536,10 @@ def preprocess_dataset(
         df.shape[1]
     )
 
-    # Clean column names
-
     df.columns = [
-
         str(column).strip()
-
-        for column
-        in df.columns
+        for column in df.columns
     ]
-
-    # Remove empty rows
 
     df = df.dropna(
         how="all"
@@ -1279,15 +1550,11 @@ def preprocess_dataset(
         - int(df.shape[0])
     )
 
-    # Remove duplicates
-
     duplicate_count = int(
         df.duplicated().sum()
     )
 
     df = df.drop_duplicates().copy()
-
-    # Detect target
 
     detected_target = (
         detect_target_column(df)
@@ -1304,8 +1571,6 @@ def preprocess_dataset(
 
         final_target = detected_target
 
-    # Missing before
-
     missing_before = int(
         df.isna().sum().sum()
     )
@@ -1320,8 +1585,6 @@ def preprocess_dataset(
 
         if int(value) > 0
     }
-
-    # Feature columns
 
     feature_columns = [
 
@@ -1352,8 +1615,6 @@ def preprocess_dataset(
         if column not in numeric_columns
     ]
 
-    # Numeric missing values
-
     for column in numeric_columns:
 
         if df[column].isna().any():
@@ -1363,7 +1624,6 @@ def preprocess_dataset(
             )
 
             if pd.isna(median_value):
-
                 median_value = 0
 
             df[column] = (
@@ -1371,8 +1631,6 @@ def preprocess_dataset(
                     median_value
                 )
             )
-
-    # Categorical missing values
 
     for column in categorical_columns:
 
@@ -1385,13 +1643,8 @@ def preprocess_dataset(
             )
 
             if len(mode) > 0:
-
-                replacement = (
-                    mode.iloc[0]
-                )
-
+                replacement = mode.iloc[0]
             else:
-
                 replacement = "Unknown"
 
             df[column] = (
@@ -1399,8 +1652,6 @@ def preprocess_dataset(
                     replacement
                 )
             )
-
-    # Missing target
 
     target_missing_removed = 0
 
@@ -1424,13 +1675,9 @@ def preprocess_dataset(
             - int(df.shape[0])
         )
 
-    # Missing after
-
     missing_after = int(
         df.isna().sum().sum()
     )
-
-    # Target distribution
 
     target_distribution = {}
 
@@ -1455,8 +1702,6 @@ def preprocess_dataset(
             in counts.items()
         }
 
-    # Feature types
-
     numeric_after = [
 
         str(column)
@@ -1480,8 +1725,6 @@ def preprocess_dataset(
             and column not in numeric_after
         )
     ]
-
-    # Save
 
     df.to_csv(
         PREPROCESSED_DATASET_PATH,
@@ -1556,7 +1799,7 @@ def preprocess_dataset(
 
 
 # ============================================================
-# ADMIN MODEL TRAINING HELPERS
+# ADMIN TRAINING
 # ============================================================
 
 def make_preprocessor(
@@ -1644,7 +1887,6 @@ def calculate_roc_auc(
             model_pipeline,
             "predict_proba",
         ):
-
             return None
 
         probabilities = (
@@ -1674,7 +1916,7 @@ def calculate_roc_auc(
     except Exception as e:
 
         print(
-            "ROC-AUC calculation warning:",
+            "ROC-AUC warning:",
             str(e),
         )
 
@@ -1714,10 +1956,6 @@ def build_training_models(
                 class_weight="balanced",
             ),
     }
-
-    # --------------------------------------------------------
-    # XGBoost
-    # --------------------------------------------------------
 
     if number_of_classes == 2:
 
@@ -1760,8 +1998,7 @@ def train_admin_models():
     if PREPROCESSED_DATASET is None:
 
         raise ValueError(
-            "Dataset must be preprocessed "
-            "before training."
+            "Dataset must be preprocessed before training."
         )
 
     if not DATASET_TARGET:
@@ -1788,10 +2025,6 @@ def train_admin_models():
             "Target column was not found."
         )
 
-    # --------------------------------------------------------
-    # Remove rows with invalid target
-    # --------------------------------------------------------
-
     df = df.dropna(
         subset=[target_column]
     ).copy()
@@ -1816,10 +2049,6 @@ def train_admin_models():
             "Dataset contains no feature columns."
         )
 
-    # --------------------------------------------------------
-    # Encode target
-    # --------------------------------------------------------
-
     label_encoder = LabelEncoder()
 
     y = label_encoder.fit_transform(
@@ -1833,20 +2062,14 @@ def train_admin_models():
     if class_count < 2:
 
         raise ValueError(
-            "Training requires at least "
-            "2 target classes."
+            "Training requires at least 2 target classes."
         )
 
     if len(df) < 10:
 
         raise ValueError(
-            "At least 10 rows are recommended "
-            "for model training."
+            "At least 10 rows are recommended for training."
         )
-
-    # --------------------------------------------------------
-    # Train/test split
-    # --------------------------------------------------------
 
     test_size = 0.20
 
@@ -1864,9 +2087,6 @@ def train_admin_models():
 
     except ValueError:
 
-        # Fallback for very small /
-        # highly imbalanced datasets
-
         X_train, X_test, y_train, y_test = (
             train_test_split(
                 X,
@@ -1876,20 +2096,12 @@ def train_admin_models():
             )
         )
 
-    # --------------------------------------------------------
-    # Build models
-    # --------------------------------------------------------
-
     models = build_training_models(
         class_count
     )
 
     results = []
     trained_models = {}
-
-    # --------------------------------------------------------
-    # Train every algorithm
-    # --------------------------------------------------------
 
     for model_name, classifier in (
         models.items()
@@ -2020,8 +2232,7 @@ def train_admin_models():
                             float(roc_auc),
                             6,
                         )
-                        if roc_auc
-                        is not None
+                        if roc_auc is not None
                         else None
                     ),
 
@@ -2088,10 +2299,6 @@ def train_admin_models():
                 }
             )
 
-    # --------------------------------------------------------
-    # Sort successful models by F1
-    # --------------------------------------------------------
-
     successful_results = [
 
         item
@@ -2109,9 +2316,6 @@ def train_admin_models():
         reverse=True,
     )
 
-    # Keep original model order
-    # for consistent frontend display
-
     model_order = {
 
         "Logistic Regression": 1,
@@ -2128,10 +2332,6 @@ def train_admin_models():
                 99,
             )
     )
-
-    # --------------------------------------------------------
-    # Save state
-    # --------------------------------------------------------
 
     TRAINING_RESULTS = results
 
@@ -2182,38 +2382,8 @@ def train_admin_models():
             len(results),
     }
 
-    # --------------------------------------------------------
-    # Save lightweight JSON results
-    # --------------------------------------------------------
-
-    try:
-
-        import json
-
-        with open(
-            TRAINING_RESULTS_PATH,
-            "w",
-            encoding="utf-8",
-        ) as output:
-
-            json.dump(
-                {
-                    "results":
-                        TRAINING_RESULTS,
-
-                    "training":
-                        TRAINING_INFO,
-                },
-                output,
-                indent=2,
-            )
-
-    except Exception as e:
-
-        print(
-            "Could not save training JSON:",
-            str(e),
-        )
+    save_training_state()
+    save_admin_state()
 
     return {
 
@@ -2223,12 +2393,182 @@ def train_admin_models():
         "message":
             "Model training completed.",
 
+        "dataset":
+            DATASET_NAME,
+
+        "target":
+            target_column,
+
         "training":
             TRAINING_INFO,
 
         "results":
             TRAINING_RESULTS,
     }
+
+
+# ============================================================
+# ADMIN SHAP
+# ============================================================
+
+def generate_admin_shap_summary():
+
+    if not TRAINING_MODELS:
+
+        return {
+
+            "available":
+                False,
+
+            "models":
+                [],
+
+            "message":
+                "No trained models are available.",
+        }
+
+    summary = []
+
+    for model_name, trained_pipeline in (
+        TRAINING_MODELS.items()
+    ):
+
+        try:
+
+            classifier = (
+                trained_pipeline.named_steps[
+                    "classifier"
+                ]
+            )
+
+            preprocessor = (
+                trained_pipeline.named_steps[
+                    "preprocessor"
+                ]
+            )
+
+            feature_names = list(
+                preprocessor
+                .get_feature_names_out()
+            )
+
+            importance = None
+
+            if hasattr(
+                classifier,
+                "feature_importances_",
+            ):
+
+                importance = (
+                    classifier
+                    .feature_importances_
+                )
+
+            elif hasattr(
+                classifier,
+                "coef_",
+            ):
+
+                coefficients = (
+                    classifier.coef_
+                )
+
+                if coefficients.ndim == 2:
+
+                    importance = np.mean(
+                        np.abs(
+                            coefficients
+                        ),
+                        axis=0,
+                    )
+
+                else:
+
+                    importance = (
+                        np.abs(
+                            coefficients
+                        )
+                    )
+
+            if importance is None:
+
+                continue
+
+            count = min(
+                len(feature_names),
+                len(importance),
+            )
+
+            features = []
+
+            for index in range(count):
+
+                name = str(
+                    feature_names[index]
+                )
+
+                if "__" in name:
+
+                    name = name.split(
+                        "__"
+                    )[-1]
+
+                features.append(
+                    {
+
+                        "feature":
+                            name,
+
+                        "importance":
+                            float(
+                                importance[index]
+                            ),
+                    }
+                )
+
+            features.sort(
+                key=lambda item:
+                    item["importance"],
+                reverse=True,
+            )
+
+            summary.append(
+                {
+
+                    "model":
+                        model_name,
+
+                    "features":
+                        features[:15],
+                }
+            )
+
+        except Exception as e:
+
+            print(
+                "ADMIN SHAP ERROR:",
+                model_name,
+                str(e),
+            )
+
+    return {
+
+        "available":
+            len(summary) > 0,
+
+        "models":
+            summary,
+    }
+
+
+# ============================================================
+# STARTUP
+# ============================================================
+
+@app.on_event("startup")
+def startup_event():
+
+    load_admin_state()
 
 
 # ============================================================
@@ -2247,7 +2587,7 @@ def root():
             "online",
 
         "version":
-            "6.0.0",
+            "7.0.0",
 
         "model_loaded":
             model is not None,
@@ -2260,6 +2600,9 @@ def root():
 
         "models_trained":
             len(TRAINING_RESULTS) > 0,
+
+        "trained_model_count":
+            len(TRAINING_MODELS),
     }
 
 
@@ -2299,6 +2642,15 @@ def health():
 
         "models_trained":
             len(TRAINING_RESULTS) > 0,
+
+        "trained_model_count":
+            len(TRAINING_MODELS),
+
+        "dataset_name":
+            DATASET_NAME,
+
+        "target":
+            DATASET_TARGET,
     }
 
 
@@ -2380,8 +2732,10 @@ async def upload_dataset(
     global DATASET
     global DATASET_NAME
     global DATASET_TARGET
+
     global PREPROCESSED_DATASET
     global PREPROCESSING_INFO
+
     global TRAINING_RESULTS
     global TRAINING_MODELS
     global TRAINING_INFO
@@ -2397,15 +2751,11 @@ async def upload_dataset(
         file.filename.lower()
     )
 
-    if not filename.endswith(
-        ".csv"
-    ):
+    if not filename.endswith(".csv"):
 
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Only CSV files are supported."
-            ),
+            detail="Only CSV files are supported.",
         )
 
     try:
@@ -2416,12 +2766,8 @@ async def upload_dataset(
 
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    "The uploaded file is empty."
-                ),
+                detail="The uploaded file is empty.",
             )
-
-        # Save
 
         with open(
             UPLOADED_DATASET_PATH,
@@ -2432,8 +2778,6 @@ async def upload_dataset(
                 contents
             )
 
-        # Read
-
         dataframe = pd.read_csv(
             UPLOADED_DATASET_PATH
         )
@@ -2442,33 +2786,21 @@ async def upload_dataset(
 
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    "The uploaded CSV does not "
-                    "contain any data rows."
-                ),
+                detail="The uploaded CSV contains no data.",
             )
 
-        if len(
-            dataframe.columns
-        ) == 0:
+        if len(dataframe.columns) == 0:
 
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    "The uploaded CSV does not "
-                    "contain any columns."
-                ),
+                detail="The uploaded CSV contains no columns.",
             )
-
-        # Detect target
 
         target_column = (
             detect_target_column(
                 dataframe
             )
         )
-
-        # Store
 
         DATASET = (
             dataframe.copy()
@@ -2482,18 +2814,26 @@ async def upload_dataset(
             target_column
         )
 
-        # Reset preprocessing
-
         PREPROCESSED_DATASET = None
         PREPROCESSING_INFO = None
-
-        # Reset training
 
         TRAINING_RESULTS = []
         TRAINING_MODELS = {}
         TRAINING_INFO = None
 
-        # Statistics
+        # Remove old state files
+
+        if PREPROCESSED_DATASET_PATH.exists():
+
+            PREPROCESSED_DATASET_PATH.unlink()
+
+        if TRAINING_RESULTS_PATH.exists():
+
+            TRAINING_RESULTS_PATH.unlink()
+
+        if TRAINING_MODELS_PATH.exists():
+
+            TRAINING_MODELS_PATH.unlink()
 
         missing_values = int(
             dataframe.isna()
@@ -2517,6 +2857,8 @@ async def upload_dataset(
             - numeric_columns
         )
 
+        save_admin_state()
+
         return {
 
             "success":
@@ -2532,30 +2874,20 @@ async def upload_dataset(
                 file.filename,
 
             "rows":
-                int(
-                    dataframe.shape[0]
-                ),
+                int(dataframe.shape[0]),
 
             "columns":
-                int(
-                    dataframe.shape[1]
-                ),
+                int(dataframe.shape[1]),
 
             "shape": [
 
-                int(
-                    dataframe.shape[0]
-                ),
-
-                int(
-                    dataframe.shape[1]
-                ),
+                int(dataframe.shape[0]),
+                int(dataframe.shape[1]),
             ],
 
             "column_names": [
 
                 str(column)
-
                 for column
                 in dataframe.columns
             ],
@@ -2563,16 +2895,14 @@ async def upload_dataset(
             "target_column":
                 (
                     str(target_column)
-                    if target_column
-                    is not None
+                    if target_column is not None
                     else None
                 ),
 
             "target":
                 (
                     str(target_column)
-                    if target_column
-                    is not None
+                    if target_column is not None
                     else None
                 ),
 
@@ -2653,13 +2983,8 @@ def dataset_status():
 
         "shape": [
 
-            int(
-                DATASET.shape[0]
-            ),
-
-            int(
-                DATASET.shape[1]
-            ),
+            int(DATASET.shape[0]),
+            int(DATASET.shape[1]),
         ],
 
         "target_column":
@@ -2668,7 +2993,6 @@ def dataset_status():
         "column_names": [
 
             str(column)
-
             for column
             in DATASET.columns
         ],
@@ -2687,20 +3011,21 @@ def dataset_status():
             ),
 
         "preprocessed":
-            PREPROCESSED_DATASET
-            is not None,
+            PREPROCESSED_DATASET is not None,
 
         "preprocessing":
             PREPROCESSING_INFO,
 
         "models_trained":
-            len(TRAINING_RESULTS)
-            > 0,
+            len(TRAINING_RESULTS) > 0,
+
+        "trained_model_count":
+            len(TRAINING_MODELS),
     }
 
 
 # ============================================================
-# ADMIN - PREPROCESS DATASET
+# ADMIN - PREPROCESS
 # ============================================================
 
 @app.post("/admin/preprocess")
@@ -2721,10 +3046,6 @@ def admin_preprocess():
 
     try:
 
-        print(
-            "Starting dataset preprocessing..."
-        )
-
         processed_df, info = (
             preprocess_dataset(
                 DATASET,
@@ -2738,9 +3059,21 @@ def admin_preprocess():
 
         PREPROCESSING_INFO = info
 
-        print(
-            "Dataset preprocessing completed."
+        # Target can change after column cleanup
+
+        detected_target = (
+            info.get(
+                "target_column"
+            )
         )
+
+        if detected_target:
+
+            globals()[
+                "DATASET_TARGET"
+            ] = detected_target
+
+        save_admin_state()
 
         return {
 
@@ -2776,7 +3109,7 @@ def admin_preprocess():
 
 
 # ============================================================
-# ADMIN - PREPROCESSING STATUS
+# ADMIN - PREPROCESS STATUS
 # ============================================================
 
 @app.get("/admin/preprocess")
@@ -2790,10 +3123,7 @@ def preprocessing_status():
                 False,
 
             "message":
-                (
-                    "Dataset has not been "
-                    "preprocessed yet."
-                ),
+                "Dataset has not been preprocessed yet.",
         }
 
     return {
@@ -2810,7 +3140,7 @@ def preprocessing_status():
 
 
 # ============================================================
-# ADMIN - TRAIN MODELS
+# ADMIN - TRAIN
 # ============================================================
 
 @app.post("/admin/train")
@@ -2883,9 +3213,7 @@ def model_comparison():
                 False,
 
             "message":
-                (
-                    "No models have been trained yet."
-                ),
+                "No models have been trained yet.",
 
             "results":
                 [],
@@ -2925,10 +3253,7 @@ def admin_metrics():
                 False,
 
             "message":
-                (
-                    "Training metrics are not "
-                    "available yet."
-                ),
+                "Training metrics are not available yet.",
 
             "metrics":
                 [],
@@ -2981,7 +3306,20 @@ def training_status():
 
         "results":
             TRAINING_RESULTS,
+
+        "trained_model_count":
+            len(TRAINING_MODELS),
     }
+
+
+# ============================================================
+# ADMIN - SHAP / FEATURE IMPORTANCE
+# ============================================================
+
+@app.get("/admin/shap")
+def admin_shap():
+
+    return generate_admin_shap_summary()
 
 
 # ============================================================
@@ -2995,42 +3333,17 @@ def predict(
 
     try:
 
-        print(
-            "Prediction request received."
-        )
-
-        # Convert request
-
         df = request_to_dataframe(
             req
         )
-
-        print(
-            "Input dataframe created."
-        )
-
-        # Prediction
 
         result = get_prediction(
             df
         )
 
-        print(
-            "Prediction completed:",
-            result["prediction"],
-        )
-
-        # SHAP
-
         shap_result = generate_shap(
             df
         )
-
-        print(
-            "SHAP completed."
-        )
-
-        # Counterfactual
 
         counterfactual_result = (
             generate_counterfactuals(
@@ -3038,10 +3351,6 @@ def predict(
                 result["prediction"],
                 shap_result,
             )
-        )
-
-        print(
-            "Counterfactual completed."
         )
 
         return {
@@ -3117,9 +3426,16 @@ if __name__ == "__main__":
 
     import uvicorn
 
+    port = int(
+        os.environ.get(
+            "PORT",
+            8000,
+        )
+    )
+
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=True,
 )
