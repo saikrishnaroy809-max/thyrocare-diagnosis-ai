@@ -200,29 +200,29 @@ function normalizeCounterfactuals(counterfactuals) {
   }
 
   /*
-   * CURRENT BACKEND FORMAT
-   *
-   * {
-   *   available: true,
-   *   features: [...],
-   *   scenarios: [
-   *     {
-   *       changes: [
-   *         {
-   *           feature: "TSH",
-   *           original_value: 0,
-   *           counterfactual_value: 7
-   *         }
-   *       ],
-   *       prediction: 1,
-   *       prediction_label: "...",
-   *       class_0_probability: ...,
-   *       class_1_probability: ...,
-   *       distance: ...
-   *     }
-   *   ]
-   * }
-   */
+    Backend format:
+
+    {
+      available: true,
+      features: [...],
+      scenarios: [
+        {
+          changes: [
+            {
+              feature: "TSH",
+              original_value: 0,
+              counterfactual_value: 7
+            }
+          ],
+          prediction: 1,
+          prediction_label: "...",
+          class_0_probability: ...,
+          class_1_probability: ...,
+          distance: ...
+        }
+      ]
+    }
+  */
 
   if (
     typeof counterfactuals === "object" &&
@@ -287,8 +287,8 @@ function normalizeCounterfactuals(counterfactuals) {
   }
 
   /*
-   * If backend wraps object inside data.
-   */
+    Backend wraps object inside data.
+  */
 
   if (
     typeof counterfactuals === "object" &&
@@ -301,8 +301,8 @@ function normalizeCounterfactuals(counterfactuals) {
   }
 
   /*
-   * Direct scenario property.
-   */
+    Direct scenario property.
+  */
 
   if (
     typeof counterfactuals === "object" &&
@@ -316,8 +316,8 @@ function normalizeCounterfactuals(counterfactuals) {
   }
 
   /*
-   * Array format.
-   */
+    Array format.
+  */
 
   if (Array.isArray(counterfactuals)) {
     return counterfactuals.map(
@@ -437,11 +437,8 @@ export default function App() {
     });
 
   /*
-   * IMPORTANT:
-   * Restore the latest result when the
-   * application is opened again during
-   * the same browser session.
-   */
+    Restore latest result from browser session.
+  */
 
   const [result, setResult] =
     useState(() => {
@@ -490,12 +487,6 @@ export default function App() {
   /* =======================================================
      HISTORY
   ======================================================= */
-
-  /*
-   * IMPORTANT:
-   * Restore prediction history from
-   * sessionStorage.
-   */
 
   const [
     analysisHistory,
@@ -770,19 +761,12 @@ export default function App() {
 
       setResult(data);
 
-      /*
-       * Persist latest result so the
-       * Admin Dashboard can still access
-       * it after navigation.
-       */
-
       try {
         sessionStorage.setItem(
           "thyrocare_latest_result",
           JSON.stringify(data)
         );
       } catch {}
-
 
       /* =================================================
          EXTRACT PREDICTION
@@ -793,7 +777,6 @@ export default function App() {
         data?.predicted_class ??
         data?.class ??
         null;
-
 
       /* =================================================
          EXTRACT PROBABILITIES
@@ -818,7 +801,6 @@ export default function App() {
         data?.class_1_probability ??
         0;
 
-
       /* =================================================
          MODEL NAME
       ================================================= */
@@ -828,7 +810,6 @@ export default function App() {
         data?.model ||
         data?.algorithm ||
         "XGBoost";
-
 
       /* =================================================
          CREATE HISTORY ITEM
@@ -855,7 +836,6 @@ export default function App() {
         model: modelName,
       };
 
-
       /* =================================================
          SAVE HISTORY
       ================================================= */
@@ -880,7 +860,6 @@ export default function App() {
         }
       );
 
-
       /* =================================================
          GO TO RESULTS
       ================================================= */
@@ -891,7 +870,6 @@ export default function App() {
         top: 0,
         behavior: "smooth",
       });
-
     } catch (err) {
       if (
         err?.name ===
@@ -925,12 +903,6 @@ export default function App() {
     });
 
     setResult(null);
-
-    /*
-     * Clear only the latest result.
-     *
-     * Prediction history is preserved.
-     */
 
     try {
       sessionStorage.removeItem(
@@ -1052,7 +1024,9 @@ export default function App() {
 
           <div
             className={`nav-links ${
-              menuOpen ? "open" : ""
+              menuOpen
+                ? "open"
+                : ""
             }`}
           >
             <button
@@ -1126,7 +1100,9 @@ export default function App() {
 
           <button
             className={`mobile-menu-button ${
-              menuOpen ? "active" : ""
+              menuOpen
+                ? "active"
+                : ""
             }`}
             onClick={() =>
               setMenuOpen(
@@ -1663,7 +1639,9 @@ export default function App() {
                     </label>
 
                     <select
-                      value={form[field]}
+                      value={
+                        form[field]
+                      }
                       onChange={(e) =>
                         updateField(
                           field,
@@ -1709,6 +1687,7 @@ export default function App() {
                   Indicate whether each
                   measurement is available.
                 </p>
+
               </div>
 
             </div>
@@ -1727,7 +1706,9 @@ export default function App() {
                     </label>
 
                     <select
-                      value={form[field]}
+                      value={
+                        form[field]
+                      }
                       onChange={(e) =>
                         updateField(
                           field,
@@ -1998,7 +1979,6 @@ export default function App() {
                       )
                     )}%`,
                   }}
-
                 />
 
               </div>
@@ -2242,6 +2222,7 @@ export default function App() {
                       )}
 
                   </div>
+
                 )
               )}
 
@@ -2282,7 +2263,6 @@ export default function App() {
               const report = `
 THYROCARE AI
 THYROID ANALYSIS REPORT
-================================
 
 Prediction:
 ${predictionLabel}
@@ -2301,7 +2281,6 @@ ${
 }
 
 SHAP FEATURES
-================================
 
 ${shapData
   .slice(0, 10)
@@ -2314,7 +2293,6 @@ ${shapData
   .join("\n")}
 
 COUNTERFACTUALS
-================================
 
 ${counterfactualData
   .map(
@@ -2638,4 +2616,4 @@ professional for medical decisions.
 
     </div>
   );
-         }
+}
