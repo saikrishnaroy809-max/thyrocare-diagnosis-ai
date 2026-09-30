@@ -16,7 +16,8 @@ import DatasetUpload from "./DatasetUpload";
    ADMIN DASHBOARD
 ========================================================= */
 
-const API_URL = "https://thyrocare-diagnosis-ai.onrender.com";
+const API_URL =
+  "https://thyrocare-diagnosis-ai.onrender.com";
 
 export default function AdminDashboard({
   result,
@@ -29,9 +30,27 @@ export default function AdminDashboard({
      MODEL COMPARISON STATE
   ========================================================= */
 
-  const [modelComparison, setModelComparison] = useState([]);
-  const [comparisonLoading, setComparisonLoading] = useState(false);
-  const [comparisonError, setComparisonError] = useState("");
+  const [modelComparison, setModelComparison] =
+    useState([]);
+
+  const [comparisonLoading, setComparisonLoading] =
+    useState(false);
+
+  const [comparisonError, setComparisonError] =
+    useState("");
+
+  /* =========================================================
+     PERSISTENT PREDICTION HISTORY STATE
+  ========================================================= */
+
+  const [predictionHistory, setPredictionHistory] =
+    useState([]);
+
+  const [historyLoading, setHistoryLoading] =
+    useState(false);
+
+  const [historyError, setHistoryError] =
+    useState("");
 
   /* =========================================================
      BASIC RESULT DATA
@@ -111,8 +130,56 @@ export default function AdminDashboard({
     }
   };
 
+  /* =========================================================
+     FETCH PERSISTENT PREDICTION HISTORY
+  ========================================================= */
+
+  const loadPredictionHistory = async () => {
+    setHistoryLoading(true);
+    setHistoryError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/admin/prediction-history`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Server returned ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (
+        data?.available &&
+        Array.isArray(data?.history)
+      ) {
+        setPredictionHistory(data.history);
+      } else {
+        setPredictionHistory([]);
+      }
+    } catch (error) {
+      console.error(
+        "Prediction history error:",
+        error
+      );
+
+      setHistoryError(
+        "Unable to load prediction history."
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  /* =========================================================
+     INITIAL LOAD
+  ========================================================= */
+
   useEffect(() => {
     loadModelComparison();
+    loadPredictionHistory();
   }, []);
 
   /* =========================================================
@@ -322,11 +389,11 @@ export default function AdminDashboard({
   }, [shapValues]);
 
   /* =========================================================
-     HISTORY
+     HISTORY COUNT
   ========================================================= */
 
   const historyCount =
-    analysisHistory.length;
+    predictionHistory.length;
 
   /* =========================================================
      VIEW RESULTS
@@ -458,7 +525,7 @@ export default function AdminDashboard({
             <div className="admin-stat-content">
 
               <span className="admin-stat-label">
-                Analyses This Session
+                Total Analyses
               </span>
 
               <strong className="admin-stat-value">
@@ -466,7 +533,7 @@ export default function AdminDashboard({
               </strong>
 
               <span className="admin-stat-subtext">
-                Prediction requests
+                Backend prediction records
               </span>
 
             </div>
@@ -1201,7 +1268,7 @@ export default function AdminDashboard({
 
               <div className="admin-info-row">
                 <span>
-                  Session History
+                  Prediction History
                 </span>
 
                 <strong>
@@ -1226,7 +1293,7 @@ export default function AdminDashboard({
         </section>
 
         {/* =====================================================
-            RECENT ANALYSIS
+            PERSISTENT RECENT ANALYSIS
         ===================================================== */}
 
         <section className="admin-panel admin-history-panel">
@@ -1244,22 +1311,89 @@ export default function AdminDashboard({
               </h2>
 
               <p>
-                Prediction activity recorded
-                during this browser session.
+                Prediction activity stored by
+                the ThyroCare AI backend.
               </p>
 
             </div>
 
-            <span className="admin-history-count">
-              {historyCount}{" "}
-              {historyCount === 1
-                ? "analysis"
-                : "analyses"}
-            </span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+
+              <span className="admin-history-count">
+                {historyCount}{" "}
+                {historyCount === 1
+                  ? "analysis"
+                  : "analyses"}
+              </span>
+
+              <button
+                type="button"
+                className="admin-secondary-button"
+                onClick={loadPredictionHistory}
+                disabled={historyLoading}
+              >
+                {historyLoading
+                  ? "Refreshing..."
+                  : "↻ Refresh"}
+              </button>
+
+            </div>
 
           </div>
 
-          {analysisHistory.length === 0 ? (
+          {historyLoading ? (
+
+            <div className="admin-empty">
+
+              <div className="admin-empty-icon">
+                📋
+              </div>
+
+              <h3>
+                Loading Prediction History
+              </h3>
+
+              <p>
+                Fetching stored prediction activity
+                from the ThyroCare AI server.
+              </p>
+
+            </div>
+
+          ) : historyError ? (
+
+            <div className="admin-empty">
+
+              <div className="admin-empty-icon">
+                ⚠️
+              </div>
+
+              <h3>
+                History Unavailable
+              </h3>
+
+              <p>
+                {historyError}
+              </p>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={loadPredictionHistory}
+              >
+                Try Again
+              </button>
+
+            </div>
+
+          ) : predictionHistory.length === 0 ? (
 
             <div className="admin-empty">
 
@@ -1272,8 +1406,8 @@ export default function AdminDashboard({
               </h3>
 
               <p>
-                Your completed predictions will
-                appear here.
+                Completed predictions will
+                appear here automatically.
               </p>
 
             </div>
@@ -1299,65 +1433,53 @@ export default function AdminDashboard({
 
                 <tbody>
 
-                  {analysisHistory.map(
+                  {predictionHistory.map(
                     (item, index) => {
 
                       const itemPrediction =
-                        item?.prediction ??
-                        item?.predicted_class ??
-                        item?.class ??
-                        null;
-
-                      const itemProbabilities =
-                        item?.probabilities ??
-                        item?.class_probabilities ??
-                        {};
+                        item?.prediction ?? null;
 
                       const itemClass0 =
-                        itemProbabilities?.["0"] ??
-                        itemProbabilities?.class_0 ??
-                        item?.class0 ??
                         item?.class_0_probability ??
                         0;
 
                       const itemClass1 =
-                        itemProbabilities?.["1"] ??
-                        itemProbabilities?.class_1 ??
-                        item?.class1 ??
                         item?.class_1_probability ??
                         0;
 
                       const itemModel =
-                        item?.model ??
-                        item?.model_name ??
-                        item?.algorithm ??
+                        item?.model ||
                         "XGBoost";
 
                       const isPositive =
-                        Number(itemPrediction) === 1;
+                        Number(
+                          itemPrediction
+                        ) === 1;
 
                       return (
                         <tr
                           key={
                             item?.id ??
-                            `${item?.time ?? "analysis"}-${index}`
+                            `${item?.timestamp}-${index}`
                           }
                         >
 
                           <td>
+
                             <span className="admin-row-number">
                               {index + 1}
                             </span>
+
                           </td>
 
                           <td>
+
                             <span className="admin-date">
                               {formatDate(
-                                item?.time ??
-                                  item?.created_at ??
-                                  item?.timestamp
+                                item?.timestamp
                               )}
                             </span>
+
                           </td>
 
                           <td>
@@ -1389,9 +1511,11 @@ export default function AdminDashboard({
                           </td>
 
                           <td>
+
                             <span className="admin-model-tag">
                               {itemModel}
                             </span>
+
                           </td>
 
                         </tr>
