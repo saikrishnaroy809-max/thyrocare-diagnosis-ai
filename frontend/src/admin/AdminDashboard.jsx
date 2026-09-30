@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import DatasetUpload from "./DatasetUpload";
 
 /* =========================================================
    THYROCARE AI
@@ -107,19 +108,6 @@ export default function AdminDashboard({
   const topShap = useMemo(() => {
     let values = shapValues;
 
-    /*
-     * Backend can return:
-     *
-     * shap_values: [...]
-     *
-     * OR
-     *
-     * shap: {
-     *   available: true,
-     *   features: [...]
-     * }
-     */
-
     if (
       !Array.isArray(values) &&
       values &&
@@ -134,12 +122,9 @@ export default function AdminDashboard({
 
     return values
       .map((item, index) => {
-        if (
-          typeof item === "number"
-        ) {
+        if (typeof item === "number") {
           return {
-            feature:
-              `Feature ${index + 1}`,
+            feature: `Feature ${index + 1}`,
             value: Number(item),
           };
         }
@@ -180,11 +165,7 @@ export default function AdminDashboard({
     analysisHistory.length;
 
   /* =========================================================
-     VIEW RESULTS HANDLER
-     
-     IMPORTANT:
-     This explicitly calls the callback supplied
-     by App.jsx.
+     VIEW RESULTS
   ========================================================= */
 
   const handleViewResults = () => {
@@ -201,7 +182,7 @@ export default function AdminDashboard({
   };
 
   /* =========================================================
-     NEW ANALYSIS HANDLER
+     NEW ANALYSIS
   ========================================================= */
 
   const handleNewAnalysis = () => {
@@ -214,7 +195,7 @@ export default function AdminDashboard({
   };
 
   /* =========================================================
-     LOGOUT HANDLER
+     LOGOUT
   ========================================================= */
 
   const handleLogout = () => {
@@ -271,9 +252,7 @@ export default function AdminDashboard({
             <button
               type="button"
               className="admin-secondary-button"
-              onClick={
-                handleNewAnalysis
-              }
+              onClick={handleNewAnalysis}
             >
               <span>＋</span>
               New Analysis
@@ -282,9 +261,7 @@ export default function AdminDashboard({
             <button
               type="button"
               className="admin-secondary-button"
-              onClick={
-                handleViewResults
-              }
+              onClick={handleViewResults}
               disabled={!result}
             >
               View Results
@@ -293,9 +270,7 @@ export default function AdminDashboard({
             <button
               type="button"
               className="admin-secondary-button admin-danger-button"
-              onClick={
-                handleLogout
-              }
+              onClick={handleLogout}
             >
               Logout
             </button>
@@ -411,6 +386,16 @@ export default function AdminDashboard({
         </section>
 
         {/* =====================================================
+            DATASET UPLOAD
+        ===================================================== */}
+
+        <section className="admin-feature-section">
+
+          <DatasetUpload />
+
+        </section>
+
+        {/* =====================================================
             MAIN GRID
         ===================================================== */}
 
@@ -471,9 +456,7 @@ export default function AdminDashboard({
                 <button
                   type="button"
                   className="primary-button"
-                  onClick={
-                    handleNewAnalysis
-                  }
+                  onClick={handleNewAnalysis}
                 >
                   Start Analysis
                 </button>
@@ -531,8 +514,7 @@ export default function AdminDashboard({
                           width: `${Math.min(
                             Number(
                               class0Probability <= 1
-                                ? class0Probability *
-                                    100
+                                ? class0Probability * 100
                                 : class0Probability
                             ) || 0,
                             100
@@ -572,8 +554,7 @@ export default function AdminDashboard({
                           width: `${Math.min(
                             Number(
                               class1Probability <= 1
-                                ? class1Probability *
-                                    100
+                                ? class1Probability * 100
                                 : class1Probability
                             ) || 0,
                             100
@@ -591,14 +572,10 @@ export default function AdminDashboard({
 
                 </div>
 
-                {/* DIRECT RESULT BUTTON */}
-
                 <button
                   type="button"
                   className="primary-button admin-view-results-button"
-                  onClick={
-                    handleViewResults
-                  }
+                  onClick={handleViewResults}
                 >
                   Open Full Results →
                 </button>
@@ -824,9 +801,7 @@ export default function AdminDashboard({
                         "XGBoost";
 
                       const isPositive =
-                        Number(
-                          itemPrediction
-                        ) === 1;
+                        Number(itemPrediction) === 1;
 
                       return (
                         <tr
@@ -961,15 +936,11 @@ export default function AdminDashboard({
                 (item, index) => {
 
                   const numericValue =
-                    Number(
-                      item.value
-                    ) || 0;
+                    Number(item.value) || 0;
 
                   const magnitude =
                     Math.min(
-                      Math.abs(
-                        numericValue
-                      ) * 100,
+                      Math.abs(numericValue) * 100,
                       100
                     );
 
@@ -1014,9 +985,7 @@ export default function AdminDashboard({
                           {numericValue >= 0
                             ? "+"
                             : ""}
-                          {numericValue.toFixed(
-                            4
-                          )}
+                          {numericValue.toFixed(4)}
                         </strong>
 
                       </div>
@@ -1070,4 +1039,4 @@ export default function AdminDashboard({
 
     </main>
   );
-           }
+                 }
