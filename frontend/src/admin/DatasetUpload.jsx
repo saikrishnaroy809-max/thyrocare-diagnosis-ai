@@ -6,14 +6,17 @@ export default function DatasetUpload() {
   const fileInputRef = useRef(null);
 
   const [file, setFile] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [preprocessing, setPreprocessing] = useState(false);
+  const [training, setTraining] = useState(false);
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const [datasetInfo, setDatasetInfo] = useState(null);
   const [preprocessInfo, setPreprocessInfo] = useState(null);
+  const [trainingInfo, setTrainingInfo] = useState(null);
 
   // ==========================================================
   // FILE SELECTION
@@ -26,22 +29,17 @@ export default function DatasetUpload() {
     setError("");
     setDatasetInfo(null);
     setPreprocessInfo(null);
+    setTrainingInfo(null);
 
     if (!selectedFile) {
       setFile(null);
       return;
     }
 
-    if (
-      !selectedFile.name
-        .toLowerCase()
-        .endsWith(".csv")
-    ) {
+    if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
       setFile(null);
 
-      setError(
-        "Please select a CSV file only."
-      );
+      setError("Please select a CSV file only.");
 
       event.target.value = "";
       return;
@@ -69,9 +67,7 @@ export default function DatasetUpload() {
 
   const handleUpload = async () => {
     if (!file) {
-      setError(
-        "Please select a CSV dataset first."
-      );
+      setError("Please select a CSV dataset first.");
       return;
     }
 
@@ -80,14 +76,12 @@ export default function DatasetUpload() {
     setError("");
     setDatasetInfo(null);
     setPreprocessInfo(null);
+    setTrainingInfo(null);
 
     try {
       const formData = new FormData();
 
-      formData.append(
-        "file",
-        file
-      );
+      formData.append("file", file);
 
       const response = await fetch(
         `${API_URL}/admin/upload-dataset`,
@@ -97,8 +91,7 @@ export default function DatasetUpload() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -168,6 +161,7 @@ export default function DatasetUpload() {
     setMessage("");
     setError("");
     setPreprocessInfo(null);
+    setTrainingInfo(null);
 
     try {
       const response = await fetch(
@@ -177,8 +171,7 @@ export default function DatasetUpload() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -208,6 +201,64 @@ export default function DatasetUpload() {
 
     } finally {
       setPreprocessing(false);
+    }
+  };
+
+  // ==========================================================
+  // TRAIN MACHINE LEARNING ALGORITHMS
+  // ==========================================================
+
+  const handleTrain = async () => {
+    if (!preprocessInfo) {
+      setError(
+        "Please preprocess the dataset before training."
+      );
+      return;
+    }
+
+    setTraining(true);
+    setMessage("");
+    setError("");
+    setTrainingInfo(null);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/admin/train`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            data?.message ||
+            "Model training failed."
+        );
+      }
+
+      setTrainingInfo(data);
+
+      setMessage(
+        data?.message ||
+          "All machine learning algorithms trained successfully."
+      );
+
+    } catch (err) {
+      console.error(
+        "Model training error:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Unable to train machine learning models."
+      );
+
+    } finally {
+      setTraining(false);
     }
   };
 
@@ -259,7 +310,6 @@ export default function DatasetUpload() {
 
 
         {/* NATIVE FILE INPUT */}
-
         <input
           ref={fileInputRef}
           type="file"
@@ -270,7 +320,6 @@ export default function DatasetUpload() {
 
 
         {/* FILE PICKER BUTTON */}
-
         <button
           type="button"
           className="dataset-file-button"
@@ -281,7 +330,6 @@ export default function DatasetUpload() {
 
 
         {/* SELECTED FILE */}
-
         {file && (
 
           <div className="selected-dataset">
@@ -318,7 +366,6 @@ export default function DatasetUpload() {
 
 
         {/* UPLOAD BUTTON */}
-
         <button
           type="button"
           className="dataset-upload-button"
@@ -332,7 +379,6 @@ export default function DatasetUpload() {
 
 
         {/* PREPROCESS BUTTON */}
-
         {datasetInfo && (
 
           <button
@@ -349,8 +395,24 @@ export default function DatasetUpload() {
         )}
 
 
-        {/* SUCCESS MESSAGE */}
+        {/* TRAIN BUTTON */}
+        {preprocessInfo && (
 
+          <button
+            type="button"
+            className="dataset-upload-button"
+            onClick={handleTrain}
+            disabled={training}
+          >
+            {training
+              ? "⏳ Training Models..."
+              : "🤖 Train Algorithms"}
+          </button>
+
+        )}
+
+
+        {/* SUCCESS MESSAGE */}
         {message && (
 
           <div className="dataset-success">
@@ -361,7 +423,6 @@ export default function DatasetUpload() {
 
 
         {/* ERROR MESSAGE */}
-
         {error && (
 
           <div className="dataset-error">
@@ -374,7 +435,6 @@ export default function DatasetUpload() {
 
 
       {/* DATASET INFORMATION */}
-
       {datasetInfo && (
 
         <div className="dataset-info">
@@ -459,7 +519,6 @@ export default function DatasetUpload() {
 
 
       {/* PREPROCESSING RESULTS */}
-
       {preprocessInfo && (
 
         <div className="dataset-info preprocessing-results">
@@ -595,7 +654,6 @@ export default function DatasetUpload() {
 
 
           {/* CLASS DISTRIBUTION */}
-
           {preprocessInfo.target_distribution &&
             Object.keys(
               preprocessInfo.target_distribution
@@ -640,7 +698,6 @@ export default function DatasetUpload() {
 
 
           {/* FEATURE INFORMATION */}
-
           {preprocessInfo.numeric_features &&
             preprocessInfo.numeric_features.length > 0 && (
 
@@ -704,6 +761,161 @@ export default function DatasetUpload() {
 
       )}
 
+
+      {/* TRAINING RESULTS */}
+      {trainingInfo && (
+
+        <div className="dataset-info training-results">
+
+          <div className="dataset-info-title">
+            🤖 Model Training Results
+          </div>
+
+
+          {/* TRAINING SUMMARY */}
+          <div className="dataset-info-grid">
+
+            <div>
+              <span>
+                Dataset
+              </span>
+
+              <strong>
+                {trainingInfo.dataset_name ??
+                  trainingInfo.filename ??
+                  "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Target
+              </span>
+
+              <strong>
+                {trainingInfo.target_column ??
+                  trainingInfo.target ??
+                  "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Models Trained
+              </span>
+
+              <strong>
+                {trainingInfo.results?.length ??
+                  trainingInfo.models_trained?.length ??
+                  "—"}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Training Status
+              </span>
+
+              <strong>
+                Completed
+              </strong>
+            </div>
+
+          </div>
+
+
+          {/* MODEL RESULTS */}
+          {trainingInfo.results &&
+            Array.isArray(trainingInfo.results) &&
+            trainingInfo.results.length > 0 && (
+
+              <div className="preprocessing-distribution">
+
+                <h3>
+                  📈 Algorithm Performance
+                </h3>
+
+
+                <div className="distribution-list">
+
+                  {trainingInfo.results.map(
+                    (model, index) => (
+
+                      <div
+                        className="distribution-item"
+                        key={
+                          model.model ||
+                          model.name ||
+                          index
+                        }
+                      >
+
+                        <span>
+                          {model.model ||
+                            model.name ||
+                            `Model ${index + 1}`}
+                        </span>
+
+                        <strong>
+                          {typeof model.accuracy === "number"
+                            ? `${(
+                                model.accuracy * 100
+                              ).toFixed(2)}%`
+                            : model.accuracy ?? "—"}
+                        </strong>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+        </div>
+
+      )}
+
     </section>
   );
 }
+
+What changed?
+
+Only one new workflow was added:
+
+Upload Dataset
+↓
+Preprocess Dataset
+↓
+🤖 Train Algorithms
+↓
+Backend "/admin/train"
+↓
+5 ML algorithms are trained
+
+The training button appears only after preprocessing succeeds, so the user cannot accidentally train before preprocessing.
+
+Your current workflow
+
+After replacing the file:
+
+1. Save "DatasetUpload.jsx".
+2. Push the change to GitHub.
+3. Vercel will deploy automatically.
+4. Open your Admin Dashboard.
+5. Upload "new-thyroid.csv".
+6. Click Upload Dataset.
+7. Click Preprocess Dataset.
+8. You should then see 🤖 Train Algorithms.
+9. Click it.
+
+Don't change "index.css" yet. Your existing CSS will handle the button using the existing ".dataset-upload-button" styling.
+
+After you click Train Algorithms, send me the result/error you see. Then we'll add the Model Comparison graph + detailed accuracy/precision/recall/F1/ROC-AUC section without redesigning your existing dashboard.
