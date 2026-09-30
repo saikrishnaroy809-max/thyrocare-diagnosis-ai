@@ -835,16 +835,4 @@ export default function DatasetUpload() {
 
     </section>
   );
-}
-
-After replacing it
-
-Save the file and commit it to GitHub → "main".
-
-Use a commit message such as:
-
-"Update DatasetUpload training workflow"
-
-Then check Vercel.
-
-Important: the new Vercel deployment must show a commit newer than "f849f0a". If it still shows "f849f0a", the code is not the problem—the Vercel/Git deployment connection is still using the old commit.
+      }
