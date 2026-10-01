@@ -1,67 +1,36 @@
-/* =========================================================
-   THYROCARE AI
-   COMPLETE GLOBAL STYLES
-   Public Website + Admin Login + Admin Dashboard
-   ========================================================= */
-
-/* =========================================================
-   1. ROOT
-   ========================================================= */
-
 :root {
   --bg: #06111f;
   --bg-secondary: #091827;
   --surface: rgba(13, 29, 47, 0.84);
   --surface-solid: #0d1d2f;
   --surface-light: #112840;
-
   --primary: #25c7f5;
   --primary-dark: #159dcc;
   --secondary: #7c5cff;
   --accent: #38e8c0;
-
   --text: #f4f9ff;
   --text-secondary: #a9bdd0;
   --text-muted: #71869a;
-
   --border: rgba(150, 205, 235, 0.14);
   --border-bright: rgba(37, 199, 245, 0.35);
-
   --success: #35df9a;
   --success-bg: rgba(53, 223, 154, 0.1);
-
   --danger: #ff6b8a;
   --danger-bg: rgba(255, 107, 138, 0.1);
-
   --warning: #ffc857;
-
   --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.18);
   --shadow-md: 0 18px 50px rgba(0, 0, 0, 0.25);
   --shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.38);
-
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
-
   --max-width: 1240px;
   --nav-height: 76px;
-
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
-
-/* =========================================================
-   2. RESET
-   ========================================================= */
 
 * {
   margin: 0;
@@ -77,9 +46,7 @@ html {
 body {
   min-width: 320px;
   min-height: 100vh;
-
-  background:
-    radial-gradient(
+  background: radial-gradient(
       circle at 15% 10%,
       rgba(37, 199, 245, 0.08),
       transparent 28%
@@ -90,38 +57,23 @@ body {
       transparent 28%
     ),
     var(--bg);
-
   color: var(--text);
-
   overflow-x: hidden;
-
   line-height: 1.6;
 }
 
 body::before {
   content: "";
-
   position: fixed;
-
   inset: 0;
-
   pointer-events: none;
-
   z-index: -1;
-
   opacity: 0.35;
-
-  background-image:
-    linear-gradient(
+  background-image: linear-gradient(
       rgba(255, 255, 255, 0.015) 1px,
       transparent 1px
     ),
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.015) 1px,
-      transparent 1px
-    );
-
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   background-size: 42px 42px;
 }
 
@@ -163,10 +115,6 @@ img {
   color: #fff;
 }
 
-/* =========================================================
-   3. SCROLLBAR
-   ========================================================= */
-
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -176,22 +124,13 @@ img {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    var(--primary),
-    var(--secondary)
-  );
-
+  background: linear-gradient(180deg, var(--primary), var(--secondary));
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }
-
-/* =========================================================
-   4. APP
-   ========================================================= */
 
 .app {
   min-height: 100vh;
@@ -203,176 +142,108 @@ main {
   position: relative;
 }
 
-/* =========================================================
-   5. NAVBAR
-   ========================================================= */
-
 .navbar {
   position: sticky;
   top: 0;
   z-index: 1000;
-
   height: var(--nav-height);
-
   display: flex;
   align-items: center;
-
   background: rgba(5, 16, 29, 0.78);
-
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
-
   border-bottom: 1px solid var(--border);
 }
 
 .navbar-inner {
   width: min(var(--max-width), calc(100% - 40px));
-
   height: 100%;
-
   margin: 0 auto;
-
   display: flex;
-
   align-items: center;
   justify-content: space-between;
 }
 
 .brand {
   display: inline-flex;
-
   align-items: center;
-
   gap: 12px;
-
   cursor: pointer;
-
   user-select: none;
 }
 
 .brand-mark {
   width: 42px;
   height: 42px;
-
   display: grid;
   place-items: center;
-
   border-radius: 13px;
-
   color: #fff;
-
-  background:
-    linear-gradient(
-      135deg,
-      var(--primary),
-      var(--secondary)
-    );
-
-  box-shadow:
-    0 0 25px rgba(37, 199, 245, 0.25),
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 0 25px rgba(37, 199, 245, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-
   font-size: 20px;
-
   font-weight: 800;
-
   position: relative;
-
   overflow: hidden;
 }
 
 .brand-mark::after {
   content: "";
-
   position: absolute;
-
   inset: -50%;
-
-  background:
-    linear-gradient(
-      110deg,
-      transparent 35%,
-      rgba(255, 255, 255, 0.35),
-      transparent 65%
-    );
-
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.35),
+    transparent 65%
+  );
   transform: translateX(-100%);
-
   animation: shine 5s infinite;
 }
 
 .brand-text {
   font-size: 18px;
-
   font-weight: 800;
-
   letter-spacing: -0.4px;
-
-  background:
-    linear-gradient(
-      90deg,
-      #fff,
-      #9cecff
-    );
-
+  background: linear-gradient(90deg, #fff, #9cecff);
   -webkit-background-clip: text;
   background-clip: text;
-
   color: transparent;
 }
 
 .nav-links {
   display: flex;
-
   align-items: center;
-
   gap: 8px;
 }
 
 .nav-links button {
   position: relative;
-
   padding: 9px 15px;
-
   background: transparent;
-
   color: var(--text-secondary);
-
   border-radius: 10px;
-
   cursor: pointer;
-
-  transition:
-    color 0.25s ease,
-    background 0.25s ease,
-    transform 0.25s ease;
+  transition: color 0.25s ease, background 0.25s ease, transform 0.25s ease;
 }
 
 .nav-links button:hover {
   color: #fff;
-
   background: rgba(255, 255, 255, 0.055);
-
   transform: translateY(-1px);
 }
 
 .nav-links button::after {
   content: "";
-
   position: absolute;
-
   bottom: 2px;
   left: 50%;
-
   width: 0;
   height: 2px;
-
   background: var(--primary);
-
   transform: translateX(-50%);
-
   transition: width 0.25s ease;
-
   border-radius: 999px;
 }
 
@@ -382,26 +253,15 @@ main {
 
 .mobile-menu-button {
   display: none;
-
   width: 44px;
   height: 44px;
-
   border-radius: 12px;
-
   background: rgba(255, 255, 255, 0.05);
-
   color: #fff;
-
   cursor: pointer;
-
   font-size: 20px;
-
   border: 1px solid var(--border);
 }
-
-/* =========================================================
-   6. PAGE CONTAINERS
-   ========================================================= */
 
 .home-page,
 .prediction-page,
@@ -415,287 +275,180 @@ main {
 .results-page > *,
 .about-page > * {
   width: min(var(--max-width), calc(100% - 40px));
-
   margin-left: auto;
   margin-right: auto;
 }
 
-/* =========================================================
-   7. HERO
-   ========================================================= */
-
 .hero {
   min-height: 650px;
-
   display: grid;
-
   grid-template-columns: 1.05fr 0.95fr;
-
   align-items: center;
-
   gap: 50px;
-
   padding-top: 70px;
   padding-bottom: 80px;
-
   position: relative;
 }
 
 .hero::before {
   content: "";
-
   position: absolute;
-
   width: 500px;
   height: 500px;
-
   left: -300px;
   top: 80px;
-
   border-radius: 50%;
-
   background: rgba(37, 199, 245, 0.07);
-
   filter: blur(70px);
-
   pointer-events: none;
 }
 
 .hero-content {
   position: relative;
-
   z-index: 2;
-
   animation: fadeUp 0.8s ease both;
 }
 
 .hero-badge,
 .model-badge {
   display: inline-flex;
-
   align-items: center;
-
   gap: 9px;
-
   padding: 7px 13px;
-
   border: 1px solid var(--border-bright);
-
   border-radius: 999px;
-
   background: rgba(37, 199, 245, 0.06);
-
   color: #a7eaff;
-
   font-size: 12px;
-
   font-weight: 700;
-
   letter-spacing: 0.4px;
-
   text-transform: uppercase;
-
   margin-bottom: 22px;
 }
 
 .status-dot {
   width: 7px;
   height: 7px;
-
   border-radius: 50%;
-
   background: var(--success);
-
-  box-shadow:
-    0 0 0 4px rgba(53, 223, 154, 0.1),
+  box-shadow: 0 0 0 4px rgba(53, 223, 154, 0.1),
     0 0 14px rgba(53, 223, 154, 0.7);
-
   animation: pulse 2s infinite;
 }
 
 .hero h1 {
   max-width: 700px;
-
   font-size: clamp(42px, 5vw, 72px);
-
   line-height: 1.04;
-
   letter-spacing: -3px;
-
   font-weight: 850;
-
   margin-bottom: 25px;
 }
 
 .hero h1 span {
-  background:
-    linear-gradient(
-      100deg,
-      var(--primary),
-      #79eaff 40%,
-      #9f8aff
-    );
-
+  background: linear-gradient(100deg, var(--primary), #79eaff 40%, #9f8aff);
   -webkit-background-clip: text;
   background-clip: text;
-
   color: transparent;
 }
 
 .hero-description {
   max-width: 610px;
-
   color: var(--text-secondary);
-
   font-size: 17px;
-
   line-height: 1.8;
-
   margin-bottom: 32px;
 }
 
 .hero-actions {
   display: flex;
-
   align-items: center;
-
   gap: 13px;
-
   flex-wrap: wrap;
 }
 
 .primary-button,
 .secondary-button {
   min-height: 48px;
-
   padding: 0 20px;
-
   border-radius: 13px;
-
   display: inline-flex;
-
   align-items: center;
   justify-content: center;
-
   gap: 9px;
-
   cursor: pointer;
-
   font-weight: 750;
-
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    background 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
 
 .primary-button {
   color: #02111b;
-
-  background:
-    linear-gradient(
-      135deg,
-      #54dcff,
-      #20bfe9
-    );
-
-  box-shadow:
-    0 12px 30px rgba(37, 199, 245, 0.2);
+  background: linear-gradient(135deg, #54dcff, #20bfe9);
+  box-shadow: 0 12px 30px rgba(37, 199, 245, 0.2);
 }
 
 .primary-button:hover {
   transform: translateY(-3px);
-
-  box-shadow:
-    0 18px 38px rgba(37, 199, 245, 0.3);
+  box-shadow: 0 18px 38px rgba(37, 199, 245, 0.3);
 }
 
 .secondary-button {
   color: #dff7ff;
-
   background: rgba(255, 255, 255, 0.045);
-
   border: 1px solid var(--border);
 }
 
 .secondary-button:hover {
   transform: translateY(-3px);
-
   background: rgba(255, 255, 255, 0.08);
-
   border-color: var(--border-bright);
 }
 
 .hero-note {
   margin-top: 17px;
-
   color: var(--text-muted);
-
   font-size: 12px;
 }
 
-/* =========================================================
-   8. HERO VISUAL
-   ========================================================= */
-
 .hero-visual {
   min-height: 500px;
-
   display: grid;
-
   place-items: center;
-
   position: relative;
-
   animation: fadeIn 1s ease 0.2s both;
 }
 
 .medical-orb {
   width: min(390px, 75vw);
-
   aspect-ratio: 1;
-
   position: relative;
-
   display: grid;
-
   place-items: center;
 }
 
 .orb-ring {
   position: absolute;
-
   border-radius: 50%;
-
   border: 1px solid rgba(37, 199, 245, 0.2);
-
   animation: rotate 20s linear infinite;
 }
 
 .ring-one {
   inset: 0;
-
-  box-shadow:
-    0 0 70px rgba(37, 199, 245, 0.08);
+  box-shadow: 0 0 70px rgba(37, 199, 245, 0.08);
 }
 
 .ring-two {
   inset: 42px;
-
   border-color: rgba(124, 92, 255, 0.25);
-
   animation-duration: 14s;
-
   animation-direction: reverse;
 }
 
 .ring-three {
   inset: 85px;
-
   border-style: dashed;
-
   border-color: rgba(56, 232, 192, 0.25);
-
   animation-duration: 9s;
 }
 
@@ -703,39 +456,26 @@ main {
 .ring-two::before,
 .ring-three::before {
   content: "";
-
   position: absolute;
-
   width: 8px;
   height: 8px;
-
   border-radius: 50%;
-
   background: var(--primary);
-
-  box-shadow:
-    0 0 16px var(--primary);
-
+  box-shadow: 0 0 16px var(--primary);
   top: 8%;
   left: 50%;
 }
 
 .ring-two::before {
   background: var(--secondary);
-
-  box-shadow:
-    0 0 16px var(--secondary);
-
+  box-shadow: 0 0 16px var(--secondary);
   top: 50%;
   left: -4px;
 }
 
 .ring-three::before {
   background: var(--accent);
-
-  box-shadow:
-    0 0 16px var(--accent);
-
+  box-shadow: 0 0 16px var(--accent);
   top: auto;
   bottom: 6%;
   left: 65%;
@@ -744,100 +484,64 @@ main {
 .orb-core {
   width: 150px;
   height: 150px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 50%;
-
-  background:
-    radial-gradient(
-      circle at 35% 30%,
-      #61e8ff,
-      #198fc2 48%,
-      #122e55 100%
-    );
-
-  box-shadow:
-    0 0 35px rgba(37, 199, 245, 0.4),
+  background: radial-gradient(
+    circle at 35% 30%,
+    #61e8ff,
+    #198fc2 48%,
+    #122e55 100%
+  );
+  box-shadow: 0 0 35px rgba(37, 199, 245, 0.4),
     0 0 100px rgba(37, 199, 245, 0.18),
     inset 0 0 30px rgba(255, 255, 255, 0.16);
-
   position: relative;
-
   animation: coreFloat 4s ease-in-out infinite;
 }
 
 .orb-core::before {
   content: "";
-
   position: absolute;
-
   inset: 15px;
-
   border-radius: 50%;
-
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .orb-core::after {
   content: "AI";
-
   font-size: 38px;
-
   font-weight: 900;
-
   color: #fff;
-
-  text-shadow:
-    0 0 18px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.5);
 }
-
-/* =========================================================
-   9. FLOATING CARDS
-   ========================================================= */
 
 .floating-card {
   position: absolute;
-
   min-width: 145px;
-
   padding: 13px 15px;
-
   border-radius: 14px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(18, 39, 62, 0.95),
-      rgba(9, 24, 40, 0.88)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(18, 39, 62, 0.95),
+    rgba(9, 24, 40, 0.88)
+  );
   border: 1px solid var(--border);
-
   box-shadow: var(--shadow-md);
-
   backdrop-filter: blur(14px);
-
   animation: floating 4s ease-in-out infinite;
 }
 
 .floating-card strong {
   display: block;
-
   color: #fff;
-
   font-size: 15px;
 }
 
 .floating-card span {
   display: block;
-
   color: var(--text-muted);
-
   font-size: 11px;
-
   margin-top: 3px;
 }
 
@@ -849,91 +553,56 @@ main {
 .card-two {
   right: 0;
   top: 30%;
-
   animation-delay: 1s;
 }
 
 .card-three {
   bottom: 11%;
   left: 7%;
-
   animation-delay: 2s;
 }
 
-/* =========================================================
-   10. STATS
-   ========================================================= */
-
 .stats-section {
   display: grid;
-
   grid-template-columns: repeat(3, 1fr);
-
   gap: 16px;
-
   padding-bottom: 90px;
 }
 
 .stat-card {
   padding: 25px;
-
   text-align: center;
-
   border: 1px solid var(--border);
-
   border-radius: var(--radius-md);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(17, 40, 64, 0.68),
-      rgba(9, 24, 40, 0.6)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(17, 40, 64, 0.68),
+    rgba(9, 24, 40, 0.6)
+  );
   box-shadow: var(--shadow-sm);
-
-  transition:
-    transform 0.3s ease,
-    border-color 0.3s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-5px);
-
   border-color: var(--border-bright);
 }
 
 .stat-number {
   font-size: 31px;
-
   line-height: 1;
-
   font-weight: 850;
-
-  background:
-    linear-gradient(
-      90deg,
-      #fff,
-      var(--primary)
-    );
-
+  background: linear-gradient(90deg, #fff, var(--primary));
   -webkit-background-clip: text;
   background-clip: text;
-
   color: transparent;
-
   margin-bottom: 7px;
 }
 
 .stat-label {
   color: var(--text-muted);
-
   font-size: 12px;
 }
-
-/* =========================================================
-   11. WORKFLOW
-   ========================================================= */
 
 .workflow-section {
   padding-bottom: 100px;
@@ -941,7 +610,6 @@ main {
 
 .section-heading {
   text-align: center;
-
   margin-bottom: 40px;
 }
 
@@ -951,19 +619,14 @@ main {
 
 .section-heading h2 {
   font-size: clamp(28px, 4vw, 42px);
-
   line-height: 1.15;
-
   letter-spacing: -1.5px;
-
   margin-bottom: 10px;
 }
 
 .section-heading p {
   max-width: 650px;
-
   margin: 0 auto;
-
   color: var(--text-secondary);
 }
 
@@ -973,119 +636,78 @@ main {
 
 .workflow-grid {
   display: grid;
-
   grid-template-columns: repeat(3, 1fr);
-
   gap: 18px;
 }
 
 .workflow-card {
   position: relative;
-
   padding: 30px 25px;
-
   border-radius: var(--radius-lg);
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(16, 37, 60, 0.78),
-      rgba(7, 21, 36, 0.82)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(16, 37, 60, 0.78),
+    rgba(7, 21, 36, 0.82)
+  );
   overflow: hidden;
-
-  transition:
-    transform 0.3s ease,
-    border-color 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .workflow-card::before {
   content: "";
-
   position: absolute;
-
   width: 130px;
   height: 130px;
-
   right: -70px;
   top: -70px;
-
   border-radius: 50%;
-
   background: rgba(37, 199, 245, 0.08);
 }
 
 .workflow-card:hover {
   transform: translateY(-7px);
-
   border-color: var(--border-bright);
-
   box-shadow: var(--shadow-md);
 }
 
 .step-number {
   display: inline-flex;
-
   width: 35px;
   height: 35px;
-
   align-items: center;
   justify-content: center;
-
   border-radius: 10px;
-
   color: #03131e;
-
   background: var(--primary);
-
   font-size: 13px;
-
   font-weight: 900;
-
   margin-bottom: 22px;
 }
 
 .workflow-icon {
   font-size: 32px;
-
   margin-bottom: 14px;
 }
 
 .workflow-card h3 {
   font-size: 19px;
-
   margin-bottom: 9px;
 }
 
 .workflow-card p {
   color: var(--text-secondary);
-
   font-size: 14px;
-
   line-height: 1.7;
 }
 
-/* =========================================================
-   12. CTA
-   ========================================================= */
-
 .cta-section {
   padding: 70px 30px;
-
   margin-bottom: 90px;
-
   text-align: center;
-
   border-radius: var(--radius-xl);
-
   border: 1px solid var(--border-bright);
-
-  background:
-    radial-gradient(
+  background: radial-gradient(
       circle at 20% 50%,
       rgba(37, 199, 245, 0.12),
       transparent 35%
@@ -1096,53 +718,37 @@ main {
       transparent 35%
     ),
     rgba(11, 29, 48, 0.72);
-
   overflow: hidden;
 }
 
 .cta-section h2 {
   font-size: clamp(28px, 4vw, 42px);
-
   letter-spacing: -1.4px;
-
   margin-bottom: 12px;
 }
 
 .cta-section p {
   color: var(--text-secondary);
-
   max-width: 620px;
-
   margin: 0 auto 25px;
 }
 
-/* =========================================================
-   13. PAGE HERO
-   ========================================================= */
-
 .page-hero {
   text-align: center;
-
   padding-top: 65px;
-
   padding-bottom: 45px;
 }
 
 .page-hero h1 {
   font-size: clamp(32px, 5vw, 52px);
-
   letter-spacing: -2px;
-
   line-height: 1.1;
-
   margin-bottom: 12px;
 }
 
 .page-hero p {
   max-width: 650px;
-
   margin: auto;
-
   color: var(--text-secondary);
 }
 
@@ -1150,82 +756,53 @@ main {
   margin-bottom: 18px;
 }
 
-/* =========================================================
-   14. PREDICTION
-   ========================================================= */
-
 .prediction-page {
   padding-bottom: 100px;
 }
 
 .error-box {
   width: min(900px, 100%);
-
   margin: 0 auto 20px;
-
   padding: 14px 17px;
-
   border-radius: 12px;
-
   border: 1px solid rgba(255, 107, 138, 0.3);
-
   background: var(--danger-bg);
-
   color: #ffb1c2;
-
   font-size: 14px;
 }
 
 .form-card {
   width: min(980px, 100%);
-
   margin: 0 auto;
-
   padding: 34px;
-
   border-radius: var(--radius-xl);
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(16, 36, 58, 0.9),
-      rgba(7, 20, 34, 0.9)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(16, 36, 58, 0.9),
+    rgba(7, 20, 34, 0.9)
+  );
   box-shadow: var(--shadow-lg);
-
   position: relative;
-
   overflow: hidden;
 }
 
 .form-card::before {
   content: "";
-
   position: absolute;
-
   width: 300px;
   height: 300px;
-
   top: -180px;
   right: -150px;
-
   border-radius: 50%;
-
   background: rgba(37, 199, 245, 0.08);
-
   filter: blur(20px);
-
   pointer-events: none;
 }
 
 .form-section {
   position: relative;
-
   padding: 25px 0;
-
   border-bottom: 1px solid var(--border);
 }
 
@@ -1235,85 +812,55 @@ main {
 
 .form-section:last-child {
   border-bottom: 0;
-
   padding-bottom: 0;
 }
 
 .form-section-heading {
   display: flex;
-
   align-items: center;
-
   gap: 10px;
-
   margin-bottom: 20px;
-
   font-size: 17px;
-
   font-weight: 750;
 }
 
 .form-section-heading::before {
   content: "";
-
   width: 4px;
   height: 20px;
-
   border-radius: 999px;
-
-  background:
-    linear-gradient(
-      180deg,
-      var(--primary),
-      var(--secondary)
-    );
+  background: linear-gradient(180deg, var(--primary), var(--secondary));
 }
 
 .form-grid {
   display: grid;
-
   grid-template-columns: repeat(2, 1fr);
-
   gap: 18px;
 }
 
 .input-group {
   display: flex;
-
   flex-direction: column;
-
   gap: 7px;
 }
 
 .input-group label {
   color: #b8cbdc;
-
   font-size: 12px;
-
   font-weight: 650;
 }
 
 .input-group input,
 .select-field select {
   width: 100%;
-
   height: 48px;
-
   padding: 0 14px;
-
   border-radius: 11px;
-
   border: 1px solid var(--border);
-
   outline: none;
-
   color: #edf8ff;
-
   background: rgba(4, 16, 28, 0.78);
-
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
+  transition: border-color 0.25s ease, box-shadow 0.25s ease,
     background 0.25s ease;
 }
 
@@ -1324,39 +871,25 @@ main {
 .input-group input:focus,
 .select-field select:focus {
   border-color: rgba(37, 199, 245, 0.65);
-
   background: rgba(5, 20, 34, 0.95);
-
-  box-shadow:
-    0 0 0 3px rgba(37, 199, 245, 0.08);
+  box-shadow: 0 0 0 3px rgba(37, 199, 245, 0.08);
 }
 
 .binary-grid {
   display: grid;
-
   grid-template-columns: repeat(2, 1fr);
-
   gap: 12px;
 }
 
 .select-field {
   display: flex;
-
   align-items: center;
-
   gap: 10px;
-
   padding: 12px 13px;
-
   border: 1px solid var(--border);
-
   border-radius: 12px;
-
   background: rgba(5, 18, 31, 0.62);
-
-  transition:
-    border-color 0.25s ease,
-    transform 0.25s ease;
+  transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
 .select-field:hover {
@@ -1365,19 +898,14 @@ main {
 
 .select-field label {
   flex: 1;
-
   color: #a9bdcf;
-
   font-size: 12px;
 }
 
 .select-field select {
   width: 92px;
-
   height: 38px;
-
   padding: 0 9px;
-
   cursor: pointer;
 }
 
@@ -1387,19 +915,14 @@ select {
 
 select option {
   background: #0b1b2c;
-
   color: #fff;
 }
 
 .form-actions {
   display: flex;
-
   align-items: center;
-
   justify-content: center;
-
   gap: 12px;
-
   padding-top: 28px;
 }
 
@@ -1410,19 +933,11 @@ select option {
 .spinner {
   width: 18px;
   height: 18px;
-
   border-radius: 50%;
-
   border: 2px solid rgba(0, 0, 0, 0.18);
-
   border-top-color: #04131d;
-
   animation: spin 0.75s linear infinite;
 }
-
-/* =========================================================
-   15. RESULTS
-   ========================================================= */
 
 .results-page {
   padding-bottom: 100px;
@@ -1430,42 +945,26 @@ select option {
 
 .empty-results {
   min-height: 420px;
-
   display: flex;
-
   flex-direction: column;
-
   align-items: center;
-
   justify-content: center;
-
   text-align: center;
-
   padding: 50px;
-
   border-radius: var(--radius-xl);
-
   border: 1px solid var(--border);
-
   background: rgba(11, 27, 44, 0.7);
 }
 
 .empty-results-icon {
   width: 70px;
   height: 70px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 20px;
-
   background: rgba(37, 199, 245, 0.1);
-
   color: var(--primary);
-
   font-size: 30px;
-
   margin-bottom: 20px;
 }
 
@@ -1475,61 +974,42 @@ select option {
 
 .empty-results p {
   max-width: 500px;
-
   color: var(--text-secondary);
-
   margin-bottom: 22px;
 }
 
 .prediction-banner {
   width: min(1000px, 100%);
-
   margin: 0 auto 28px;
-
   padding: 25px;
-
   display: flex;
-
   align-items: center;
-
   gap: 18px;
-
   border-radius: var(--radius-lg);
-
   border: 1px solid var(--border);
-
   background: rgba(11, 29, 47, 0.82);
-
   box-shadow: var(--shadow-md);
-
   position: relative;
-
   overflow: hidden;
 }
 
 .prediction-banner::before {
   content: "";
-
   position: absolute;
-
   left: 0;
   top: 0;
   bottom: 0;
-
   width: 4px;
-
   background: var(--primary);
 }
 
 .prediction-banner.positive {
   border-color: rgba(255, 107, 138, 0.22);
-
-  background:
-    linear-gradient(
-      110deg,
-      rgba(255, 107, 138, 0.08),
-      rgba(11, 29, 47, 0.8)
-    );
+  background: linear-gradient(
+    110deg,
+    rgba(255, 107, 138, 0.08),
+    rgba(11, 29, 47, 0.8)
+  );
 }
 
 .prediction-banner.positive::before {
@@ -1538,13 +1018,11 @@ select option {
 
 .prediction-banner.negative {
   border-color: rgba(53, 223, 154, 0.22);
-
-  background:
-    linear-gradient(
-      110deg,
-      rgba(53, 223, 154, 0.07),
-      rgba(11, 29, 47, 0.8)
-    );
+  background: linear-gradient(
+    110deg,
+    rgba(53, 223, 154, 0.07),
+    rgba(11, 29, 47, 0.8)
+  );
 }
 
 .prediction-banner.negative::before {
@@ -1554,17 +1032,11 @@ select option {
 .prediction-icon {
   width: 55px;
   height: 55px;
-
   flex: 0 0 55px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 16px;
-
   font-size: 25px;
-
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -1578,13 +1050,11 @@ select option {
 
 .prediction-banner h2 {
   font-size: 22px;
-
   margin-bottom: 3px;
 }
 
 .prediction-banner p {
   color: var(--text-secondary);
-
   font-size: 13px;
 }
 
@@ -1592,180 +1062,110 @@ select option {
 .explanation-section,
 .counterfactual-section {
   width: min(1000px, 100%);
-
   margin: 0 auto 35px;
 }
 
 .probability-grid {
   display: grid;
-
   grid-template-columns: repeat(2, 1fr);
-
   gap: 16px;
 }
 
 .probability-card {
   padding: 22px;
-
   border-radius: var(--radius-md);
-
   border: 1px solid var(--border);
-
   background: rgba(12, 30, 48, 0.75);
-
-  transition:
-    transform 0.3s ease,
-    border-color 0.3s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
 .probability-card:hover {
   transform: translateY(-4px);
-
   border-color: var(--border-bright);
 }
 
 .probability-card > div:first-child {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   margin-bottom: 12px;
-
   font-size: 13px;
-
   color: var(--text-secondary);
 }
 
 .probability-card strong {
   color: #fff;
-
   font-size: 20px;
 }
 
 .progress-track {
   width: 100%;
-
   height: 9px;
-
   overflow: hidden;
-
   border-radius: 999px;
-
   background: rgba(255, 255, 255, 0.07);
 }
 
 .progress-fill {
   height: 100%;
-
   border-radius: inherit;
-
-  background:
-    linear-gradient(
-      90deg,
-      var(--primary),
-      var(--secondary)
-    );
-
-  transition:
-    width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
-/* =========================================================
-   16. SHAP
-   ========================================================= */
 
 .shap-list {
   display: flex;
-
   flex-direction: column;
-
   gap: 10px;
 }
 
 .shap-row {
   display: grid;
-
   grid-template-columns: 145px 1fr 70px;
-
   align-items: center;
-
   gap: 12px;
-
   padding: 11px 13px;
-
   border: 1px solid rgba(150, 205, 235, 0.08);
-
   border-radius: 11px;
-
   background: rgba(10, 26, 43, 0.58);
 }
 
 .shap-name {
   color: #c5d7e5;
-
   font-size: 12px;
-
   font-weight: 650;
-
   overflow: hidden;
-
   text-overflow: ellipsis;
-
   white-space: nowrap;
 }
 
 .shap-bar {
   height: 8px;
-
   display: flex;
-
   align-items: center;
-
   border-radius: 999px;
-
   background: rgba(255, 255, 255, 0.045);
-
   overflow: hidden;
 }
 
 .shap-bar > div {
   height: 100%;
-
   border-radius: inherit;
-
   min-width: 2px;
-
   transition: width 0.8s ease;
 }
 
 .positive-bar {
-  background:
-    linear-gradient(
-      90deg,
-      #ff7190,
-      #ff4771
-    );
+  background: linear-gradient(90deg, #ff7190, #ff4771);
 }
 
 .negative-bar {
-  background:
-    linear-gradient(
-      90deg,
-      #3ee2ac,
-      #22bd8b
-    );
+  background: linear-gradient(90deg, #3ee2ac, #22bd8b);
 }
 
 .shap-value {
   text-align: right;
-
-  font-family:
-    "SFMono-Regular",
-    Consolas,
-    monospace;
-
+  font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 11px;
 }
 
@@ -1779,102 +1179,65 @@ select option {
 
 .empty-card {
   padding: 25px;
-
   text-align: center;
-
   color: var(--text-muted);
-
   border: 1px dashed var(--border);
-
   border-radius: 14px;
 }
 
-/* =========================================================
-   17. COUNTERFACTUAL
-   ========================================================= */
-
 .counterfactual-grid {
   display: grid;
-
   grid-template-columns: repeat(2, 1fr);
-
   gap: 14px;
 }
 
 .counterfactual-card {
   padding: 20px;
-
   border-radius: var(--radius-md);
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(14, 35, 56, 0.75),
-      rgba(8, 22, 37, 0.75)
-    );
-
-  transition:
-    transform 0.3s ease,
-    border-color 0.3s ease;
+  background: linear-gradient(
+    145deg,
+    rgba(14, 35, 56, 0.75),
+    rgba(8, 22, 37, 0.75)
+  );
+  transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
 .counterfactual-card:hover {
   transform: translateY(-4px);
-
   border-color: rgba(124, 92, 255, 0.35);
 }
 
 .counterfactual-card h3 {
   font-size: 14px;
-
   margin-bottom: 13px;
-
   color: #e7f4ff;
 }
 
 .cf-values {
   display: flex;
-
   flex-wrap: wrap;
-
   gap: 7px;
 }
 
 .cf-values span {
   padding: 6px 9px;
-
   border-radius: 8px;
-
   border: 1px solid rgba(150, 205, 235, 0.1);
-
   background: rgba(255, 255, 255, 0.04);
-
   color: #a9bfd1;
-
   font-size: 10px;
 }
 
 .result-actions {
   width: min(1000px, 100%);
-
   margin: 30px auto 0;
-
   display: flex;
-
   align-items: center;
-
   justify-content: center;
-
   gap: 12px;
-
   flex-wrap: wrap;
 }
-
-/* =========================================================
-   18. ABOUT
-   ========================================================= */
 
 .about-page {
   padding-bottom: 100px;
@@ -1886,88 +1249,61 @@ select option {
 
 .about-grid {
   display: grid;
-
   grid-template-columns: repeat(3, 1fr);
-
   gap: 18px;
-
   margin-bottom: 30px;
 }
 
 .about-card {
   padding: 28px;
-
   border-radius: var(--radius-lg);
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(16, 37, 60, 0.75),
-      rgba(8, 23, 39, 0.75)
-    );
-
-  transition:
-    transform 0.3s ease,
-    border-color 0.3s ease;
+  background: linear-gradient(
+    145deg,
+    rgba(16, 37, 60, 0.75),
+    rgba(8, 23, 39, 0.75)
+  );
+  transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
 .about-card:hover {
   transform: translateY(-5px);
-
   border-color: var(--border-bright);
 }
 
 .about-icon {
   width: 48px;
   height: 48px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 13px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(37, 199, 245, 0.17),
-      rgba(124, 92, 255, 0.17)
-    );
-
+  background: linear-gradient(
+    135deg,
+    rgba(37, 199, 245, 0.17),
+    rgba(124, 92, 255, 0.17)
+  );
   border: 1px solid rgba(37, 199, 245, 0.15);
-
   color: var(--primary);
-
   font-size: 22px;
-
   margin-bottom: 18px;
 }
 
 .about-card h3 {
   margin-bottom: 9px;
-
   font-size: 18px;
 }
 
 .about-card p {
   color: var(--text-secondary);
-
   font-size: 13px;
-
   line-height: 1.75;
 }
 
 .technology-card {
   padding: 30px;
-
   border-radius: var(--radius-lg);
-
   border: 1px solid var(--border);
-
   background: rgba(10, 27, 44, 0.78);
-
   margin-bottom: 30px;
 }
 
@@ -1977,67 +1313,42 @@ select option {
 
 .technology-list {
   display: grid;
-
   grid-template-columns: repeat(2, 1fr);
-
   gap: 11px;
-
   list-style: none;
 }
 
 .technology-list li {
   padding: 12px 14px;
-
   border-radius: 11px;
-
   border: 1px solid rgba(150, 205, 235, 0.08);
-
   background: rgba(255, 255, 255, 0.025);
-
   color: #b9cddd;
-
   font-size: 13px;
 }
 
 .technology-list li::before {
   content: "✓";
-
   margin-right: 9px;
-
   color: var(--success);
-
   font-weight: 900;
 }
 
-/* =========================================================
-   19. FOOTER
-   ========================================================= */
-
 .footer {
   width: 100%;
-
   border-top: 1px solid var(--border);
-
   background: rgba(3, 12, 21, 0.75);
-
   padding: 28px 20px;
 }
 
 .footer-brand {
   width: min(var(--max-width), 100%);
-
   margin: auto;
-
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 20px;
-
   color: var(--text-muted);
-
   font-size: 12px;
 }
 
@@ -2045,242 +1356,157 @@ select option {
   color: #cfe5f4;
 }
 
-/* =========================================================
-   20. ADMIN LOGIN
-   ========================================================= */
-
 .admin-login-page {
   min-height: 100vh;
-
   width: 100%;
-
   display: flex;
-
   align-items: center;
-
   justify-content: center;
-
   padding: 40px 20px;
-
   position: relative;
-
   overflow: hidden;
 }
 
 .admin-login-page::before {
   content: "";
-
   position: absolute;
-
   width: 520px;
   height: 520px;
-
   top: -220px;
   left: -180px;
-
   border-radius: 50%;
-
   background: rgba(37, 199, 245, 0.08);
-
   filter: blur(80px);
-
   pointer-events: none;
 }
 
 .admin-login-page::after {
   content: "";
-
   position: absolute;
-
   width: 480px;
   height: 480px;
-
   bottom: -220px;
   right: -180px;
-
   border-radius: 50%;
-
   background: rgba(124, 92, 255, 0.09);
-
   filter: blur(80px);
-
   pointer-events: none;
 }
 
 .admin-login-card {
   width: min(460px, 100%);
-
   position: relative;
-
   z-index: 2;
-
   padding: 36px;
-
   border-radius: 28px;
-
   border: 1px solid rgba(150, 205, 235, 0.16);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(17, 39, 62, 0.94),
-      rgba(7, 20, 35, 0.96)
-    );
-
-  box-shadow:
-    0 35px 100px rgba(0, 0, 0, 0.45),
+  background: linear-gradient(
+    145deg,
+    rgba(17, 39, 62, 0.94),
+    rgba(7, 20, 35, 0.96)
+  );
+  box-shadow: 0 35px 100px rgba(0, 0, 0, 0.45),
     0 0 70px rgba(37, 199, 245, 0.06);
-
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-
   animation: adminCardIn 0.65s ease both;
 }
 
 .admin-login-card::before {
   content: "";
-
   position: absolute;
-
   top: 0;
   left: 35px;
   right: 35px;
-
   height: 1px;
-
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(37, 199, 245, 0.65),
-      transparent
-    );
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(37, 199, 245, 0.65),
+    transparent
+  );
 }
 
 .admin-login-header {
   text-align: center;
-
   margin-bottom: 30px;
 }
 
 .admin-login-icon {
   width: 68px;
   height: 68px;
-
   display: grid;
-
   place-items: center;
-
   margin: 0 auto 17px;
-
   border-radius: 20px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(37, 199, 245, 0.18),
-      rgba(124, 92, 255, 0.18)
-    );
-
+  background: linear-gradient(
+    135deg,
+    rgba(37, 199, 245, 0.18),
+    rgba(124, 92, 255, 0.18)
+  );
   border: 1px solid rgba(37, 199, 245, 0.25);
-
   font-size: 29px;
-
-  box-shadow:
-    0 15px 40px rgba(0, 0, 0, 0.25),
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25),
     0 0 35px rgba(37, 199, 245, 0.08);
-
   animation: adminIconFloat 4s ease-in-out infinite;
 }
 
 .admin-panel-badge {
   display: inline-flex;
-
   align-items: center;
-
   justify-content: center;
-
   padding: 6px 11px;
-
   margin-bottom: 13px;
-
   border-radius: 999px;
-
   border: 1px solid rgba(37, 199, 245, 0.25);
-
   background: rgba(37, 199, 245, 0.07);
-
   color: #8feaff;
-
   font-size: 10px;
-
   font-weight: 800;
-
   letter-spacing: 1px;
 }
 
 .admin-login-header h1 {
   font-size: 30px;
-
   line-height: 1.15;
-
   letter-spacing: -1px;
-
   margin-bottom: 8px;
 }
 
 .admin-login-header p {
   color: var(--text-secondary);
-
   font-size: 13px;
-
   line-height: 1.7;
 }
 
 .admin-login-form {
   display: flex;
-
   flex-direction: column;
-
   gap: 18px;
 }
 
 .admin-field {
   display: flex;
-
   flex-direction: column;
-
   gap: 8px;
 }
 
 .admin-field label {
   color: #c3d5e3;
-
   font-size: 12px;
-
   font-weight: 700;
 }
 
 .admin-field input {
   width: 100%;
-
   height: 50px;
-
   padding: 0 14px;
-
   border-radius: 12px;
-
   border: 1px solid var(--border);
-
   outline: none;
-
   color: #f1f9ff;
-
   background: rgba(3, 14, 25, 0.8);
-
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
+  transition: border-color 0.25s ease, box-shadow 0.25s ease,
     background 0.25s ease;
 }
 
@@ -2290,17 +1516,13 @@ select option {
 
 .admin-field input:focus {
   border-color: rgba(37, 199, 245, 0.7);
-
   background: rgba(4, 17, 30, 0.96);
-
-  box-shadow:
-    0 0 0 3px rgba(37, 199, 245, 0.08),
+  box-shadow: 0 0 0 3px rgba(37, 199, 245, 0.08),
     0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .admin-password-wrapper {
   position: relative;
-
   width: 100%;
 }
 
@@ -2310,441 +1532,268 @@ select option {
 
 .admin-password-toggle {
   position: absolute;
-
   right: 7px;
   top: 50%;
-
   transform: translateY(-50%);
-
   padding: 7px 9px;
-
   border-radius: 8px;
-
   background: transparent;
-
   color: #7f96a8;
-
   font-size: 10px;
-
   font-weight: 800;
-
   letter-spacing: 0.5px;
-
   cursor: pointer;
 }
 
 .admin-password-toggle:hover {
   color: var(--primary);
-
   background: rgba(37, 199, 245, 0.08);
 }
 
 .admin-login-button {
   width: 100%;
-
   min-height: 51px;
-
   margin-top: 3px;
-
   border-radius: 13px;
-
   color: #02111b;
-
-  background:
-    linear-gradient(
-      135deg,
-      #59ddff,
-      #20bde7
-    );
-
+  background: linear-gradient(135deg, #59ddff, #20bde7);
   font-size: 14px;
-
   font-weight: 800;
-
   cursor: pointer;
-
-  box-shadow:
-    0 14px 32px rgba(37, 199, 245, 0.18);
-
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+  box-shadow: 0 14px 32px rgba(37, 199, 245, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .admin-login-button:hover {
   transform: translateY(-2px);
-
-  box-shadow:
-    0 18px 40px rgba(37, 199, 245, 0.28);
+  box-shadow: 0 18px 40px rgba(37, 199, 245, 0.28);
 }
 
 .error-message {
   padding: 11px 13px;
-
   border-radius: 10px;
-
   border: 1px solid rgba(255, 107, 138, 0.28);
-
   background: rgba(255, 107, 138, 0.08);
-
   color: #ff9db2;
-
   font-size: 12px;
-
   line-height: 1.5;
-
   animation: errorShake 0.3s ease;
 }
 
 .admin-demo-note {
   margin-top: 23px;
-
   padding: 15px;
-
   border-radius: 13px;
-
   border: 1px solid rgba(150, 205, 235, 0.09);
-
   background: rgba(255, 255, 255, 0.025);
 }
 
 .admin-demo-note > strong {
   display: block;
-
   margin-bottom: 10px;
-
   color: #91e9ff;
-
   font-size: 11px;
-
   text-transform: uppercase;
-
   letter-spacing: 0.7px;
 }
 
 .admin-demo-row {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 15px;
-
   margin-top: 7px;
-
   color: #70869a;
-
   font-size: 12px;
 }
 
 .admin-demo-row strong {
   color: #d6e6f2;
-
-  font-family:
-    "SFMono-Regular",
-    Consolas,
-    monospace;
+  font-family: "SFMono-Regular", Consolas, monospace;
 }
 
 .admin-demo-note p {
   margin-top: 12px;
-
   color: #536b7e;
-
   font-size: 10px;
-
   line-height: 1.6;
 }
 
 .admin-back-button {
   width: 100%;
-
   margin-top: 14px;
 }
 
-/* =========================================================
-   21. ADMIN DASHBOARD
-   ========================================================= */
-
 .admin-dashboard {
   min-height: 100vh;
-
   padding: 35px 20px 70px;
-
   position: relative;
-
   overflow: hidden;
 }
 
 .admin-dashboard::before {
   content: "";
-
   position: absolute;
-
   width: 550px;
   height: 550px;
-
   top: -300px;
   right: -200px;
-
   border-radius: 50%;
-
   background: rgba(124, 92, 255, 0.07);
-
   filter: blur(80px);
-
   pointer-events: none;
 }
 
 .admin-dashboard-container {
   width: min(1240px, 100%);
-
   margin: 0 auto;
-
   position: relative;
-
   z-index: 1;
 }
 
-/* =========================================================
-   22. ADMIN TOPBAR
-   ========================================================= */
-
 .admin-topbar {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 20px;
-
   padding: 18px 20px;
-
   margin-bottom: 22px;
-
   border: 1px solid var(--border);
-
   border-radius: 18px;
-
   background: rgba(10, 27, 44, 0.8);
-
   box-shadow: var(--shadow-sm);
-
   backdrop-filter: blur(18px);
 }
 
 .admin-topbar-brand {
   display: flex;
-
   align-items: center;
-
   gap: 12px;
-
   min-width: 0;
 }
 
 .admin-brand-mark {
   width: 45px;
   height: 45px;
-
   flex: 0 0 45px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 13px;
-
-  background:
-    linear-gradient(
-      135deg,
-      var(--primary),
-      var(--secondary)
-    );
-
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: white;
-
   font-size: 20px;
-
-  box-shadow:
-    0 0 25px rgba(37, 199, 245, 0.18);
+  box-shadow: 0 0 25px rgba(37, 199, 245, 0.18);
 }
 
 .admin-eyebrow {
   display: block;
-
   color: var(--primary);
-
   font-size: 9px;
-
   font-weight: 800;
-
   letter-spacing: 1.4px;
-
   text-transform: uppercase;
-
   margin-bottom: 2px;
 }
 
 .admin-topbar-brand h1 {
   font-size: 20px;
-
   line-height: 1.15;
-
   letter-spacing: -0.5px;
 }
 
 .admin-topbar-actions {
   display: flex;
-
   align-items: center;
-
   gap: 8px;
-
   flex-wrap: wrap;
-
   justify-content: flex-end;
 }
 
 .admin-secondary-button,
 .admin-danger-button {
   min-height: 40px;
-
   padding: 0 13px;
-
   display: inline-flex;
-
   align-items: center;
-
   justify-content: center;
-
   gap: 7px;
-
   border-radius: 10px;
-
   cursor: pointer;
-
   font-size: 11px;
-
   font-weight: 750;
-
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .admin-secondary-button {
   color: #bfe9f8;
-
   background: rgba(37, 199, 245, 0.07);
-
   border: 1px solid rgba(37, 199, 245, 0.18);
 }
 
 .admin-secondary-button:hover {
   transform: translateY(-2px);
-
   background: rgba(37, 199, 245, 0.12);
-
   border-color: rgba(37, 199, 245, 0.35);
 }
 
 .admin-danger-button {
   color: #ffadbf;
-
   background: rgba(255, 107, 138, 0.06);
-
   border: 1px solid rgba(255, 107, 138, 0.18);
 }
 
 .admin-danger-button:hover {
   transform: translateY(-2px);
-
   background: rgba(255, 107, 138, 0.12);
-
   border-color: rgba(255, 107, 138, 0.35);
 }
 
-/* =========================================================
-   23. ADMIN STATS
-   ========================================================= */
-
 .admin-stats-grid {
   display: grid;
-
   grid-template-columns: repeat(4, 1fr);
-
   gap: 14px;
-
   margin-bottom: 18px;
 }
 
 .admin-stat-card {
   min-width: 0;
-
   padding: 20px;
-
   display: flex;
-
   align-items: center;
-
   gap: 14px;
-
   border-radius: 17px;
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(15, 35, 56, 0.84),
-      rgba(8, 23, 39, 0.78)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(15, 35, 56, 0.84),
+    rgba(8, 23, 39, 0.78)
+  );
   box-shadow: var(--shadow-sm);
-
-  transition:
-    transform 0.25s ease,
-    border-color 0.25s ease,
+  transition: transform 0.25s ease, border-color 0.25s ease,
     box-shadow 0.25s ease;
-
   animation: dashboardUp 0.55s ease both;
 }
 
 .admin-stat-card:hover {
   transform: translateY(-4px);
-
   border-color: var(--border-bright);
-
   box-shadow: var(--shadow-md);
 }
 
 .admin-stat-icon {
   width: 46px;
   height: 46px;
-
   flex: 0 0 46px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 13px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(37, 199, 245, 0.14),
-      rgba(124, 92, 255, 0.14)
-    );
-
+  background: linear-gradient(
+    135deg,
+    rgba(37, 199, 245, 0.14),
+    rgba(124, 92, 255, 0.14)
+  );
   border: 1px solid rgba(37, 199, 245, 0.14);
-
   color: var(--primary);
-
   font-size: 20px;
 }
 
@@ -2754,250 +1803,162 @@ select option {
 
 .admin-stat-label {
   display: block;
-
   color: var(--text-muted);
-
   font-size: 10px;
-
   font-weight: 700;
-
   text-transform: uppercase;
-
   letter-spacing: 0.7px;
-
   margin-bottom: 3px;
 }
 
 .admin-stat-value {
   display: block;
-
   color: #fff;
-
   font-size: 22px;
-
   line-height: 1.15;
-
   font-weight: 850;
 }
 
 .admin-model-value {
   font-size: 15px;
-
   overflow: hidden;
-
   text-overflow: ellipsis;
-
   white-space: nowrap;
 }
 
 .admin-stat-subtext {
   display: block;
-
   color: #647c90;
-
   font-size: 10px;
-
   margin-top: 3px;
 }
 
-/* =========================================================
-   24. ADMIN CONTENT
-   ========================================================= */
-
 .admin-content-grid {
   display: grid;
-
   grid-template-columns: 1.3fr 0.7fr;
-
   gap: 18px;
-
   margin-bottom: 18px;
 }
 
 .admin-panel {
   min-width: 0;
-
   padding: 22px;
-
   border-radius: 19px;
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(13, 31, 50, 0.84),
-      rgba(7, 21, 36, 0.82)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(13, 31, 50, 0.84),
+    rgba(7, 21, 36, 0.82)
+  );
   box-shadow: var(--shadow-sm);
 }
 
 .admin-panel-header {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 12px;
-
   margin-bottom: 20px;
-
   padding-bottom: 14px;
-
   border-bottom: 1px solid var(--border);
 }
 
 .admin-panel-header h2 {
   font-size: 16px;
-
   letter-spacing: -0.3px;
 }
 
 .admin-panel-badge {
   display: inline-flex;
-
   align-items: center;
-
   padding: 5px 9px;
-
   border-radius: 999px;
-
   background: rgba(37, 199, 245, 0.07);
-
   border: 1px solid rgba(37, 199, 245, 0.17);
-
   color: #8ee8ff;
-
   font-size: 9px;
-
   font-weight: 800;
-
   text-transform: uppercase;
-
   letter-spacing: 0.6px;
 }
 
 .admin-status {
   display: inline-flex;
-
   align-items: center;
-
   gap: 7px;
-
   color: var(--success);
-
   font-size: 10px;
-
   font-weight: 750;
 }
 
 .admin-status-dot {
   width: 7px;
   height: 7px;
-
   border-radius: 50%;
-
   background: var(--success);
-
-  box-shadow:
-    0 0 0 4px rgba(53, 223, 154, 0.08),
+  box-shadow: 0 0 0 4px rgba(53, 223, 154, 0.08),
     0 0 12px rgba(53, 223, 154, 0.55);
-
   animation: pulse 2s infinite;
 }
 
-/* =========================================================
-   25. ADMIN LATEST ANALYSIS
-   ========================================================= */
-
 .admin-empty {
   min-height: 190px;
-
   display: flex;
-
   flex-direction: column;
-
   align-items: center;
-
   justify-content: center;
-
   text-align: center;
-
   color: var(--text-muted);
 }
 
 .admin-empty-icon {
   width: 54px;
   height: 54px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 15px;
-
   background: rgba(37, 199, 245, 0.07);
-
   color: var(--primary);
-
   font-size: 23px;
-
   margin-bottom: 12px;
 }
 
 .admin-empty p {
   font-size: 12px;
-
   margin-bottom: 14px;
 }
 
 .admin-prediction-content {
   display: flex;
-
   flex-direction: column;
-
   gap: 18px;
 }
 
 .admin-prediction-box {
   display: flex;
-
   align-items: center;
-
   gap: 14px;
-
   padding: 17px;
-
   border-radius: 14px;
-
   border: 1px solid var(--border);
-
   background: rgba(255, 255, 255, 0.025);
 }
 
 .admin-prediction-box.positive {
   border-color: rgba(255, 107, 138, 0.2);
-
   background: rgba(255, 107, 138, 0.055);
 }
 
 .admin-prediction-box.negative {
   border-color: rgba(53, 223, 154, 0.2);
-
   background: rgba(53, 223, 154, 0.05);
 }
 
 .admin-prediction-box::before {
   content: "";
-
   width: 4px;
-
   align-self: stretch;
-
   border-radius: 999px;
-
   background: var(--primary);
 }
 
@@ -3011,21 +1972,15 @@ select option {
 
 .prediction-label {
   color: var(--text-muted);
-
   font-size: 9px;
-
   text-transform: uppercase;
-
   letter-spacing: 0.8px;
-
   font-weight: 750;
 }
 
 .admin-prediction-class {
   font-size: 19px;
-
   font-weight: 850;
-
   margin-top: 2px;
 }
 
@@ -3037,35 +1992,23 @@ select option {
   color: #58e8b6;
 }
 
-/* =========================================================
-   26. ADMIN PROBABILITIES
-   ========================================================= */
-
 .admin-probabilities {
   display: flex;
-
   flex-direction: column;
-
   gap: 14px;
 }
 
 .admin-probability {
   display: flex;
-
   flex-direction: column;
-
   gap: 7px;
 }
 
 .admin-probability-header {
   display: flex;
-
   justify-content: space-between;
-
   gap: 10px;
-
   color: #a9bfd0;
-
   font-size: 11px;
 }
 
@@ -3075,57 +2018,32 @@ select option {
 
 .admin-progress {
   width: 100%;
-
   height: 8px;
-
   border-radius: 999px;
-
   overflow: hidden;
-
   background: rgba(255, 255, 255, 0.06);
 }
 
 .admin-progress-bar {
   height: 100%;
-
   min-width: 2px;
-
   border-radius: inherit;
-
-  background:
-    linear-gradient(
-      90deg,
-      var(--primary),
-      var(--secondary)
-    );
-
-  transition:
-    width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
-/* =========================================================
-   27. ADMIN SYSTEM INFO
-   ========================================================= */
 
 .admin-info-list {
   display: flex;
-
   flex-direction: column;
-
   gap: 0;
 }
 
 .admin-info-row {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 15px;
-
   padding: 12px 0;
-
   border-bottom: 1px solid rgba(150, 205, 235, 0.07);
 }
 
@@ -3135,32 +2053,22 @@ select option {
 
 .admin-info-row span:first-child {
   color: var(--text-muted);
-
   font-size: 11px;
 }
 
 .admin-info-row span:last-child,
 .admin-info-row strong {
   color: #dcebf5;
-
   font-size: 11px;
-
   text-align: right;
 }
 
 .admin-system-status {
   color: var(--success) !important;
-
   display: inline-flex;
-
   align-items: center;
-
   gap: 5px;
 }
-
-/* =========================================================
-   28. ADMIN HISTORY
-   ========================================================= */
 
 .admin-history-panel {
   margin-bottom: 18px;
@@ -3168,67 +2076,44 @@ select option {
 
 .admin-history-count {
   padding: 4px 8px;
-
   border-radius: 999px;
-
   background: rgba(124, 92, 255, 0.1);
-
   border: 1px solid rgba(124, 92, 255, 0.2);
-
   color: #b7a9ff;
-
   font-size: 9px;
-
   font-weight: 800;
 }
 
 .admin-table-wrapper {
   width: 100%;
-
   overflow-x: auto;
-
   border-radius: 12px;
-
   border: 1px solid rgba(150, 205, 235, 0.07);
 }
 
 .admin-table {
   width: 100%;
-
   min-width: 620px;
-
   border-collapse: collapse;
 }
 
 .admin-table th {
   padding: 12px 13px;
-
   text-align: left;
-
   color: #7890a3;
-
   background: rgba(255, 255, 255, 0.025);
-
   font-size: 9px;
-
   font-weight: 800;
-
   text-transform: uppercase;
-
   letter-spacing: 0.7px;
-
   white-space: nowrap;
 }
 
 .admin-table td {
   padding: 13px;
-
   border-top: 1px solid rgba(150, 205, 235, 0.06);
-
   color: #b9ccda;
-
   font-size: 11px;
-
   white-space: nowrap;
 }
 
@@ -3242,11 +2127,7 @@ select option {
 
 .admin-row-number {
   color: #62798c !important;
-
-  font-family:
-    "SFMono-Regular",
-    Consolas,
-    monospace;
+  font-family: "SFMono-Regular", Consolas, monospace;
 }
 
 .admin-date {
@@ -3255,245 +2136,148 @@ select option {
 
 .admin-badge {
   display: inline-flex;
-
   align-items: center;
-
   padding: 5px 8px;
-
   border-radius: 7px;
-
   font-size: 9px;
-
   font-weight: 800;
 }
 
 .admin-badge-positive {
   color: #ff9fb2;
-
   background: rgba(255, 107, 138, 0.08);
-
   border: 1px solid rgba(255, 107, 138, 0.14);
 }
 
 .admin-badge-negative {
   color: #5ce5b5;
-
   background: rgba(53, 223, 154, 0.07);
-
   border: 1px solid rgba(53, 223, 154, 0.14);
 }
 
 .admin-model-tag {
   padding: 4px 7px;
-
   border-radius: 6px;
-
   background: rgba(37, 199, 245, 0.06);
-
   color: #8edff5;
-
   font-size: 9px;
 }
 
-/* =========================================================
-   29. ADMIN SHAP
-   ========================================================= */
-
 .admin-shap-list {
   display: flex;
-
   flex-direction: column;
-
   gap: 9px;
 }
 
 .admin-shap-item {
   display: flex;
-
   align-items: center;
-
   gap: 10px;
-
   padding: 10px 11px;
-
   border-radius: 10px;
-
   border: 1px solid rgba(150, 205, 235, 0.07);
-
   background: rgba(255, 255, 255, 0.02);
 }
 
 .admin-shap-main {
   flex: 1;
-
   min-width: 0;
 }
 
 .admin-shap-rank {
   width: 24px;
   height: 24px;
-
   flex: 0 0 24px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 7px;
-
   background: rgba(37, 199, 245, 0.08);
-
   color: #7dddf6;
-
   font-size: 9px;
-
   font-weight: 850;
 }
 
 .admin-shap-feature {
   display: block;
-
   overflow: hidden;
-
   text-overflow: ellipsis;
-
   white-space: nowrap;
-
   color: #c5d7e4;
-
   font-size: 10px;
-
   font-weight: 700;
-
   margin-bottom: 5px;
 }
 
 .admin-shap-bar {
   width: 100%;
-
   height: 5px;
-
   border-radius: 999px;
-
   overflow: hidden;
-
   background: rgba(255, 255, 255, 0.05);
 }
 
 .admin-shap-bar-fill {
   height: 100%;
-
   min-width: 2px;
-
   border-radius: inherit;
-
   transition: width 0.7s ease;
 }
 
 .shap-positive {
-  background:
-    linear-gradient(
-      90deg,
-      #ff7190,
-      #ff4771
-    );
+  background: linear-gradient(90deg, #ff7190, #ff4771);
 }
 
 .shap-negative {
-  background:
-    linear-gradient(
-      90deg,
-      #3ee2ac,
-      #22bd8b
-    );
+  background: linear-gradient(90deg, #3ee2ac, #22bd8b);
 }
 
 .admin-shap-item > span:last-child {
   min-width: 52px;
-
   text-align: right;
-
-  font-family:
-    "SFMono-Regular",
-    Consolas,
-    monospace;
-
+  font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 9px;
-
   color: #8fa6b8;
 }
 
-/* =========================================================
-   30. ADMIN DISCLAIMER
-   ========================================================= */
-
 .admin-disclaimer {
   display: flex;
-
   align-items: flex-start;
-
   gap: 10px;
-
   padding: 14px 16px;
-
   border-radius: 13px;
-
   border: 1px solid rgba(255, 200, 87, 0.14);
-
   background: rgba(255, 200, 87, 0.035);
-
   color: #a99871;
-
   font-size: 10px;
-
   line-height: 1.6;
 }
 
 .admin-disclaimer-icon {
   flex: 0 0 auto;
-
   color: var(--warning);
-
   font-size: 14px;
 }
 
-/* =========================================================
-   31. DATASET UPLOAD
-   IMPORTANT MOBILE-SAFE FILE PICKER
-   ========================================================= */
-
 .admin-feature-section {
   position: relative;
-
   z-index: 20;
-
   width: 100%;
-
   margin-bottom: 18px;
 }
 
 .dataset-upload-card {
   position: relative;
-
   z-index: 30;
-
   width: 100%;
-
   overflow: visible;
-
   padding: 22px;
-
   border-radius: 19px;
-
   border: 1px solid var(--border);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(13, 31, 50, 0.84),
-      rgba(7, 21, 36, 0.82)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(13, 31, 50, 0.84),
+    rgba(7, 21, 36, 0.82)
+  );
   box-shadow: var(--shadow-sm);
 }
 
@@ -3503,26 +2287,17 @@ select option {
 
 .dataset-upload-area {
   position: relative;
-
   z-index: 40;
-
   width: 100%;
-
   padding: 28px;
-
   border: 1px dashed rgba(37, 199, 245, 0.35);
-
   border-radius: 18px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(37, 199, 245, 0.045),
-      rgba(124, 92, 255, 0.035)
-    );
-
+  background: linear-gradient(
+    145deg,
+    rgba(37, 199, 245, 0.045),
+    rgba(124, 92, 255, 0.035)
+  );
   text-align: center;
-
   overflow: visible;
 }
 
@@ -3530,249 +2305,129 @@ select option {
   border-color: rgba(37, 199, 245, 0.65);
 }
 
-/* Upload icon */
-
 .dataset-upload-icon {
   width: 58px;
   height: 58px;
-
   margin: 0 auto 15px;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 17px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(37, 199, 245, 0.14),
-      rgba(124, 92, 255, 0.14)
-    );
-
+  background: linear-gradient(
+    135deg,
+    rgba(37, 199, 245, 0.14),
+    rgba(124, 92, 255, 0.14)
+  );
   border: 1px solid rgba(37, 199, 245, 0.16);
-
   color: var(--primary);
-
   font-size: 25px;
 }
-
-/* Upload heading */
 
 .dataset-upload-card h2,
 .dataset-upload-card h3 {
   color: #fff;
-
   margin-bottom: 7px;
 }
 
 .dataset-upload-card p {
   color: var(--text-secondary);
-
   font-size: 12px;
-
   line-height: 1.65;
 }
 
-/* =========================================================
-   NATIVE FILE INPUT
-   DO NOT HIDE THIS INPUT
-   ========================================================= */
-
 .dataset-native-input {
   display: block !important;
-
   position: relative !important;
-
   z-index: 9999 !important;
-
   width: 100% !important;
-
   min-height: 54px !important;
-
   margin: 18px 0 !important;
-
   padding: 9px !important;
-
   border: 1px solid rgba(150, 205, 235, 0.18) !important;
-
   border-radius: 12px !important;
-
   outline: none !important;
-
   background: rgba(4, 16, 28, 0.9) !important;
-
   color: #cfe8f5 !important;
-
   font-size: 13px !important;
-
   cursor: pointer !important;
-
   pointer-events: auto !important;
-
   touch-action: manipulation !important;
-
   opacity: 1 !important;
-
   visibility: visible !important;
 }
 
 .dataset-native-input:focus {
   border-color: rgba(37, 199, 245, 0.65) !important;
-
-  box-shadow:
-    0 0 0 3px rgba(37, 199, 245, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(37, 199, 245, 0.08) !important;
 }
-
-/* Android / Chrome native file button */
 
 .dataset-native-input::file-selector-button {
   margin-right: 12px;
-
   padding: 9px 14px;
-
   border: 0;
-
   border-radius: 9px;
-
-  background:
-    linear-gradient(
-      135deg,
-      var(--primary),
-      var(--primary-dark)
-    );
-
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #02111b;
-
   font-size: 12px;
-
   font-weight: 800;
-
   cursor: pointer;
 }
-
-/* WebKit fallback */
 
 .dataset-native-input::-webkit-file-upload-button {
   margin-right: 12px;
-
   padding: 9px 14px;
-
   border: 0;
-
   border-radius: 9px;
-
-  background:
-    linear-gradient(
-      135deg,
-      var(--primary),
-      var(--primary-dark)
-    );
-
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #02111b;
-
   font-size: 12px;
-
   font-weight: 800;
-
   cursor: pointer;
 }
 
-/* =========================================================
-   CUSTOM FILE BUTTON
-   ========================================================= */
-
 .dataset-file-button {
   position: relative;
-
   z-index: 10000;
-
   min-height: 46px;
-
   padding: 0 18px;
-
   border-radius: 11px;
-
-  background:
-    linear-gradient(
-      135deg,
-      var(--primary),
-      var(--primary-dark)
-    );
-
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #02111b;
-
   font-size: 13px;
-
   font-weight: 800;
-
   cursor: pointer;
-
   pointer-events: auto;
-
   touch-action: manipulation;
-
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dataset-file-button:hover {
   transform: translateY(-2px);
-
-  box-shadow:
-    0 10px 25px rgba(37, 199, 245, 0.2);
+  box-shadow: 0 10px 25px rgba(37, 199, 245, 0.2);
 }
 
 .dataset-file-button:active {
   transform: translateY(0);
 }
 
-/* =========================================================
-   UPLOAD BUTTON
-   ========================================================= */
-
 .dataset-upload-button {
   position: relative;
-
   z-index: 10000;
-
   width: 100%;
-
   min-height: 48px;
-
   margin-top: 10px;
-
   border-radius: 12px;
-
-  background:
-    linear-gradient(
-      135deg,
-      var(--secondary),
-      #5d45d9
-    );
-
+  background: linear-gradient(135deg, var(--secondary), #5d45d9);
   color: #fff;
-
   font-weight: 800;
-
   cursor: pointer;
-
   pointer-events: auto;
-
   touch-action: manipulation;
-
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dataset-upload-button:hover {
   transform: translateY(-2px);
-
-  box-shadow:
-    0 12px 28px rgba(124, 92, 255, 0.22);
+  box-shadow: 0 12px 28px rgba(124, 92, 255, 0.22);
 }
 
 .dataset-upload-button:active {
@@ -3781,150 +2436,88 @@ select option {
 
 .dataset-upload-button:disabled {
   opacity: 0.5;
-
   cursor: not-allowed;
-
   pointer-events: none;
 }
 
-/* =========================================================
-   DATASET FILE NAME
-   ========================================================= */
-
 .dataset-file-name {
   margin-top: 12px;
-
   padding: 10px 12px;
-
   border-radius: 10px;
-
   background: rgba(53, 223, 154, 0.06);
-
   border: 1px solid rgba(53, 223, 154, 0.14);
-
   color: #8cecc4;
-
   font-size: 12px;
-
   word-break: break-word;
 }
 
-/* =========================================================
-   DATASET STATUS
-   ========================================================= */
-
 .dataset-message {
   margin-top: 14px;
-
   padding: 12px;
-
   border-radius: 10px;
-
   background: rgba(53, 223, 154, 0.07);
-
   border: 1px solid rgba(53, 223, 154, 0.18);
-
   color: #8cecc4;
-
   font-size: 12px;
-
   line-height: 1.6;
 }
 
 .dataset-error {
   margin-top: 14px;
-
   padding: 12px;
-
   border-radius: 10px;
-
   background: rgba(255, 107, 138, 0.07);
-
   border: 1px solid rgba(255, 107, 138, 0.18);
-
   color: #ff9fb3;
-
   font-size: 12px;
-
   line-height: 1.6;
 }
 
-/* =========================================================
-   DATASET INFORMATION
-   ========================================================= */
-
 .dataset-info {
   margin-top: 18px;
-
   display: grid;
-
   grid-template-columns: repeat(2, 1fr);
-
   gap: 10px;
 }
 
 .dataset-info-item {
   padding: 12px;
-
   border-radius: 11px;
-
   border: 1px solid rgba(150, 205, 235, 0.08);
-
   background: rgba(255, 255, 255, 0.025);
 }
 
 .dataset-info-item span {
   display: block;
-
   color: var(--text-muted);
-
   font-size: 10px;
-
   margin-bottom: 3px;
 }
 
 .dataset-info-item strong {
   color: #e4f2fa;
-
   font-size: 12px;
 }
 
-/* =========================================================
-   32. GLOBAL BUTTON STATES
-   ========================================================= */
-
 button:disabled {
   opacity: 0.55;
-
   cursor: not-allowed;
-
   transform: none !important;
-
   box-shadow: none !important;
 }
-
-/* =========================================================
-   33. FOCUS
-   ========================================================= */
 
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--primary);
-
   outline-offset: 3px;
 }
-
-/* =========================================================
-   34. ANIMATIONS
-   ========================================================= */
 
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -3933,13 +2526,10 @@ a:focus-visible {
 @keyframes fadeUp {
   from {
     opacity: 0;
-
     transform: translateY(25px);
   }
-
   to {
     opacity: 1;
-
     transform: translateY(0);
   }
 }
@@ -3947,13 +2537,10 @@ a:focus-visible {
 @keyframes dashboardUp {
   from {
     opacity: 0;
-
     transform: translateY(15px);
   }
-
   to {
     opacity: 1;
-
     transform: translateY(0);
   }
 }
@@ -3961,18 +2548,11 @@ a:focus-visible {
 @keyframes adminCardIn {
   from {
     opacity: 0;
-
-    transform:
-      translateY(25px)
-      scale(0.98);
+    transform: translateY(25px) scale(0.98);
   }
-
   to {
     opacity: 1;
-
-    transform:
-      translateY(0)
-      scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -3981,7 +2561,6 @@ a:focus-visible {
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-5px);
   }
@@ -3992,11 +2571,9 @@ a:focus-visible {
   100% {
     transform: translateX(0);
   }
-
   25% {
     transform: translateX(-4px);
   }
-
   75% {
     transform: translateX(4px);
   }
@@ -4007,7 +2584,6 @@ a:focus-visible {
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-9px);
   }
@@ -4016,32 +2592,22 @@ a:focus-visible {
 @keyframes coreFloat {
   0%,
   100% {
-    transform:
-      translateY(0)
-      scale(1);
+    transform: translateY(0) scale(1);
   }
-
   50% {
-    transform:
-      translateY(-8px)
-      scale(1.025);
+    transform: translateY(-8px) scale(1.025);
   }
 }
 
 @keyframes pulse {
   0% {
-    box-shadow:
-      0 0 0 0 rgba(53, 223, 154, 0.4);
+    box-shadow: 0 0 0 0 rgba(53, 223, 154, 0.4);
   }
-
   70% {
-    box-shadow:
-      0 0 0 8px rgba(53, 223, 154, 0);
+    box-shadow: 0 0 0 8px rgba(53, 223, 154, 0);
   }
-
   100% {
-    box-shadow:
-      0 0 0 0 rgba(53, 223, 154, 0);
+    box-shadow: 0 0 0 0 rgba(53, 223, 154, 0);
   }
 }
 
@@ -4049,7 +2615,6 @@ a:focus-visible {
   from {
     transform: rotate(0deg);
   }
-
   to {
     transform: rotate(360deg);
   }
@@ -4063,22 +2628,13 @@ a:focus-visible {
 
 @keyframes shine {
   0% {
-    transform:
-      translateX(-100%)
-      rotate(20deg);
+    transform: translateX(-100%) rotate(20deg);
   }
-
   25%,
   100% {
-    transform:
-      translateX(100%)
-      rotate(20deg);
+    transform: translateX(100%) rotate(20deg);
   }
 }
-
-/* =========================================================
-   35. TABLET
-   ========================================================= */
 
 @media (max-width: 1100px) {
   .admin-stats-grid {
@@ -4093,17 +2649,13 @@ a:focus-visible {
 @media (max-width: 950px) {
   .hero {
     grid-template-columns: 1fr;
-
     text-align: center;
-
     padding-top: 55px;
   }
 
   .hero-content {
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
   }
 
@@ -4137,10 +2689,6 @@ a:focus-visible {
   }
 }
 
-/* =========================================================
-   36. MOBILE NAVBAR
-   ========================================================= */
-
 @media (max-width: 760px) {
   :root {
     --nav-height: 66px;
@@ -4152,28 +2700,17 @@ a:focus-visible {
 
   .nav-links {
     display: none;
-
     position: absolute;
-
     top: calc(var(--nav-height) + 8px);
-
     left: 14px;
     right: 14px;
-
     padding: 10px;
-
     flex-direction: column;
-
     align-items: stretch;
-
     border-radius: 17px;
-
     background: rgba(7, 21, 35, 0.97);
-
     border: 1px solid var(--border);
-
     box-shadow: var(--shadow-lg);
-
     backdrop-filter: blur(22px);
   }
 
@@ -4183,15 +2720,12 @@ a:focus-visible {
 
   .nav-links button {
     width: 100%;
-
     padding: 13px;
-
     text-align: left;
   }
 
   .mobile-menu-button {
     display: grid;
-
     place-items: center;
   }
 
@@ -4210,17 +2744,13 @@ a:focus-visible {
 
   .admin-topbar {
     align-items: flex-start;
-
     flex-direction: column;
-
     padding: 16px;
-
     border-radius: 16px;
   }
 
   .admin-topbar-actions {
     width: 100%;
-
     justify-content: stretch;
   }
 
@@ -4230,22 +2760,18 @@ a:focus-visible {
 
   .admin-stats-grid {
     grid-template-columns: 1fr 1fr;
-
     gap: 10px;
   }
 
   .admin-stat-card {
     padding: 15px;
-
     gap: 10px;
   }
 
   .admin-stat-icon {
     width: 38px;
     height: 38px;
-
     flex-basis: 38px;
-
     font-size: 16px;
   }
 
@@ -4266,10 +2792,6 @@ a:focus-visible {
   }
 }
 
-/* =========================================================
-   37. MOBILE CONTENT
-   ========================================================= */
-
 @media (max-width: 650px) {
   .home-page > *,
   .prediction-page > *,
@@ -4280,29 +2802,23 @@ a:focus-visible {
 
   .hero {
     min-height: auto;
-
     padding-top: 45px;
-
     padding-bottom: 55px;
-
     gap: 30px;
   }
 
   .hero h1 {
     font-size: clamp(38px, 12vw, 55px);
-
     letter-spacing: -2px;
   }
 
   .hero-description {
     font-size: 15px;
-
     line-height: 1.7;
   }
 
   .hero-actions {
     width: 100%;
-
     flex-direction: column;
   }
 
@@ -4338,7 +2854,6 @@ a:focus-visible {
 
   .floating-card {
     min-width: 118px;
-
     padding: 10px;
   }
 
@@ -4367,7 +2882,6 @@ a:focus-visible {
 
   .stats-section {
     grid-template-columns: 1fr;
-
     padding-bottom: 65px;
   }
 
@@ -4381,9 +2895,7 @@ a:focus-visible {
 
   .cta-section {
     padding: 45px 20px;
-
     margin-bottom: 65px;
-
     border-radius: 22px;
   }
 
@@ -4393,7 +2905,6 @@ a:focus-visible {
 
   .form-card {
     padding: 20px 16px;
-
     border-radius: 21px;
   }
 
@@ -4412,7 +2923,6 @@ a:focus-visible {
 
   .select-field {
     align-items: flex-start;
-
     flex-direction: column;
   }
 
@@ -4430,14 +2940,12 @@ a:focus-visible {
 
   .prediction-banner {
     align-items: flex-start;
-
     padding: 18px;
   }
 
   .prediction-icon {
     width: 45px;
     height: 45px;
-
     flex-basis: 45px;
   }
 
@@ -4447,7 +2955,6 @@ a:focus-visible {
 
   .shap-row {
     grid-template-columns: 1fr;
-
     gap: 7px;
   }
 
@@ -4469,11 +2976,8 @@ a:focus-visible {
 
   .footer-brand {
     flex-direction: column;
-
     text-align: center;
   }
-
-  /* Admin login */
 
   .admin-login-page {
     padding: 22px 14px;
@@ -4481,7 +2985,6 @@ a:focus-visible {
 
   .admin-login-card {
     padding: 25px 18px;
-
     border-radius: 22px;
   }
 
@@ -4492,11 +2995,8 @@ a:focus-visible {
   .admin-login-icon {
     width: 58px;
     height: 58px;
-
     font-size: 25px;
   }
-
-  /* Admin dashboard */
 
   .admin-stats-grid {
     grid-template-columns: 1fr;
@@ -4512,13 +3012,11 @@ a:focus-visible {
 
   .admin-topbar-actions button {
     width: 100%;
-
     flex: none;
   }
 
   .admin-panel-header {
     align-items: flex-start;
-
     flex-direction: column;
   }
 
@@ -4532,9 +3030,7 @@ a:focus-visible {
 
   .admin-info-row {
     align-items: flex-start;
-
     flex-direction: column;
-
     gap: 3px;
   }
 
@@ -4542,8 +3038,6 @@ a:focus-visible {
   .admin-info-row strong {
     text-align: left;
   }
-
-  /* Dataset upload */
 
   .dataset-upload-card {
     padding: 14px;
@@ -4556,43 +3050,32 @@ a:focus-visible {
   .dataset-upload-icon {
     width: 52px;
     height: 52px;
-
     font-size: 22px;
   }
 
   .dataset-native-input {
     display: block !important;
-
     width: 100% !important;
-
     min-height: 56px !important;
-
     margin: 18px 0 !important;
-
     padding: 9px !important;
-
     font-size: 12px !important;
-
     pointer-events: auto !important;
-
     touch-action: manipulation !important;
   }
 
   .dataset-native-input::file-selector-button {
     padding: 8px 10px;
-
     font-size: 11px;
   }
 
   .dataset-file-button {
     width: 100%;
-
     min-height: 50px;
   }
 
   .dataset-upload-button {
     width: 100%;
-
     min-height: 50px;
   }
 
@@ -4600,10 +3083,6 @@ a:focus-visible {
     grid-template-columns: 1fr;
   }
 }
-
-/* =========================================================
-   38. SMALL MOBILE
-   ========================================================= */
 
 @media (max-width: 420px) {
   .hero h1 {
@@ -4693,20 +3172,366 @@ a:focus-visible {
   }
 }
 
-/* =========================================================
-   39. REDUCED MOTION
-   ========================================================= */
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-
     animation-iteration-count: 1 !important;
-
     scroll-behavior: auto !important;
-
     transition-duration: 0.01ms !important;
   }
-   }
+}
+
+.admin-dashboard .admin-dashboard-container {
+  animation: tcAdminDashboardIn 0.7s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+}
+
+.admin-dashboard .admin-topbar {
+  animation: tcAdminTopbarIn 0.65s ease both;
+  transform-origin: top center;
+}
+
+.admin-dashboard .admin-stat-card {
+  animation: tcAdminCardIn 0.65s cubic-bezier(0.22, 0.8, 0.24, 1) both,
+    tcAdminCardGlow 5s ease-in-out infinite;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(1) {
+  animation-delay: 0.08s, 1.4s;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(2) {
+  animation-delay: 0.16s, 1.7s;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(3) {
+  animation-delay: 0.24s, 2s;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(4) {
+  animation-delay: 0.32s, 2.3s;
+}
+
+.admin-dashboard .admin-stat-icon {
+  animation: tcAdminIconFloat 3.8s ease-in-out infinite;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(2) .admin-stat-icon {
+  animation-delay: 0.45s;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(3) .admin-stat-icon {
+  animation-delay: 0.9s;
+}
+
+.admin-dashboard .admin-stat-card:nth-child(4) .admin-stat-icon {
+  animation-delay: 1.35s;
+}
+
+.admin-dashboard .admin-panel {
+  animation: tcAdminPanelIn 0.7s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+}
+
+.admin-dashboard .admin-content-grid > .admin-panel:nth-child(1) {
+  animation-delay: 0.28s;
+}
+
+.admin-dashboard .admin-content-grid > .admin-panel:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.admin-dashboard .admin-feature-section {
+  animation: tcAdminPanelIn 0.7s cubic-bezier(0.22, 0.8, 0.24, 1) 0.48s both;
+}
+
+.admin-dashboard .dataset-upload-card {
+  transition: transform 0.35s ease, border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.admin-dashboard .dataset-upload-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(37, 199, 245, 0.3);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.28),
+    0 0 35px rgba(37, 199, 245, 0.06);
+}
+
+.admin-dashboard .dataset-upload-area {
+  transition: border-color 0.3s ease, background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.admin-dashboard .dataset-upload-area:hover {
+  animation: tcUploadPulse 2.2s ease-in-out infinite;
+  background: linear-gradient(
+    145deg,
+    rgba(37, 199, 245, 0.065),
+    rgba(124, 92, 255, 0.05)
+  );
+  box-shadow: inset 0 0 30px rgba(37, 199, 245, 0.035);
+}
+
+.admin-dashboard .dataset-upload-icon {
+  animation: tcUploadIconFloat 3.5s ease-in-out infinite;
+}
+
+.admin-dashboard .admin-panel-header {
+  position: relative;
+}
+
+.admin-dashboard .admin-panel-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 55px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--secondary),
+    transparent
+  );
+  animation: tcHeaderSweep 3.2s ease-in-out infinite;
+}
+
+.admin-dashboard .admin-status-dot {
+  animation: tcStatusPulse 2s ease-in-out infinite;
+}
+
+.admin-dashboard .admin-shap-bar-fill {
+  transform-origin: left center;
+  animation: tcBarReveal 1s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+}
+
+.admin-dashboard .admin-table tbody tr {
+  animation: tcTableRowIn 0.45s ease both;
+}
+
+.admin-dashboard .admin-table tbody tr:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.admin-dashboard .admin-table tbody tr:nth-child(2) {
+  animation-delay: 0.09s;
+}
+
+.admin-dashboard .admin-table tbody tr:nth-child(3) {
+  animation-delay: 0.13s;
+}
+
+.admin-dashboard .admin-table tbody tr:nth-child(4) {
+  animation-delay: 0.17s;
+}
+
+.admin-dashboard .admin-table tbody tr:nth-child(5) {
+  animation-delay: 0.21s;
+}
+
+.admin-dashboard .admin-table tbody tr:nth-child(6) {
+  animation-delay: 0.25s;
+}
+
+.admin-dashboard .admin-prediction-box,
+.admin-dashboard .admin-info-row,
+.admin-dashboard .dataset-info-item,
+.admin-dashboard .admin-shap-item {
+  transition: transform 0.25s ease, border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+.admin-dashboard .admin-prediction-box:hover,
+.admin-dashboard .dataset-info-item:hover,
+.admin-dashboard .admin-shap-item:hover {
+  transform: translateY(-2px);
+}
+
+.admin-dashboard .admin-secondary-button,
+.admin-dashboard .admin-danger-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-dashboard .admin-secondary-button::after,
+.admin-dashboard .admin-danger-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  transform: translateX(-160%) skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.admin-dashboard .admin-secondary-button:hover::after,
+.admin-dashboard .admin-danger-button:hover::after {
+  animation: tcButtonShine 0.75s ease;
+}
+
+.admin-dashboard::before {
+  animation: tcDashboardAura 9s ease-in-out infinite;
+}
+
+@keyframes tcAdminDashboardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tcAdminTopbarIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tcAdminCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tcAdminPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tcAdminCardGlow {
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm);
+  }
+  50% {
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22),
+      0 0 22px rgba(37, 199, 245, 0.035);
+  }
+}
+
+@keyframes tcAdminIconFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(1deg);
+  }
+}
+
+@keyframes tcUploadIconFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes tcUploadPulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 rgba(37, 199, 245, 0);
+  }
+  50% {
+    box-shadow: inset 0 0 28px rgba(37, 199, 245, 0.035);
+  }
+}
+
+@keyframes tcHeaderSweep {
+  0%,
+  100% {
+    width: 45px;
+    opacity: 0.55;
+  }
+  50% {
+    width: 95px;
+    opacity: 1;
+  }
+}
+
+@keyframes tcStatusPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(53, 223, 154, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(53, 223, 154, 0);
+  }
+}
+
+@keyframes tcBarReveal {
+  from {
+    opacity: 0.25;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tcTableRowIn {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tcButtonShine {
+  from {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(360%) skewX(-18deg);
+  }
+}
+
+@keyframes tcDashboardAura {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-18px, 14px, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard *,
+  .admin-dashboard *::before,
+  .admin-dashboard *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+     }
