@@ -4400,227 +4400,221 @@ a:focus-visible {
   }
 }
 
-/* ========================================================= THYROCARE AI — COMPLETE WEBSITE ANIMATION LAYER --------------------------------------------------------- Added on top of the existing stylesheet. Animations cover: Navbar • Hero • Cards • Stats • Workflow • CTA Prediction • Results • SHAP • Counterfactual About • Footer • Admin Login • Admin Dashboard Dataset Upload • Tables • Buttons • Inputs ========================================================= */
+/* ========================================================= THYROCARE AI — ENHANCED MOTION PACK Added without changing the existing layout/classes. ========================================================= */
 
-/* ========================================================= 40. GLOBAL PAGE ENTRANCE ========================================================= */
-
+/* Smooth page entrance */
 .home-page,
 .prediction-page,
 .results-page,
 .about-page {
-  animation: tcPageEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-main {
-  animation: tcMainEnter 0.55s ease-out both;
-}
-
-/* ========================================================= 41. NAVBAR ANIMATION ========================================================= */
-
+/* Header feels alive without being distracting */
 .navbar {
-  animation: tcNavbarEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background 0.35s ease, box-shadow 0.35s ease,
+    border-color 0.35s ease;
+  animation: navbarDrop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Brand interaction */
 .brand {
-  transition: transform 0.3s ease, filter 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 .brand:hover {
   transform: translateY(-2px);
-  filter: drop-shadow(0 0 12px rgba(37, 199, 245, 0.25));
 }
 
 .brand-mark {
-  animation: tcBrandPulse 4s ease-in-out infinite;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
 }
 
+.brand:hover .brand-mark {
+  transform: rotate(-4deg) scale(1.07);
+  box-shadow: 0 0 30px rgba(37, 199, 245, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Navigation items enter one after another */
 .nav-links button {
-  transition: transform 0.25s ease, color 0.25s ease, background 0.25s ease,
-    box-shadow 0.25s ease;
+  animation: navItemIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.nav-links button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 18px rgba(37, 199, 245, 0.08);
+.nav-links button:nth-child(1) {
+  animation-delay: 0.08s;
+}
+.nav-links button:nth-child(2) {
+  animation-delay: 0.14s;
+}
+.nav-links button:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.nav-links button:nth-child(4) {
+  animation-delay: 0.26s;
 }
 
-.mobile-menu-button {
-  transition: transform 0.25s ease, background 0.25s ease,
-    border-color 0.25s ease;
-}
-
-.mobile-menu-button:hover {
-  transform: rotate(4deg) scale(1.04);
-  border-color: var(--border-bright);
-}
-
-/* ========================================================= 42. HERO ========================================================= */
-
-.hero-content {
-  animation: tcHeroContent 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hero-badge {
-  animation: tcBadgeEnter 0.7s ease-out 0.15s both,
-    tcBadgeGlow 3s ease-in-out 1s infinite;
-}
-
-.hero h1 {
-  animation: tcHeadingReveal 0.9s ease-out 0.25s both;
-}
-
-.hero-description {
-  animation: tcTextReveal 0.8s ease-out 0.4s both;
-}
-
-.hero-actions {
-  animation: tcTextReveal 0.8s ease-out 0.52s both;
-}
-
-.hero-note {
-  animation: tcTextReveal 0.8s ease-out 0.65s both;
-}
-
-.hero-visual {
-  animation: tcHeroVisual 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
-}
-
-.medical-orb {
-  animation: tcOrbFloat 6s ease-in-out infinite;
-}
-
-.orb-core {
-  animation: coreFloat 4s ease-in-out infinite,
-    tcCoreGlow 3s ease-in-out infinite;
-}
-
-.floating-card {
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.floating-card:hover {
-  transform: translateY(-9px) scale(1.035);
-  border-color: var(--border-bright);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.3), 0 0 22px rgba(37, 199, 245, 0.1);
-}
-
-/* ========================================================= 43. BUTTONS — GLOBAL ========================================================= */
-
+/* Buttons: premium shine + press feedback */
 .primary-button,
 .secondary-button,
-.form-actions button,
-.result-actions button,
-.admin-dashboard button,
-.admin-login-button {
+.admin-login-button,
+.dataset-upload-button {
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
-.primary-button::after,
-.secondary-button::after,
-.admin-login-button::after,
-.admin-dashboard button::after {
+.primary-button::before,
+.secondary-button::before,
+.admin-login-button::before,
+.dataset-upload-button::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: -130%;
-  width: 65%;
-  height: 100%;
-  pointer-events: none;
-  transform: skewX(-22deg);
+  inset: 0;
+  z-index: -1;
   background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.24),
-    transparent
+    115deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.22) 48%,
+    transparent 76%
   );
+  transform: translateX(-120%);
+  transition: transform 0.65s ease;
 }
 
-.primary-button:hover::after,
-.secondary-button:hover::after,
-.admin-login-button:hover::after,
-.admin-dashboard button:hover::after {
-  animation: tcButtonShine 0.75s ease;
-}
-
-.primary-button,
-.secondary-button {
-  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
-}
-
-.primary-button:hover,
-.secondary-button:hover {
-  filter: brightness(1.06);
+.primary-button:hover::before,
+.secondary-button:hover::before,
+.admin-login-button:hover::before,
+.dataset-upload-button:hover::before {
+  transform: translateX(120%);
 }
 
 .primary-button:active,
 .secondary-button:active,
 .admin-login-button:active,
-.admin-dashboard button:active {
-  transform: scale(0.97);
+.dataset-upload-button:active {
+  transform: translateY(1px) scale(0.98);
 }
 
-/* ========================================================= 44. HOME STATS ========================================================= */
-
-.stats-section {
-  animation: tcSectionReveal 0.8s ease-out 0.25s both;
+/* Hero text gets a subtle cinematic entrance */
+.hero-badge {
+  animation: fadeUp 0.7s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both,
+    badgeGlow 3s 1s ease-in-out infinite;
 }
 
-.stat-card {
-  animation: tcCardReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+.hero h1 {
+  animation: heroTitleIn 0.9s 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.stat-card:nth-child(1) {
-  animation-delay: 0.25s;
+.hero-description {
+  animation: fadeUp 0.8s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.stat-card:nth-child(2) {
-  animation-delay: 0.38s;
+.hero-actions {
+  animation: fadeUp 0.8s 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.stat-card:nth-child(3) {
-  animation-delay: 0.51s;
+.hero-note {
+  animation: fadeUp 0.8s 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.stat-card:hover {
-  transform: translateY(-8px) scale(1.015);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24), 0 0 22px rgba(37, 199, 245, 0.08);
+/* AI orb: extra depth while preserving the existing rotation */
+.medical-orb {
+  animation: orbEntrance 1s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.stat-number {
-  animation: tcNumberReveal 1s ease-out 0.65s both;
+.orb-core {
+  box-shadow: 0 0 35px rgba(37, 199, 245, 0.4),
+    0 0 100px rgba(37, 199, 245, 0.18), inset 0 0 30px rgba(255, 255, 255, 0.16);
 }
 
-/* ========================================================= 45. WORKFLOW CARDS ========================================================= */
-
-.workflow-section {
-  animation: tcSectionReveal 0.8s ease-out both;
+.orb-core::after {
+  animation: aiTextPulse 2.8s ease-in-out infinite;
 }
 
-.workflow-card {
-  animation: tcCardReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+.orb-ring {
+  transition: border-color 0.35s ease, filter 0.35s ease;
 }
 
-.workflow-card:nth-child(1) {
-  animation-delay: 0.12s;
+.medical-orb:hover .ring-one {
+  border-color: rgba(37, 199, 245, 0.42);
 }
 
-.workflow-card:nth-child(2) {
+.medical-orb:hover .ring-two {
+  border-color: rgba(124, 92, 255, 0.48);
+}
+
+.medical-orb:hover .ring-three {
+  border-color: rgba(56, 232, 192, 0.48);
+}
+
+/* Floating cards react like glass UI */
+.floating-card {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.floating-card:hover {
+  transform: translateY(-12px) scale(1.035);
+  border-color: rgba(37, 199, 245, 0.34);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.32), 0 0 28px rgba(37, 199, 245, 0.08);
+}
+
+/* Home cards reveal in sequence */
+.stats-section .stat-card,
+.workflow-grid .workflow-card,
+.about-grid .about-card {
+  animation: cardReveal 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stats-section .stat-card:nth-child(1),
+.workflow-grid .workflow-card:nth-child(1),
+.about-grid .about-card:nth-child(1) {
+  animation-delay: 0.08s;
+}
+
+.stats-section .stat-card:nth-child(2),
+.workflow-grid .workflow-card:nth-child(2),
+.about-grid .about-card:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.stats-section .stat-card:nth-child(3),
+.workflow-grid .workflow-card:nth-child(3),
+.about-grid .about-card:nth-child(3) {
   animation-delay: 0.24s;
 }
 
-.workflow-card:nth-child(3) {
-  animation-delay: 0.36s;
+.workflow-grid .workflow-card:nth-child(4),
+.about-grid .about-card:nth-child(4) {
+  animation-delay: 0.32s;
 }
 
+.workflow-grid .workflow-card:nth-child(5),
+.about-grid .about-card:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+/* Card hover lift becomes smoother */
+.stat-card,
+.workflow-card,
+.about-card,
+.probability-card,
+.counterfactual-card,
+.technology-card,
+.empty-results {
+  will-change: transform;
+}
+
+/* Workflow icons gently breathe */
 .workflow-icon {
-  transition: transform 0.3s ease, filter 0.3s ease;
+  transition: transform 0.35s ease, filter 0.35s ease;
 }
 
 .workflow-card:hover .workflow-icon {
-  transform: translateY(-5px) scale(1.12);
-  filter: drop-shadow(0 0 9px rgba(37, 199, 245, 0.4));
+  transform: translateY(-4px) scale(1.12);
+  filter: drop-shadow(0 0 12px rgba(37, 199, 245, 0.35));
 }
 
 .step-number {
@@ -4628,1133 +4622,504 @@ main {
 }
 
 .workflow-card:hover .step-number {
-  transform: scale(1.12) rotate(4deg);
-  box-shadow: 0 0 20px rgba(37, 199, 245, 0.22);
+  transform: rotate(-5deg) scale(1.08);
+  box-shadow: 0 8px 22px rgba(37, 199, 245, 0.22);
 }
 
-/* ========================================================= 46. CTA ========================================================= */
-
+/* CTA glow slowly travels across the panel */
 .cta-section {
-  animation: tcCtaReveal 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   position: relative;
 }
 
 .cta-section::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  pointer-events: none;
-  transform: skewX(-20deg);
+  top: -80%;
+  left: -25%;
+  width: 28%;
+  height: 260%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.055),
     transparent
   );
-  animation: tcCtaSweep 5s ease-in-out infinite;
+  transform: rotate(18deg);
+  pointer-events: none;
+  animation: ctaSweep 7s ease-in-out infinite;
 }
 
-/* ========================================================= 47. PAGE HERO ========================================================= */
-
-.page-hero {
-  animation: tcPageHero 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.page-hero .model-badge {
-  animation: tcBadgeEnter 0.65s ease-out both,
-    tcBadgeGlow 3s ease-in-out 1s infinite;
-}
-
-.page-hero h1 {
-  animation: tcHeadingReveal 0.8s ease-out 0.12s both;
-}
-
-.page-hero p {
-  animation: tcTextReveal 0.8s ease-out 0.25s both;
-}
-
-/* ========================================================= 48. PREDICTION FORM ========================================================= */
-
+/* Prediction form */
 .form-card {
-  animation: tcFormEnter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: formCardIn 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .form-section {
-  animation: tcFormSection 0.65s ease-out both;
-}
-
-.form-section:nth-child(1) {
-  animation-delay: 0.12s;
+  animation: sectionReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .form-section:nth-child(2) {
-  animation-delay: 0.2s;
+  animation-delay: 0.08s;
 }
-
 .form-section:nth-child(3) {
-  animation-delay: 0.28s;
+  animation-delay: 0.16s;
 }
-
 .form-section:nth-child(4) {
-  animation-delay: 0.36s;
+  animation-delay: 0.24s;
+}
+.form-section:nth-child(5) {
+  animation-delay: 0.32s;
 }
 
-.input-group,
+.input-group input,
+.select-field select {
+  transition: transform 0.2s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.input-group input:hover,
+.select-field select:hover {
+  border-color: rgba(37, 199, 245, 0.28);
+}
+
+.input-group input:focus,
+.select-field select:focus {
+  transform: translateY(-1px);
+}
+
 .select-field {
   transition: transform 0.25s ease, border-color 0.25s ease,
-    box-shadow 0.25s ease;
+    background 0.25s ease, box-shadow 0.25s ease;
 }
 
-.input-group:focus-within,
-.select-field:focus-within {
+.select-field:hover {
   transform: translateY(-2px);
+  background: rgba(8, 25, 42, 0.82);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
 }
 
-.form-section-heading::before {
-  animation: tcAccentPulse 2.5s ease-in-out infinite;
-}
-
-.form-actions {
-  animation: tcTextReveal 0.7s ease-out 0.5s both;
-}
-
-.spinner {
-  animation: spin 0.75s linear infinite;
-}
-
-/* ========================================================= 49. RESULTS ========================================================= */
-
+/* Results animate like an analysis report */
 .results-page .prediction-banner {
-  animation: tcResultBanner 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: resultBannerIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.results-page .prediction-icon {
-  animation: tcResultIcon 0.7s ease-out 0.35s both,
-    tcIconPulse 2.8s ease-in-out 1s infinite;
+.results-page .probability-section {
+  animation: sectionReveal 0.65s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.probability-section {
-  animation: tcResultSection 0.75s ease-out 0.2s both;
+.results-page .explanation-section {
+  animation: sectionReveal 0.65s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.results-page .counterfactual-section {
+  animation: sectionReveal 0.65s 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .probability-card {
-  animation: tcCardReveal 0.65s ease-out both;
-}
-
-.probability-card:nth-child(1) {
-  animation-delay: 0.25s;
+  animation: miniCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .probability-card:nth-child(2) {
-  animation-delay: 0.38s;
+  animation-delay: 0.12s;
 }
 
-.progress-fill {
-  animation: tcProgressReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* Progress bars animate from zero when results appear */
+.results-page .progress-fill {
+  animation: progressGlow 1.4s 0.35s ease-out both;
   transform-origin: left center;
 }
 
-.explanation-section {
-  animation: tcResultSection 0.75s ease-out 0.35s both;
-}
-
-.counterfactual-section {
-  animation: tcResultSection 0.75s ease-out 0.5s both;
-}
-
-.counterfactual-card {
-  animation: tcCardReveal 0.65s ease-out both;
-}
-
-.counterfactual-card:nth-child(1) {
-  animation-delay: 0.55s;
-}
-
-.counterfactual-card:nth-child(2) {
-  animation-delay: 0.68s;
-}
-
-.result-actions {
-  animation: tcTextReveal 0.7s ease-out 0.65s both;
-}
-
-/* ========================================================= 50. SHAP ========================================================= */
-
+/* SHAP rows reveal progressively */
 .shap-row {
-  animation: tcShapRow 0.55s ease-out both;
+  animation: shapRowIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.25s ease, border-color 0.25s ease,
     background 0.25s ease;
 }
 
 .shap-row:nth-child(1) {
-  animation-delay: 0.08s;
+  animation-delay: 0.05s;
 }
-
 .shap-row:nth-child(2) {
-  animation-delay: 0.16s;
+  animation-delay: 0.1s;
 }
-
 .shap-row:nth-child(3) {
-  animation-delay: 0.24s;
+  animation-delay: 0.15s;
 }
-
 .shap-row:nth-child(4) {
-  animation-delay: 0.32s;
+  animation-delay: 0.2s;
 }
-
 .shap-row:nth-child(5) {
-  animation-delay: 0.4s;
+  animation-delay: 0.25s;
 }
-
 .shap-row:nth-child(6) {
-  animation-delay: 0.48s;
+  animation-delay: 0.3s;
 }
-
 .shap-row:nth-child(7) {
-  animation-delay: 0.56s;
+  animation-delay: 0.35s;
 }
-
 .shap-row:nth-child(8) {
-  animation-delay: 0.64s;
+  animation-delay: 0.4s;
 }
 
 .shap-row:hover {
-  transform: translateX(5px);
-  border-color: rgba(37, 199, 245, 0.2);
-  background: rgba(15, 34, 53, 0.72);
+  transform: translateX(4px);
+  border-color: rgba(37, 199, 245, 0.22);
+  background: rgba(16, 37, 59, 0.72);
 }
 
 .shap-bar > div {
-  animation: tcShapBar 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: shapBarIn 0.9s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
   transform-origin: left center;
 }
 
-/* ========================================================= 51. ABOUT ========================================================= */
-
-.about-hero {
-  animation: tcPageHero 0.8s ease-out both;
+/* Counterfactual cards */
+.counterfactual-card {
+  animation: miniCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.about-card {
-  animation: tcCardReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+.counterfactual-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.counterfactual-card:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.counterfactual-card:nth-child(4) {
+  animation-delay: 0.24s;
 }
 
-.about-card:nth-child(1) {
-  animation-delay: 0.1s;
+.cf-values span {
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.about-card:nth-child(2) {
-  animation-delay: 0.22s;
+.cf-values span:hover {
+  transform: translateY(-2px);
+  border-color: rgba(124, 92, 255, 0.3);
+  background: rgba(124, 92, 255, 0.08);
 }
 
-.about-card:nth-child(3) {
-  animation-delay: 0.34s;
+/* Admin dashboard entrance */
+.admin-dashboard {
+  animation: dashboardReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.about-icon {
-  transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+.admin-topbar {
+  animation: dashboardSectionIn 0.6s 0.05s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.about-card:hover .about-icon {
-  transform: translateY(-4px) rotate(4deg) scale(1.08);
-  box-shadow: 0 0 25px rgba(37, 199, 245, 0.12);
-  filter: drop-shadow(0 0 7px rgba(37, 199, 245, 0.2));
+.admin-stats-grid,
+.admin-content-grid,
+.admin-panels,
+.admin-panel {
+  animation: dashboardSectionIn 0.65s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.technology-card {
-  animation: tcCardReveal 0.75s ease-out 0.35s both;
+/* Dataset / admin panels get a subtle hover response */
+.admin-panel,
+.admin-stat-card,
+.dataset-upload-card,
+.dataset-info-item {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
 }
 
-.technology-list li {
-  transition: transform 0.25s ease, border-color 0.25s ease,
-    background 0.25s ease;
+.admin-panel:hover,
+.admin-stat-card:hover,
+.dataset-upload-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 199, 245, 0.22);
+  box-shadow: var(--shadow-md);
 }
 
-.technology-list li:hover {
-  transform: translateX(5px);
-  border-color: rgba(37, 199, 245, 0.2);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-/* ========================================================= 52. FOOTER ========================================================= */
-
-.footer {
-  animation: tcFooterReveal 0.8s ease-out both;
-}
-
-.footer-brand strong {
-  transition: color 0.25s ease, text-shadow 0.25s ease;
-}
-
-.footer-brand strong:hover {
-  color: var(--primary);
-  text-shadow: 0 0 12px rgba(37, 199, 245, 0.3);
-}
-
-/* ========================================================= 53. ADMIN LOGIN ========================================================= */
-
-.admin-login-page {
-  animation: tcPageEnter 0.7s ease-out both;
-}
-
+/* Admin login gets a premium ambient glow */
 .admin-login-card {
-  animation: adminCardIn 0.75s cubic-bezier(0.22, 1, 0.36, 1) both,
-    tcLoginGlow 4s ease-in-out 1s infinite;
+  animation: adminCardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both,
+    adminAmbient 4s 0.8s ease-in-out infinite;
 }
 
 .admin-login-icon {
-  animation: adminIconFloat 4s ease-in-out infinite,
-    tcCoreGlow 3s ease-in-out infinite;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
-.admin-field {
-  animation: tcFormSection 0.55s ease-out both;
+.admin-login-icon:hover {
+  transform: translateY(-5px) rotate(3deg) scale(1.04);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28), 0 0 45px rgba(37, 199, 245, 0.16);
 }
 
-.admin-field:nth-child(1) {
-  animation-delay: 0.18s;
-}
-
-.admin-field:nth-child(2) {
-  animation-delay: 0.28s;
-}
-
-.admin-login-button {
-  animation: tcTextReveal 0.6s ease-out 0.38s both;
-}
-
-.admin-demo-note {
-  animation: tcTextReveal 0.6s ease-out 0.48s both;
-}
-
-.admin-back-button {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.admin-back-button:hover {
-  transform: translateY(-2px);
-}
-
-/* ========================================================= 54. ADMIN DASHBOARD ========================================================= */
-
-.admin-dashboard {
-  animation: tcPageEnter 0.7s ease-out both;
-  isolation: isolate;
-}
-
-.admin-dashboard::after {
-  content: "";
-  position: fixed;
-  width: 380px;
-  height: 380px;
-  right: -150px;
-  bottom: 5%;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -1;
-  background: radial-gradient(
-    circle,
-    rgba(37, 199, 245, 0.08),
-    transparent 70%
-  );
-  animation: tcDashboardGlow 8s ease-in-out infinite;
-}
-
-.admin-dashboard .admin-topbar {
-  animation: tcTopbarReveal 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* Loading state */
+.analyze-button:disabled {
   position: relative;
   overflow: hidden;
 }
 
-.admin-dashboard .admin-topbar::after {
+.analyze-button:disabled::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: -120%;
-  width: 70%;
-  height: 100%;
-  pointer-events: none;
-  transform: skewX(-20deg);
+  inset: 0;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.12),
     transparent
   );
-  animation: tcTopbarSweep 4.5s ease-in-out infinite;
+  transform: translateX(-100%);
+  animation: loadingSweep 1.2s linear infinite;
 }
 
-.admin-dashboard .admin-stats-grid {
-  animation: tcSectionReveal 0.7s ease-out 0.15s both;
-}
+/* ========================================================= NEW KEYFRAMES ========================================================= */
 
-.admin-dashboard .admin-stat-card {
-  animation: tcAdminStat 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(1) {
-  animation-delay: 0.2s;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(2) {
-  animation-delay: 0.32s;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(3) {
-  animation-delay: 0.44s;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(4) {
-  animation-delay: 0.56s;
-}
-
-.admin-dashboard .admin-stat-card:hover {
-  transform: translateY(-8px) scale(1.015);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28), 0 0 25px rgba(37, 199, 245, 0.09);
-}
-
-.admin-dashboard .admin-stat-icon {
-  animation: tcAdminIcon 3s ease-in-out infinite;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(2) .admin-stat-icon {
-  animation-delay: 0.4s;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(3) .admin-stat-icon {
-  animation-delay: 0.8s;
-}
-
-.admin-dashboard .admin-stat-card:nth-child(4) .admin-stat-icon {
-  animation-delay: 1.2s;
-}
-
-.admin-dashboard .admin-content-grid {
-  animation: tcPanelReveal 0.75s ease-out 0.58s both;
-}
-
-.admin-dashboard .admin-history-panel {
-  animation: tcPanelReveal 0.75s ease-out 0.7s both;
-}
-
-.admin-dashboard .admin-feature-section {
-  animation: tcPanelReveal 0.75s ease-out 0.82s both;
-}
-
-.admin-dashboard .admin-panel {
-  animation: tcPanelReveal 0.75s ease-out 0.9s both;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-.admin-dashboard .admin-panel:hover,
-.admin-dashboard .admin-history-panel:hover,
-.admin-dashboard .admin-feature-section:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22), 0 0 22px rgba(37, 199, 245, 0.06);
-}
-
-.admin-dashboard .admin-shap-bar-fill,
-.admin-dashboard .admin-progress-bar {
-  transform-origin: left center;
-  animation: tcShapBar 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.admin-dashboard .admin-table tbody tr {
-  animation: tcTableRow 0.5s ease-out both;
-  transition: transform 0.25s ease, background 0.25s ease;
-}
-
-.admin-dashboard .admin-table tbody tr:nth-child(1) {
-  animation-delay: 0.12s;
-}
-
-.admin-dashboard .admin-table tbody tr:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.admin-dashboard .admin-table tbody tr:nth-child(3) {
-  animation-delay: 0.28s;
-}
-
-.admin-dashboard .admin-table tbody tr:nth-child(4) {
-  animation-delay: 0.36s;
-}
-
-.admin-dashboard .admin-table tbody tr:nth-child(5) {
-  animation-delay: 0.44s;
-}
-
-.admin-dashboard .admin-table tbody tr:hover {
-  transform: translateX(4px);
-}
-
-.admin-dashboard .dataset-upload-card {
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.admin-dashboard .dataset-upload-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 2px;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--primary),
-    var(--secondary),
-    transparent
-  );
-  animation: tcUploadSweep 3.5s linear infinite;
-}
-
-.admin-dashboard .dataset-upload-card:hover {
-  transform: translateY(-5px);
-  border-color: var(--border-bright);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.25), 0 0 24px rgba(37, 199, 245, 0.08);
-}
-
-.admin-dashboard .dataset-upload-icon {
-  animation: tcUploadIcon 2.5s ease-in-out infinite;
-}
-
-.admin-dashboard .admin-status-dot {
-  position: relative;
-}
-
-.admin-dashboard .admin-status-dot::after {
-  content: "";
-  position: absolute;
-  inset: -5px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  animation: tcStatusPulse 2s ease-out infinite;
-}
-
-.admin-dashboard .admin-prediction-box {
-  animation: tcResultBanner 0.7s ease-out both;
-}
-
-.admin-dashboard .admin-probability {
-  animation: tcCardReveal 0.6s ease-out both;
-}
-
-.admin-dashboard .admin-probability:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.admin-dashboard .admin-probability:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.admin-dashboard .admin-probability:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-/* ========================================================= 55. INPUT / SELECT MICRO-INTERACTIONS ========================================================= */
-
-input,
-select,
-textarea {
-  transition: border-color 0.25s ease, box-shadow 0.25s ease,
-    transform 0.25s ease, background 0.25s ease;
-}
-
-input:hover,
-select:hover,
-textarea:hover {
-  border-color: rgba(37, 199, 245, 0.24);
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  transform: translateY(-1px);
-}
-
-/* ========================================================= 56. GLOBAL ICON MICRO-INTERACTION ========================================================= */
-
-.about-icon,
-.workflow-icon,
-.admin-stat-icon,
-.dataset-upload-icon,
-.prediction-icon,
-.empty-results-icon {
-  will-change: transform;
-}
-
-/* ========================================================= 57. KEYFRAMES ========================================================= */
-
-@keyframes tcPageEnter {
+@keyframes pageReveal {
   from {
     opacity: 0;
+    transform: translateY(10px);
   }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes tcMainEnter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes tcNavbarEnter {
+@keyframes navbarDrop {
   from {
     opacity: 0;
-    transform: translateY(-18px);
+    transform: translateY(-12px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes tcBrandPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 25px rgba(37, 199, 245, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-
-  50% {
-    box-shadow: 0 0 34px rgba(37, 199, 245, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-}
-
-@keyframes tcHeroContent {
+@keyframes navItemIn {
   from {
     opacity: 0;
-    transform: translateY(35px);
+    transform: translateY(-7px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes tcHeroVisual {
+@keyframes heroTitleIn {
   from {
     opacity: 0;
-    transform: translateX(35px) scale(0.94);
+    transform: translateY(28px) scale(0.985);
+    filter: blur(5px);
   }
-
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes tcOrbFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes tcCoreGlow {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-
-  50% {
-    filter: brightness(1.12);
-  }
-}
-
-@keyframes tcBadgeEnter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.94);
-  }
-
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tcBadgeGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 rgba(37, 199, 245, 0);
-  }
-
-  50% {
-    box-shadow: 0 0 18px rgba(37, 199, 245, 0.08);
-  }
-}
-
-@keyframes tcHeadingReveal {
-  from {
-    opacity: 0;
-    transform: translateY(22px);
-    filter: blur(4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
     filter: blur(0);
   }
 }
 
-@keyframes tcTextReveal {
+@keyframes orbEntrance {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: scale(0.82) rotate(-8deg);
+    filter: blur(4px);
   }
-
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) rotate(0);
+    filter: blur(0);
   }
 }
 
-@keyframes tcButtonShine {
-  from {
-    left: -130%;
-  }
-
-  to {
-    left: 150%;
-  }
-}
-
-@keyframes tcSectionReveal {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes tcCardReveal {
-  from {
-    opacity: 0;
-    transform: translateY(28px) scale(0.97);
-  }
-
-  70% {
-    opacity: 1;
-    transform: translateY(-2px) scale(1.005);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tcNumberReveal {
-  from {
-    opacity: 0;
-    transform: scale(0.65);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes tcCtaReveal {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tcCtaSweep {
-  0% {
-    left: -100%;
-  }
-
-  35%,
+@keyframes aiTextPulse {
+  0%,
   100% {
-    left: 150%;
+    opacity: 0.88;
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.35);
   }
-}
-
-@keyframes tcPageHero {
-  from {
-    opacity: 0;
-    transform: translateY(25px);
-  }
-
-  to {
+  50% {
     opacity: 1;
-    transform: translateY(0);
+    text-shadow: 0 0 22px rgba(255, 255, 255, 0.7),
+      0 0 38px rgba(37, 199, 245, 0.28);
   }
 }
 
-@keyframes tcFormEnter {
-  from {
-    opacity: 0;
-    transform: translateY(35px) scale(0.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tcFormSection {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes tcAccentPulse {
+@keyframes badgeGlow {
   0%,
   100% {
     box-shadow: 0 0 0 rgba(37, 199, 245, 0);
   }
-
   50% {
-    box-shadow: 0 0 13px rgba(37, 199, 245, 0.28);
+    box-shadow: 0 0 24px rgba(37, 199, 245, 0.08);
   }
 }
 
-@keyframes tcResultBanner {
+@keyframes cardReveal {
   from {
     opacity: 0;
-    transform: translateY(25px) scale(0.98);
+    transform: translateY(18px);
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tcResultIcon {
-  from {
-    opacity: 0;
-    transform: scale(0.5) rotate(-10deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(0);
-  }
-}
-
-@keyframes tcIconPulse {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 0 rgba(37, 199, 245, 0));
-  }
-
-  50% {
-    filter: drop-shadow(0 0 10px rgba(37, 199, 245, 0.35));
-  }
-}
-
-@keyframes tcResultSection {
-  from {
-    opacity: 0;
-    transform: translateY(25px);
-  }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes tcProgressReveal {
-  from {
-    transform: scaleX(0);
-    opacity: 0.35;
+@keyframes ctaSweep {
+  0%,
+  65%,
+  100% {
+    transform: translateX(-120%) rotate(18deg);
   }
-
-  to {
-    transform: scaleX(1);
-    opacity: 1;
+  82% {
+    transform: translateX(520%) rotate(18deg);
   }
 }
 
-@keyframes tcShapRow {
+@keyframes formCardIn {
   from {
     opacity: 0;
-    transform: translateX(-18px);
+    transform: translateY(20px) scale(0.99);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
+@keyframes sectionReveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes resultBannerIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes miniCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes progressGlow {
+  from {
+    filter: brightness(0.8);
+    box-shadow: 0 0 0 rgba(37, 199, 245, 0);
+  }
+  to {
+    filter: brightness(1);
+    box-shadow: 0 0 16px rgba(37, 199, 245, 0.18);
+  }
+}
+
+@keyframes shapRowIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
 
-@keyframes tcShapBar {
+@keyframes shapBarIn {
   from {
     transform: scaleX(0);
-    opacity: 0.25;
+    opacity: 0.35;
   }
-
   to {
     transform: scaleX(1);
     opacity: 1;
   }
 }
 
-@keyframes tcFooterReveal {
+@keyframes dashboardReveal {
   from {
     opacity: 0;
-    transform: translateY(15px);
   }
+  to {
+    opacity: 1;
+  }
+}
 
+@keyframes dashboardSectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes tcLoginGlow {
+@keyframes adminAmbient {
   0%,
   100% {
     box-shadow: 0 35px 100px rgba(0, 0, 0, 0.45),
       0 0 70px rgba(37, 199, 245, 0.06);
   }
-
   50% {
     box-shadow: 0 35px 100px rgba(0, 0, 0, 0.45),
       0 0 90px rgba(37, 199, 245, 0.11);
   }
 }
 
-@keyframes tcTopbarReveal {
-  from {
-    opacity: 0;
-    transform: translateY(-22px);
-  }
-
+@keyframes loadingSweep {
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateX(100%);
   }
 }
 
-@keyframes tcTopbarSweep {
-  0% {
-    left: -120%;
-  }
-
-  35%,
-  100% {
-    left: 150%;
-  }
-}
-
-@keyframes tcDashboardGlow {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.55;
-  }
-
-  50% {
-    transform: translate(-70px, -35px) scale(1.18);
-    opacity: 1;
-  }
-}
-
-@keyframes tcAdminStat {
-  from {
-    opacity: 0;
-    transform: translateY(38px) scale(0.92);
-  }
-
-  65% {
-    opacity: 1;
-    transform: translateY(-5px) scale(1.01);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tcAdminIcon {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0);
-  }
-
-  50% {
-    transform: translateY(-6px) rotate(3deg);
-  }
-}
-
-@keyframes tcPanelReveal {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes tcTableRow {
-  from {
-    opacity: 0;
-    transform: translateX(-15px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes tcUploadSweep {
-  0% {
-    left: -100%;
-  }
-
-  45%,
-  100% {
-    left: 100%;
-  }
-}
-
-@keyframes tcUploadIcon {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-@keyframes tcStatusPulse {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.75;
-  }
-
-  70% {
-    transform: scale(1.55);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1.55);
-    opacity: 0;
-  }
-}
-
-/* ========================================================= 58. RESPONSIVE ANIMATION TUNING ========================================================= */
-
-@media (max-width: 768px) {
-  .hero-content,
-  .hero-visual,
-  .form-card,
-  .prediction-banner,
-  .about-card,
-  .admin-login-card,
-  .admin-panel {
-    animation-duration: 0.65s;
-  }
-
-  .stat-card:hover,
-  .workflow-card:hover,
-  .about-card:hover {
-    transform: translateY(-4px);
-  }
-
-  .floating-card:hover {
-    transform: translateY(-5px) scale(1.02);
-  }
-}
-
-/* ========================================================= 59. REDUCED MOTION ========================================================= */
-
+/* Respect accessibility preferences, including all new animations */
 @media (prefers-reduced-motion: reduce) {
   .home-page,
   .prediction-page,
   .results-page,
   .about-page,
   .navbar,
-  .hero-content,
-  .hero-visual,
+  .nav-links button,
+  .hero-badge,
+  .hero h1,
+  .hero-description,
+  .hero-actions,
+  .hero-note,
   .medical-orb,
-  .floating-card,
-  .stat-card,
-  .workflow-card,
-  .cta-section,
-  .page-hero,
+  .stats-section .stat-card,
+  .workflow-grid .workflow-card,
+  .about-grid .about-card,
   .form-card,
   .form-section,
-  .prediction-banner,
-  .probability-section,
-  .explanation-section,
-  .counterfactual-section,
-  .counterfactual-card,
+  .results-page .prediction-banner,
+  .results-page .probability-section,
+  .results-page .explanation-section,
+  .results-page .counterfactual-section,
+  .probability-card,
   .shap-row,
-  .about-card,
-  .technology-card,
-  .footer,
-  .admin-login-page,
-  .admin-login-card,
-  .admin-field,
+  .counterfactual-card,
   .admin-dashboard,
   .admin-topbar,
-  .admin-stat-card,
+  .admin-stats-grid,
   .admin-content-grid,
-  .admin-history-panel,
-  .admin-feature-section,
+  .admin-panels,
   .admin-panel,
-  .admin-table tbody tr {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .admin-login-card,
+  .analyze-button:disabled::after {
+    animation: none !important;
   }
-}
+  }
